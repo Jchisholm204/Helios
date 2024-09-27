@@ -153,8 +153,16 @@ void obj_scan(struct object * obj){
 
 }
 
-void var_parse(struct object * pObj, struct context * pCtx, int i, char delim){
-
+void var_parse(struct object * pObj, struct context * pCtx, size_t *start, char delim){
+    printf("Parsing Variable ");
+    printf("%s (type)", pObj->objects[(*start)++]);
+    printf(" %s ", pObj->objects[(*start)++]);
+    if(pObj->objects[(*start)][0] == '='){
+        (*start)++;
+        printf("= %s\n", pObj->objects[(*start)++]);
+    }
+    else
+        printf("\n");
 }
 
 
@@ -205,7 +213,7 @@ void func_parse(struct object * pObj, struct context * pCtx, size_t *start){
         printf("param %d: %d %s\n", i, ctx->params[i].type, ctx->params[i].name);
     }
     *start = j;
-    // context_parse(pObj, ctx, start);
+    context_parse(pObj, ctx, start);
 }
 
 void context_parse(struct object * pObj, struct context * pCtx, size_t *start){
@@ -220,6 +228,18 @@ void context_parse(struct object * pObj, struct context * pCtx, size_t *start){
                 func_parse(pObj, pCtx, start);
                 printf("finished parsing function @ %d\n", *start);
             }
+            else
+                var_parse(pObj, pCtx, start, ';');
+        }
+        else if(!strcmp(expr, "char")){
+            // This must be a new function
+            if(pObj->objects[*start+2][0] == '('){
+                *start += 3;
+                func_parse(pObj, pCtx, start);
+                printf("finished parsing function @ %d\n", *start);
+            }
+            else
+                var_parse(pObj, pCtx, start, ';');
         }
         else if(!strcmp(expr, "void")){
         }
