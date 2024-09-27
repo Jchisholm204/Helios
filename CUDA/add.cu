@@ -30,7 +30,7 @@ int main(void)
 
   auto t_start = std::chrono::high_resolution_clock::now();
 
-  int blockSize = 512;
+  int blockSize = 4096;
   int numBlocks = (N + blockSize - 1) / blockSize;
 
   // Run kernel on 1M elements on the GPU
