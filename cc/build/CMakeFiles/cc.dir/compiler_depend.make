@@ -72,6 +72,7 @@ CMakeFiles/cc.dir/src/main.c.o: /home/jacob/documents/github/Helios/cc/src/main.
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/lib/gcc/x86_64-linux-gnu/11/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdbool.h \
   /usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h \
   /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h
 
@@ -147,6 +148,8 @@ CMakeFiles/cc.dir/src/main.c.o: /home/jacob/documents/github/Helios/cc/src/main.
 /usr/include/string.h:
 
 /usr/include/stdlib.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/stdbool.h:
 
 /usr/include/x86_64-linux-gnu/bits/time64.h:
 
