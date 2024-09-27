@@ -1,0 +1,1 @@
+/usr/bin/gcc  -isystem  -g CMakeFiles/cc.dir/src/main.c.o -o cc   -L/home/jacob/.local/lib  -L/usr/lib64/openmpi/lib  -Wl,-rpath,/home/jacob/.local/lib:/usr/lib64/openmpi/lib -lm -lpthread 
