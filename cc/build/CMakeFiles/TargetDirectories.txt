@@ -1,3 +1,0 @@
-/home/jacob/documents/github/Helios/cc/build/CMakeFiles/cc.dir
-/home/jacob/documents/github/Helios/cc/build/CMakeFiles/edit_cache.dir
-/home/jacob/documents/github/Helios/cc/build/CMakeFiles/rebuild_cache.dir

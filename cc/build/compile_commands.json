@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/jacob/documents/github/Helios/cc/build",
-  "command": "/usr/bin/gcc  -I/home/jacob/.local/include -I/usr/include/openmpi-x86_64 -I/home/jacob/documents/github/Helios/cc/include  -isystem  -g -std=gnu99 -g -O3 -o CMakeFiles/cc.dir/src/main.c.o -c /home/jacob/documents/github/Helios/cc/src/main.c",
-  "file": "/home/jacob/documents/github/Helios/cc/src/main.c",
-  "output": "CMakeFiles/cc.dir/src/main.c.o"
-}
-]
