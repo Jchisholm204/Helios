@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/jacob/documents/github/Helios/cpusim/build",
-  "command": "/usr/bin/gcc  -I/home/jacob/documents/github/Helios/cpusim/include  -isystem  -g -std=gnu11 -Wdouble-promotion -Wformat -Wshadow -g -O0 -o CMakeFiles/cpusim.dir/src/main.c.o -c /home/jacob/documents/github/Helios/cpusim/src/main.c",
-  "file": "/home/jacob/documents/github/Helios/cpusim/src/main.c",
-  "output": "CMakeFiles/cpusim.dir/src/main.c.o"
-}
-]

@@ -1,1 +1,0 @@
-/usr/bin/gcc  -isystem  -g CMakeFiles/cpusim.dir/src/main.c.o -o cpusim  -lm -lc -lssh -lpthread 
