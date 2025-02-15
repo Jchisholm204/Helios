@@ -9,8 +9,6 @@ all: build
 
 ${BUILD_DIR}/Makefile:
 	cmake \
-		-DCMAKE_C_COMPILER=nvcc.exe\
-		-DCMAKE_CXX_COMPILER=nvcc.exe\
 		-B${BUILD_DIR} \
 		-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
