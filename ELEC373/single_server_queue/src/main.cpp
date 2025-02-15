@@ -60,7 +60,7 @@ void run_sim(std::vector<float> &avg_len, std::vector<float> &avg_wait){
 
 }
 
-void plot_delay_arrival_rate(std::vector<float> avg_wait, std::vector<float> avg_len){
+void plot_sim(std::vector<float> avg_wait, std::vector<float> avg_len){
     using namespace matplot;
 
     // Plot the queue delay against arrival rates
@@ -72,14 +72,79 @@ void plot_delay_arrival_rate(std::vector<float> avg_wait, std::vector<float> avg
     title("Queue Delay vs. Arrival Rate");
     grid(true);
     show();
-
 }
+
+void plot_theory(void){
+    using namespace matplot;
+    std::vector<float> avg_wait;
+    for(int i = 0; i < n_trials; i++){
+        float lambda = arrival_rate[i];
+        float p = (lambda * (1-service_rate))/(service_rate*(1-lambda));
+        float wait = (p/(1-p))/lambda;
+        avg_wait.push_back(wait);
+    }
+    // Plot the queue delay against arrival rates
+    std::vector<float> arrival_rate_vec(arrival_rate, arrival_rate + n_trials);
+    figure();
+    plot(arrival_rate_vec, avg_wait, "-o")->line_width(2).color("b");
+    xlabel("Arrival Rate (λ)");
+    ylabel("Theoretical Queue Wait (W)");
+    title("Theoretical Queue Delay vs. Arrival Rate");
+    grid(true);
+    show();
+    
+}
+
+void plot_comparison(const std::vector<float>& avg_wait, const std::vector<float>& avg_len) {
+    using namespace matplot;
+
+    // Convert static array to std::vector
+    std::vector<float> arrival_rate_vec(arrival_rate, arrival_rate + n_trials);
+
+    // Check if avg_wait has valid data
+    if (avg_wait.empty()) {
+        std::cerr << "Error: avg_wait is empty! Ensure data is properly collected before plotting.\n";
+        return;
+    }
+
+    // Compute theoretical queue wait times
+    std::vector<float> theoretical_wait;
+    for (int i = 0; i < n_trials; i++) {
+        float lambda = arrival_rate[i];
+        float p = (lambda * (1 - service_rate)) / (service_rate * (1 - lambda));
+        float wait = (p / (1 - p)) / lambda;
+        theoretical_wait.push_back(wait);
+    }
+
+    // Debug print to check values
+    std::cout << "Debug: Measured Queue Waits: ";
+    for (float w : avg_wait) std::cout << w << " ";
+    std::cout << "\n";
+
+    // Create figure and plot both theoretical and measured values
+    auto p1 = plot(arrival_rate_vec, avg_wait, "-ob");
+    hold(on);
+    auto p2 = plot(arrival_rate_vec, theoretical_wait, "--r");
+
+    p1->line_width(2).display_name("Measured");
+    p2->line_width(2).display_name("Theoretical");
+
+    xlabel("Arrival Rate (λ)");
+    ylabel("Queue Wait (W)");
+    title("Queue Delay: Measured vs. Theoretical");
+    legend();
+    grid(true);
+    show();
+}
+
 
 int main() {
     std::vector<float> avg_wait, avg_len;
-    run_sim(avg_len, avg_wait);
-    plot_delay_arrival_rate(avg_wait, avg_len);
+    // run_sim(avg_len, avg_wait);
+    // plot_sim(avg_wait, avg_len);
+    plot_theory();
 
+    // plot_comparison(avg_wait, avg_len);
     return 0;
 }
 
