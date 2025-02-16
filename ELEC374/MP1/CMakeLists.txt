@@ -53,6 +53,8 @@ target_compile_options(${EXECUTABLE} PRIVATE
     # -Wconversion
     # -fstack-usage
     -g
+    -G
+    -lineinfo
     # -fmessage-length=0
     # -ffunction-sections
     # -fdata-sections

@@ -38,128 +38,55 @@ void getDevProperties(void){
 
 }
 
-float *M, *N, *P;
-#define MAT_SIZE (1 << 20)
-#define MAT(row, col) (MAT_SIZE*row + col)
 
-#define FREE(p) if(!p){ free(p); p = NULL; }
-
-void MAT_print(float *Mat, size_t n){
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < n; j++){
-            printf("%5.1f ", Mat[MAT(i, j)]);
-        }
-        printf("\n");
-    }
-}
-
-void MAT_fill(float *Mat, size_t n, int max_i, float div){
-    srand(time(NULL));
-    for(int i = 0; i < MAT_SIZE; i++){
-        for(int j = 0; j < MAT_SIZE; j++){
-            Mat[MAT(i, j)] = (float)(rand() % max_i)/div;
-        }
-    }
-}
-
-__global__ void MatrixMulKernel(float *M, float *N, float *P, int width){
-    int row = blockIdx.y *blockDim.y + threadIdx.y;
-    int col = blockIdx.x *blockDim.x + threadIdx.x;
-    if(row < width && col < width){
-        float Pvalue = 0;
-        for(int k = 0; k < width; ++k)
-            Pvalue += M[row*width + k] * N[k*width + col];
-        P[row*width + col] = Pvalue;
-    }
-}
-
-__global__
-void add(float *A, float *B, float *C, size_t n){
-    for(int i = 0; i < n; i++)
+__global__ void __noinline__ add(float *A, float *B, float *C, size_t n){
+    int index = threadIdx.x;
+    int stride = blockDim.x;
+    for(int i = index; i < n; i+=stride)
         C[i] = A[i] + B[i];
 }
 
 int main() {
-
+    int N = 1<<20;
     cudaError_t cudaStatus;
-    getDevProperties();
-
-    // printf("Allocating Host Matricies\n");
-    // M = (float*)malloc(sizeof(float)*MAT_SIZE*MAT_SIZE);
-    // N = (float*)malloc(sizeof(float)*MAT_SIZE*MAT_SIZE);
-    // P = (float*)malloc(sizeof(float)*MAT_SIZE*MAT_SIZE);
-    // if(!M || !N || !P){
-    //     fprintf(stderr, "Host Matrix Allocation Failure");
-    //     FREE(M);
-    //     FREE(N);
-    //     FREE(P);
-    //     exit(-1);
-    // }
-    // Populate the Matricies with random values
-    // MAT_fill(M, MAT_SIZE, 1000, 18.321);
-    // MAT_fill(N, MAT_SIZE, 1000, 21.123);
-    // Print out sample Matricies
-    // printf("Matrix M:\n");
-    // MAT_print(M, 10);
-    //
-    // printf("Matrix N:\n");
-    // MAT_print(N, 10);
+    // getDevProperties();
 
     float *A, *B, *C;
-    // A = new float[MAT_SIZE];
-    // B = new float[MAT_SIZE];
-    // C = new float[MAT_SIZE];
-    cudaMallocManaged(&A, MAT_SIZE*sizeof(float));
-    cudaMallocManaged(&B, MAT_SIZE*sizeof(float));
-    cudaMallocManaged(&C, MAT_SIZE*sizeof(float));
-    for(int i = 0; i < MAT_SIZE; i++){
-        A[i] = i;
-        B[i] = i*10;
+    cudaMallocManaged(&A, N*sizeof(float));
+    cudaMallocManaged(&B, N*sizeof(float));
+    cudaMallocManaged(&C, N*sizeof(float));
+    for(int i = 0; i < N; i++){
+        A[i] = 1.0f;
+        B[i] = 2.0f;
     }
-    // printf("Array A:\n");
-    // for(int i = 0; i < MAT_SIZE; i++){
-    //     printf("%5.1f ", A[i]);
-    // }
-    // printf("\n");
-    //
-    // printf("Array B:\n");
-    // for(int i = 0; i < MAT_SIZE; i++){
-    //     printf("%5.1f ", B[i]);
-    // }
-    printf("\n");
-    
-    add<<<1, 1>>>(A, B, C, MAT_SIZE);
 
+    add<<<1, 256>>>(A, B, C, N);
+    
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        printf("CUDA kernel launch failed: %s\n", cudaGetErrorString(err));
+    }
+    printf("Waiting for Sync\n");
     cudaDeviceSynchronize();
 
-    printf("Result:\n");
-    for(int i = 0; i < MAT_SIZE; i++){
-        // printf("%5.1f ", C[i]);
-        if(A[i] + B[i] != C[i])
-            printf("ADD ERR %5.1f ", C[i]);
+    printf("Total Error: ");
+    float err_count = 0;
+    for(int i = 0; i < N; i++){
+        err_count += A[i] + B[i] - C[i];
     }
-    printf("\n");
+    printf("%0.2f\n", err_count);
     
     cudaFree(A);
     cudaFree(B);
     cudaFree(C);
-    // MatrixMulKernel<<<1, 1>>>(M, N, P, MAT_SIZE);
 
-    // printf("Matrix P:\n");
-    // MAT_print(P, 10);
-
-    printf("Freeing Host Matricies\n");
-    FREE(M);
-    FREE(N);
-    FREE(P);
-    
     // cudaDeviceReset must be called before exiting in order for profiling and
     // tracing tools such as Nsight and Visual Profiler to show complete traces.
-    cudaStatus = cudaDeviceReset();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceReset failed!");
-        return 1;
-    }
+    // cudaStatus = cudaDeviceReset();
+    // if (cudaStatus != cudaSuccess) {
+    //     fprintf(stderr, "cudaDeviceReset failed!");
+    //     return 1;
+    // }
 
     return 0;
 }

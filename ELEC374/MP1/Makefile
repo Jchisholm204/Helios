@@ -3,6 +3,7 @@
 .PHONY: all build cmake clean format
 
 BUILD_DIR := build
+BUILD_OBJ := elec374_MP1
 BUILD_TYPE ?= Debug
 
 all: build
@@ -28,5 +29,7 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 run: build
-	./${BUILD_DIR}/elec374_MP1
+	./${BUILD_DIR}/${BUILD_OBJ}
 
+profile: build
+	nsys nvprof ./${BUILD_DIR}/${BUILD_OBJ}
