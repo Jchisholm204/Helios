@@ -100,6 +100,16 @@ bool inRange(float val, float trg, float rng){
     return true;
 }
 
+int MAT_compare(mat_t A, mat_t B, float rng){
+    int err_count = 0;
+    for(int i = 0; i < MAT_N; i++){
+        for(int j = 0; j < MAT_N; j++){
+            err_count += (1-inRange(A[MAT(i,j)], B[MAT(i,j)], rng));
+        }
+    }
+    return err_count;
+}
+
 void MAT_print(mat_t Mat, size_t n){
     for(int i = 0; i < n; i++){
         for(int j = 0; j < n; j++){
@@ -137,6 +147,18 @@ void cpuMatMul(mat_t P, mat_t M, mat_t N){
     }
 }
 
+__global__ void __noinline__ gpuMatMul(mat_t P, mat_t M, mat_t N){
+    int row = blockIdx.y*blockDim.y + threadIdx.y;
+    int col = blockIdx.x*blockDim.x + threadIdx.x;
+    // row = row % MAT_N;
+    // col = col % MAT_N;
+    float pVal = 0;
+    for(int k = 0; k < MAT_N; k++){
+        pVal += M[MAT(row, k)]*N[MAT(k, col)];
+    }
+    P[MAT(row, col)] = pVal;
+}
+
 int main() {
     cudaError_t cudaStatus;
     getDevProperties();
@@ -158,28 +180,42 @@ int main() {
     cudaMalloc(&M_dev, MAT_SIZE);
     cudaMalloc(&N_dev, MAT_SIZE);
     cudaMalloc(&P_dev, MAT_SIZE);
+    cudaDeviceSynchronize();
 
     // Copy the data from the host to the device
-    cudaMemcpy(&M_dev, M_host, MAT_SIZE, cudaMemcpyHostToDevice);
-    cudaMemcpy(&N_dev, N_host, MAT_SIZE, cudaMemcpyHostToDevice);
+    cudaMemcpy(M_dev, M_host, MAT_SIZE, cudaMemcpyHostToDevice);
+    cudaMemcpy(N_dev, N_host, MAT_SIZE, cudaMemcpyHostToDevice);
+    cudaMemcpy(P_dev, P_host, MAT_SIZE, cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
 
     // Run the Multiplication Kernel
-
+    dim3 dimGrid(1, 1, 1);
+    dim3 dimBlock(MAT_N, MAT_N, 1);
+    gpuMatMul<<<dimGrid, dimBlock>>>(P_dev, M_dev, N_dev);
+    cudaDeviceSynchronize();
     // Copy the result back to the host
-    // cudaMemcpy(&P_host, P_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
+    cudaMemcpy(P_host, P_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
+    cudaMemcpy(M_host, M_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
+    cudaMemcpy(N_host, N_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
 
     // Compute the reference matrix
-    cpuMatMul(P_ref, N_host, M_host);
-    printf("Matrix A:\n");
-    MAT_print(N_host, MAT_N);
-    printf("Matrix B:\n");
+    cpuMatMul(P_ref, M_host, N_host);
+    printf("Matrix M:\n");
     MAT_print(M_host, MAT_N);
+    printf("Matrix N:\n");
+    MAT_print(N_host, MAT_N);
     printf("Matrix CPU Multiplication Result:\n");
     MAT_print(P_ref, MAT_N);
+    printf("Matrix GPU Multiplication Result:\n");
+    MAT_print(P_host, MAT_N);
 
     FREE(M_host);
     FREE(N_host);
     FREE(P_host);
+    FREE(P_ref);
+    cudaFree(M_dev);
+    cudaFree(N_dev);
+    cudaFree(P_dev);
 
     // cudaDeviceReset must be called before exiting in order for profiling and
     // tracing tools such as Nsight and Visual Profiler to show complete traces.
