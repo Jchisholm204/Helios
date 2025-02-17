@@ -88,7 +88,7 @@ void cudaAdd(void){
 typedef float* mat_t;
 mat_t M_host, N_host, P_host, P_ref;
 mat_t M_dev, N_dev, P_dev;
-#define MAT_N (3)
+#define MAT_N (4)
 #define MAT_SIZE (sizeof(float)*MAT_N*MAT_N)
 #define MAT(row, col) (MAT_N*row + col)
 
@@ -120,7 +120,7 @@ void MAT_print(mat_t Mat, size_t n){
 }
 
 void MAT_fillRand(mat_t Mat, int max_i, float div){
-    // srand(time(NULL));
+    srand(time(NULL));
     for(int i = 0; i < MAT_N; i++){
         for(int j = 0; j < MAT_N; j++){
             Mat[MAT(i, j)] = (float)(rand() % max_i)/div;
@@ -150,8 +150,8 @@ void cpuMatMul(mat_t P, mat_t M, mat_t N){
 __global__ void __noinline__ gpuMatMul(mat_t P, mat_t M, mat_t N){
     int row = blockIdx.y*blockDim.y + threadIdx.y;
     int col = blockIdx.x*blockDim.x + threadIdx.x;
-    // row = row % MAT_N;
-    // col = col % MAT_N;
+    row = row % MAT_N;
+    col = col % MAT_N;
     float pVal = 0;
     for(int k = 0; k < MAT_N; k++){
         pVal += M[MAT(row, k)]*N[MAT(k, col)];
@@ -189,10 +189,13 @@ int main() {
     cudaDeviceSynchronize();
 
     // Run the Multiplication Kernel
-    dim3 dimGrid(1, 1, 1);
-    dim3 dimBlock(MAT_N, MAT_N, 1);
+    dim3 dimGrid(2, 2, 1);
+    dim3 dimBlock(4, 4, 1);
+
     gpuMatMul<<<dimGrid, dimBlock>>>(P_dev, M_dev, N_dev);
+
     cudaDeviceSynchronize();
+    
     // Copy the result back to the host
     cudaMemcpy(P_host, P_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
     cudaMemcpy(M_host, M_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
@@ -208,6 +211,8 @@ int main() {
     MAT_print(P_ref, MAT_N);
     printf("Matrix GPU Multiplication Result:\n");
     MAT_print(P_host, MAT_N);
+
+    printf("Detected %d Errors\n", MAT_compare(P_host, P_ref, 0.1));
 
     FREE(M_host);
     FREE(N_host);
