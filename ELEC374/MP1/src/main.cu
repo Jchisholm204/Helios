@@ -148,15 +148,23 @@ void cpuMatMul(mat_t P, mat_t M, mat_t N){
 }
 
 __global__ void __noinline__ gpuMatMul(mat_t P, mat_t M, mat_t N){
+    int index = blockIdx.x*blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
     int row = blockIdx.y*blockDim.y + threadIdx.y;
     int col = blockIdx.x*blockDim.x + threadIdx.x;
-    row = row % MAT_N;
-    col = col % MAT_N;
-    float pVal = 0;
-    for(int k = 0; k < MAT_N; k++){
-        pVal += M[MAT(row, k)]*N[MAT(k, col)];
+
+    row = row ;
+    col = col ;
+    for(int i = row; i < MAT_N; i+=gridDim.x){
+        for(int j = col; j < MAT_N; j+=gridDim.y){
+            float pVal = 0;
+            for(int k = 0; k < MAT_N; k++){
+                pVal += M[MAT(i, k)]*N[MAT(k, j)];
+            }
+            P[MAT(i, j)] = pVal;
+        }
     }
-    P[MAT(row, col)] = pVal;
 }
 
 int main() {
@@ -189,8 +197,10 @@ int main() {
     cudaDeviceSynchronize();
 
     // Run the Multiplication Kernel
-    dim3 dimGrid(2, 2, 1);
-    dim3 dimBlock(4, 4, 1);
+    int n_threads = 1;
+    int n_blocks = 1;//MAT_N/n_threads;
+    dim3 dimGrid(n_blocks, n_blocks, 1);
+    dim3 dimBlock(n_threads, n_threads, 1);
 
     gpuMatMul<<<dimGrid, dimBlock>>>(P_dev, M_dev, N_dev);
 
