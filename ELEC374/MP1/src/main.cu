@@ -85,11 +85,87 @@ void cudaAdd(void){
     cudaFree(C);
 }
 
+float *M_host, *N_host, *P_host, *P_ref;
+float *M_dev, *N_dev, *P_dev;
+#define MAT_N (3)
+#define MAT_SIZE (sizeof(float)*MAT_N*MAT_N)
+#define MAT(row, col) (MAT_N*row + col)
+
+#define FREE(p) if(!p){ free(p); p = NULL; }
+
+void MAT_print(float *Mat, size_t n){
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < n; j++){
+            printf("%5.1f ", Mat[MAT(i, j)]);
+        }
+        printf("\n");
+    }
+}
+
+void MAT_fillRand(float *Mat, int max_i, float div){
+    srand(time(NULL));
+    for(int i = 0; i < MAT_N; i++){
+        for(int j = 0; j < MAT_N; j++){
+            Mat[MAT(i, j)] = (float)(rand() % max_i)/div;
+        }
+    }
+}
+
+void MAT_fill(float *Mat, float val){
+    for(int i = 0; i < MAT_N; i++){
+        for(int j = 0; j < MAT_N; j++){
+            Mat[MAT(i, j)] = val;
+        }
+    }
+}
+
+void cpuMatMul(float *P, float *M, float *N){
+    for(int i = 0; i < MAT_N; i++){
+        for(int j = 0; j < MAT_N; j++){
+            P[MAT(i, j)] = 0;
+            for(int k = 0; k < MAT_N; k++)
+                P[MAT(i, j)] += M[MAT(i, k)]*N[MAT(k, j)];
+        }
+    }
+}
+
 int main() {
     cudaError_t cudaStatus;
     getDevProperties();
 
-    cudaAdd();
+    // cudaAdd();
+
+    // Allocate Host side memories
+    M_host = (float*)malloc(MAT_SIZE);
+    N_host = (float*)malloc(MAT_SIZE);
+    P_host = (float*)malloc(MAT_SIZE);
+    P_ref  = (float*)malloc(MAT_SIZE);
+
+    // Fill the matricies with data
+    MAT_fill(M_host, 1);
+    MAT_fill(N_host, 2);
+    MAT_fill(P_host, 0);
+
+    // Allocate Device Side Memory
+    cudaMalloc(&M_dev, MAT_SIZE);
+    cudaMalloc(&N_dev, MAT_SIZE);
+    cudaMalloc(&P_dev, MAT_SIZE);
+
+    // Copy the data from the host to the device
+    cudaMemcpy(&M_dev, M_host, MAT_SIZE, cudaMemcpyHostToDevice);
+    cudaMemcpy(&N_dev, N_host, MAT_SIZE, cudaMemcpyHostToDevice);
+    
+    // Copy the result back to the host
+    cudaMemcpy(&P_host, P_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
+
+    // Compute the reference matrix
+    cpuMatMul(P_ref, N_host, M_host);
+    printf("Matrix CPU Multiplication Result:\n");
+    MAT_print(P_ref, MAT_N);
+
+    FREE(M_host);
+    FREE(N_host);
+    FREE(P_host);
 
     // cudaDeviceReset must be called before exiting in order for profiling and
     // tracing tools such as Nsight and Visual Profiler to show complete traces.

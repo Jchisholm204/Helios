@@ -81,7 +81,7 @@ void add(float *A, float *B, float *C, size_t n){
         C[i] = A[i] + B[i];
 }
 
-int main() {
+int main2() {
 
     cudaError_t cudaStatus;
     getDevProperties();
