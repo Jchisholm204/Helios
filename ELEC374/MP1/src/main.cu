@@ -39,18 +39,15 @@ void getDevProperties(void){
 }
 
 
-__global__ void __noinline__ add(float *A, float *B, float *C, size_t n){
-    int index = threadIdx.x;
-    int stride = blockDim.x;
+__global__ void __noinline__ cudaAddKernel(float *A, float *B, float *C, size_t n){
+    int index = blockIdx.x*blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
     for(int i = index; i < n; i+=stride)
         C[i] = A[i] + B[i];
 }
 
-int main() {
+void cudaAdd(void){
     int N = 1<<20;
-    cudaError_t cudaStatus;
-    // getDevProperties();
-
     float *A, *B, *C;
     cudaMallocManaged(&A, N*sizeof(float));
     cudaMallocManaged(&B, N*sizeof(float));
@@ -60,7 +57,14 @@ int main() {
         B[i] = 2.0f;
     }
 
-    add<<<1, 256>>>(A, B, C, N);
+    int blockSize = 256;
+    // Allocate one thread per add
+    int numBlocks = (N + blockSize - 1)/blockSize;
+    printf("Launching %d blocks each with %d threads\n", numBlocks, blockSize);
+    printf("%d threads total\n", numBlocks*blockSize);
+    printf("Each thread will add %0.1f elements\n", (float)N/((float)numBlocks*(float)blockSize));
+
+    cudaAddKernel<<<numBlocks, blockSize>>>(A, B, C, N);
     
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {
@@ -79,14 +83,21 @@ int main() {
     cudaFree(A);
     cudaFree(B);
     cudaFree(C);
+}
+
+int main() {
+    cudaError_t cudaStatus;
+    getDevProperties();
+
+    cudaAdd();
 
     // cudaDeviceReset must be called before exiting in order for profiling and
     // tracing tools such as Nsight and Visual Profiler to show complete traces.
-    // cudaStatus = cudaDeviceReset();
-    // if (cudaStatus != cudaSuccess) {
-    //     fprintf(stderr, "cudaDeviceReset failed!");
-    //     return 1;
-    // }
+    cudaStatus = cudaDeviceReset();
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaDeviceReset failed!");
+        return 1;
+    }
 
     return 0;
 }
