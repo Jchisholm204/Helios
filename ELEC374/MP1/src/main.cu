@@ -88,7 +88,7 @@ void cudaAdd(void){
 typedef float* mat_t;
 mat_t M_host, N_host, P_host, P_ref;
 mat_t M_dev, N_dev, P_dev;
-#define MAT_N (4)
+#define MAT_N (256)
 #define MAT_SIZE (sizeof(float)*MAT_N*MAT_N)
 #define MAT(row, col) (MAT_N*row + col)
 
@@ -148,9 +148,6 @@ void cpuMatMul(mat_t P, mat_t M, mat_t N){
 }
 
 __global__ void __noinline__ gpuMatMul(mat_t P, mat_t M, mat_t N){
-    int index = blockIdx.x*blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
-
     int row = blockIdx.y*blockDim.y + threadIdx.y;
     int col = blockIdx.x*blockDim.x + threadIdx.x;
 
@@ -197,8 +194,8 @@ int main() {
     cudaDeviceSynchronize();
 
     // Run the Multiplication Kernel
-    int n_threads = 1;
-    int n_blocks = 1;//MAT_N/n_threads;
+    int n_threads = 32;
+    int n_blocks = MAT_N/n_threads;
     dim3 dimGrid(n_blocks, n_blocks, 1);
     dim3 dimBlock(n_threads, n_threads, 1);
 
@@ -213,14 +210,14 @@ int main() {
 
     // Compute the reference matrix
     cpuMatMul(P_ref, M_host, N_host);
-    printf("Matrix M:\n");
-    MAT_print(M_host, MAT_N);
-    printf("Matrix N:\n");
-    MAT_print(N_host, MAT_N);
-    printf("Matrix CPU Multiplication Result:\n");
-    MAT_print(P_ref, MAT_N);
-    printf("Matrix GPU Multiplication Result:\n");
-    MAT_print(P_host, MAT_N);
+    // printf("Matrix M:\n");
+    // MAT_print(M_host, MAT_N);
+    // printf("Matrix N:\n");
+    // MAT_print(N_host, MAT_N);
+    // printf("Matrix CPU Multiplication Result:\n");
+    // MAT_print(P_ref, MAT_N);
+    // printf("Matrix GPU Multiplication Result:\n");
+    // MAT_print(P_host, MAT_N);
 
     printf("Detected %d Errors\n", MAT_compare(P_host, P_ref, 0.1));
 
