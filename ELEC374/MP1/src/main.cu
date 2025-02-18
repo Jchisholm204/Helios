@@ -42,10 +42,10 @@ void MAT_print(mat_t Mat, size_t n){
     }
 }
 
-void MAT_fillRand(mat_t Mat, int max_i, float div){
+void MAT_fillRand(mat_t Mat, size_t N, int max_i, float div){
     srand(time(NULL));
-    for(int i = 0; i < MAT_N; i++){
-        for(int j = 0; j < MAT_N; j++){
+    for(int i = 0; i < N; i++){
+        for(int j = 0; j < N; j++){
             Mat[MAT(i, j)] = (float)(rand() % max_i)/div;
         }
     }
@@ -98,30 +98,31 @@ __global__ void __noinline__ gpuMatMulX(mat_t P, mat_t M, mat_t N, size_t size){
     P[MAT(row, col)] = pVal;
 }
 
+#define TILE_WIDTH 8
 __global__ void __noinline__ gpuMatMulT(mat_t P, mat_t M, mat_t N, size_t Width){
-    float Mds[MAT_N][MAT_N]; // Shared memory for sub-matrix of M
-    float Nds[MAT_N][MAT_N]; // Shared memory for sub-matrix of N
+    __shared__ float Mds[TILE_WIDTH][TILE_WIDTH]; // Shared memory for sub-matrix of M
+    __shared__ float Nds[TILE_WIDTH][TILE_WIDTH]; // Shared memory for sub-matrix of N
 
     // Thread and block indices
     int bx = blockIdx.x, by = blockIdx.y;
     int tx = threadIdx.x, ty = threadIdx.y;
 
     // Identify the row and column of the P element
-    int Row = by * MAT_N + ty;
-    int Col = bx * MAT_N + tx;
+    int Row = by * TILE_WIDTH + ty;
+    int Col = bx * TILE_WIDTH + tx;
 
     float Pvalue = 0.0f;
 
     // Loop over tiles
-    for (int ph = 0; ph < Width / MAT_N; ++ph) {
+    for (int ph = 0; ph < Width / TILE_WIDTH; ++ph) {
         // Load tiles into shared memory
-        Mds[ty][tx] = M[Row * Width + ph * MAT_N + tx];
-        Nds[ty][tx] = N[(ph * MAT_N + ty) * Width + Col];
+        Mds[ty][tx] = M[Row * Width + ph * TILE_WIDTH + tx];
+        Nds[ty][tx] = N[(ph * TILE_WIDTH + ty) * Width + Col];
 
         __syncthreads(); // Ensure all threads load data before proceeding
 
         // Perform matrix multiplication for the tile
-        for (int k = 0; k < MAT_N; ++k) {
+        for (int k = 0; k < TILE_WIDTH; ++k) {
             Pvalue += Mds[ty][k] * Nds[k][tx];
         }
 
@@ -133,21 +134,16 @@ __global__ void __noinline__ gpuMatMulT(mat_t P, mat_t M, mat_t N, size_t Width)
 }
 
 
-int main() {
-    cudaError_t cudaStatus;
-    getDevProperties();
-
-    // cudaAdd();
-
+mat_t runtest(size_t size, int g_size, int b_size){
     // Allocate Host side memories
-    M_host = (mat_t)malloc(MAT_SIZE);
-    N_host = (mat_t)malloc(MAT_SIZE);
-    P_host = (mat_t)malloc(MAT_SIZE);
-    P_ref  = (mat_t)malloc(MAT_SIZE);
+    size_t mat_size = size*size*sizeof(float);
+    M_host = (mat_t)malloc(mat_size);
+    N_host = (mat_t)malloc(mat_size);
+    P_host = (mat_t)malloc(mat_size);
 
     // Fill the matricies with data
-    MAT_fillRand(M_host, 10, 1.4);
-    MAT_fillRand(N_host, 11, 1.8);
+    MAT_fillRand(M_host, size, 10, 1.4);
+    MAT_fillRand(N_host, size, 11, 1.8);
     MAT_fill(P_host, 0);
 
     cudaEvent_t start, stop;
@@ -157,28 +153,24 @@ int main() {
 
 
     // Allocate Device Side Memory
-    cudaMalloc(&M_dev, MAT_SIZE);
-    cudaMalloc(&N_dev, MAT_SIZE);
-    cudaMalloc(&P_dev, MAT_SIZE);
+    cudaMalloc(&M_dev, mat_size);
+    cudaMalloc(&N_dev, mat_size);
+    cudaMalloc(&P_dev, mat_size);
 
     cudaDeviceSynchronize();
 
     // Copy the data from the host to the device
-    cudaMemcpy(M_dev, M_host, MAT_SIZE, cudaMemcpyHostToDevice);
-    cudaMemcpy(N_dev, N_host, MAT_SIZE, cudaMemcpyHostToDevice);
-    cudaMemcpy(P_dev, P_host, MAT_SIZE, cudaMemcpyHostToDevice);
+    cudaMemcpy(M_dev, M_host, mat_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(N_dev, N_host, mat_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(P_dev, P_host, mat_size, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
 
     cudaEventRecord(start, 0);
     // Run the Multiplication Kernel
-    int n_threads = 32;
-    int n_blocks = MAT_N/n_threads;
-    dim3 dimGrid(n_blocks, n_blocks, 1);
-    dim3 dimBlock(n_threads, n_threads, 1);
+    dim3 dimGrid(g_size, g_size, 1);
+    dim3 dimBlock(b_size, b_size, 1);
 
-    gpuMatMulX<<<dimGrid, dimBlock>>>(P_dev, M_dev, N_dev, MAT_N);
-
-    // cudaDeviceSynchronize();
+    gpuMatMulX<<<dimGrid, dimBlock>>>(P_dev, M_dev, N_dev, size);
 
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
@@ -186,20 +178,42 @@ int main() {
     cudaEventElapsedTime(&memcpy_time, start, stop);
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
-    printf("GPU for %d took %0.2f ms\n", MAT_N, memcpy_time);
+    printf("GPU for %ld took %0.2f ms\n", size, memcpy_time);
 
     
     // Copy the result back to the host
-    cudaMemcpy(P_host, P_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
-    cudaMemcpy(M_host, M_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
-    cudaMemcpy(N_host, N_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
+    cudaMemcpy(P_host, P_dev, mat_size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(M_host, M_dev, mat_size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(N_host, N_dev, mat_size, cudaMemcpyDeviceToHost);
+
+
+    FREE(M_host);
+    FREE(N_host);
+    cudaFree(M_dev);
+    cudaFree(N_dev);
+    cudaFree(P_dev);
+    return P_host;
+}
+
+int main() {
+    cudaError_t cudaStatus;
+    getDevProperties();
+    int batch = 0;
+    for(int b = 2; b < 33; b=b<<1){
+        printf("Batch %d\n", b);
+        for (int i = 256; i < 4098; i = i << 1){
+            mat_t P = runtest(i, (i + 1) / b, b);
+            FREE(P);
+        }
+    }
 
     // Compute the reference matrix
     
-    double startT = (float)clock();
-    cpuMatMul(P_ref, M_host, N_host, MAT_N);
-    double endT = (float)clock();
-    printf("CPU for %d took %0.2f ms\n", MAT_N, endT-startT);
+    // double startT = (float)clock();
+    // cpuMatMul(P_ref, M_host, N_host, MAT_N);
+    // double endT = (float)clock();
+    // printf("CPU for %d took %0.2f ms\n", MAT_N, endT-startT);
+
     // Output Matrix (Debug)
     // printf("Matrix M:\n");
     // MAT_print(M_host, MAT_N);
@@ -210,15 +224,7 @@ int main() {
     // printf("Matrix GPU Multiplication Result:\n");
     // MAT_print(P_host, MAT_N);
 
-    printf("Detected %d Errors\n", MAT_compare(P_host, P_ref, 0.1));
-
-    FREE(M_host);
-    FREE(N_host);
-    FREE(P_host);
-    FREE(P_ref);
-    cudaFree(M_dev);
-    cudaFree(N_dev);
-    cudaFree(P_dev);
+    // printf("Detected %d Errors\n", MAT_compare(P_host, P_ref, 0.1));
 
     // cudaDeviceReset must be called before exiting in order for profiling and
     // tracing tools such as Nsight and Visual Profiler to show complete traces.
