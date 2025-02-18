@@ -3,6 +3,7 @@
 #include <device_launch_parameters.h>
 #include <stdio.h>
 #include <iostream>
+#include <time.h>
 
 #include "info.h"
 #include "kernel_add.h"
@@ -58,33 +59,79 @@ void MAT_fill(mat_t Mat, float val){
     }
 }
 
-void cpuMatMul(mat_t P, mat_t M, mat_t N){
-    for(int i = 0; i < MAT_N; i++){
-        for(int j = 0; j < MAT_N; j++){
+void cpuMatMul(mat_t P, mat_t M, mat_t N, size_t size){
+    for(int i = 0; i < size; i++){
+        for(int j = 0; j < size; j++){
             double sum = 0;
-            for(int k = 0; k < MAT_N; k++)
+            for(int k = 0; k < size; k++)
                 sum += M[MAT(i, k)]*N[MAT(k, j)];
             P[MAT(i, j)] = sum;
         }
     }
 }
 
-__global__ void __noinline__ gpuMatMul(mat_t P, mat_t M, mat_t N){
+__global__ void __noinline__ gpuMatMul(mat_t P, mat_t M, mat_t N, size_t size){
     int row = blockIdx.y*blockDim.y + threadIdx.y;
     int col = blockIdx.x*blockDim.x + threadIdx.x;
-
-    row = row ;
-    col = col ;
-    for(int i = row; i < MAT_N; i+=gridDim.x){
-        for(int j = col; j < MAT_N; j+=gridDim.y){
+    row = row % size;
+    col = col % size;
+    for(int i = row; i < size; i+=gridDim.x){
+        for(int j = col; j < size; j+=gridDim.y){
             float pVal = 0;
-            for(int k = 0; k < MAT_N; k++){
+            for(int k = 0; k < size; k++){
                 pVal += M[MAT(i, k)]*N[MAT(k, j)];
             }
             P[MAT(i, j)] = pVal;
         }
     }
 }
+
+__global__ void __noinline__ gpuMatMulX(mat_t P, mat_t M, mat_t N, size_t size){
+    int row = blockIdx.y*blockDim.y + threadIdx.y;
+    int col = blockIdx.x*blockDim.x + threadIdx.x;
+    row = row % size;
+    col = col % size;
+    float pVal = 0;
+    for (int k = 0; k < size; k++){
+        pVal += M[MAT(row, k)] * N[MAT(k, col)];
+    }
+    P[MAT(row, col)] = pVal;
+}
+
+__global__ void __noinline__ gpuMatMulT(mat_t P, mat_t M, mat_t N, size_t Width){
+    float Mds[MAT_N][MAT_N]; // Shared memory for sub-matrix of M
+    float Nds[MAT_N][MAT_N]; // Shared memory for sub-matrix of N
+
+    // Thread and block indices
+    int bx = blockIdx.x, by = blockIdx.y;
+    int tx = threadIdx.x, ty = threadIdx.y;
+
+    // Identify the row and column of the P element
+    int Row = by * MAT_N + ty;
+    int Col = bx * MAT_N + tx;
+
+    float Pvalue = 0.0f;
+
+    // Loop over tiles
+    for (int ph = 0; ph < Width / MAT_N; ++ph) {
+        // Load tiles into shared memory
+        Mds[ty][tx] = M[Row * Width + ph * MAT_N + tx];
+        Nds[ty][tx] = N[(ph * MAT_N + ty) * Width + Col];
+
+        __syncthreads(); // Ensure all threads load data before proceeding
+
+        // Perform matrix multiplication for the tile
+        for (int k = 0; k < MAT_N; ++k) {
+            Pvalue += Mds[ty][k] * Nds[k][tx];
+        }
+
+        __syncthreads(); // Synchronize before loading next tile
+    }
+
+    // Write result to global memory
+    P[Row * Width + Col] = Pvalue;
+}
+
 
 int main() {
     cudaError_t cudaStatus;
@@ -103,10 +150,17 @@ int main() {
     MAT_fillRand(N_host, 11, 1.8);
     MAT_fill(P_host, 0);
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaDeviceSynchronize();
+
+
     // Allocate Device Side Memory
     cudaMalloc(&M_dev, MAT_SIZE);
     cudaMalloc(&N_dev, MAT_SIZE);
     cudaMalloc(&P_dev, MAT_SIZE);
+
     cudaDeviceSynchronize();
 
     // Copy the data from the host to the device
@@ -115,15 +169,25 @@ int main() {
     cudaMemcpy(P_dev, P_host, MAT_SIZE, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
 
+    cudaEventRecord(start, 0);
     // Run the Multiplication Kernel
     int n_threads = 32;
     int n_blocks = MAT_N/n_threads;
     dim3 dimGrid(n_blocks, n_blocks, 1);
     dim3 dimBlock(n_threads, n_threads, 1);
 
-    gpuMatMul<<<dimGrid, dimBlock>>>(P_dev, M_dev, N_dev);
+    gpuMatMulX<<<dimGrid, dimBlock>>>(P_dev, M_dev, N_dev, MAT_N);
 
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    float memcpy_time = 0;
+    cudaEventElapsedTime(&memcpy_time, start, stop);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    printf("GPU for %d took %0.2f ms\n", MAT_N, memcpy_time);
+
     
     // Copy the result back to the host
     cudaMemcpy(P_host, P_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
@@ -131,7 +195,12 @@ int main() {
     cudaMemcpy(N_host, N_dev, MAT_SIZE, cudaMemcpyDeviceToHost);
 
     // Compute the reference matrix
-    cpuMatMul(P_ref, M_host, N_host);
+    
+    double startT = (float)clock();
+    cpuMatMul(P_ref, M_host, N_host, MAT_N);
+    double endT = (float)clock();
+    printf("CPU for %d took %0.2f ms\n", MAT_N, endT-startT);
+    // Output Matrix (Debug)
     // printf("Matrix M:\n");
     // MAT_print(M_host, MAT_N);
     // printf("Matrix N:\n");
