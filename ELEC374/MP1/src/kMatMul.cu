@@ -20,9 +20,9 @@ __global__ void __noinline__ kMatMul_ssm(mat_t P, mat_t M, mat_t N, size_t size)
         for(int j = col; j < size; j+=gridDim.y){
             float pVal = 0;
             for(int k = 0; k < size; k++){
-                pVal += M[MAT(i, k)]*N[MAT(k, j)];
+                pVal += M[MAT(size, i, k)]*N[MAT(size, k, j)];
             }
-            P[MAT(i, j)] = pVal;
+            P[MAT(size, i, j)] = pVal;
         }
     }
 }
@@ -34,9 +34,9 @@ __global__ void __noinline__ kMatMul_msm(mat_t P, mat_t M, mat_t N, size_t size)
     col = col % size;
     float pVal = 0;
     for (int k = 0; k < size; k++){
-        pVal += M[MAT(row, k)] * N[MAT(k, col)];
+        pVal += M[MAT(size, row, k)] * N[MAT(size, k, col)];
     }
-    P[MAT(row, col)] = pVal;
+    P[MAT(size, row, col)] = pVal;
 }
 
 #define TILE_WIDTH 32

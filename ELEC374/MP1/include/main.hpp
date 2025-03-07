@@ -13,7 +13,6 @@
 
 #include <stdio.h>
 #include <iostream>
-#include <unistd.h>
 #include <inttypes.h>
 
 typedef float* mat_t;
@@ -27,7 +26,7 @@ typedef float* mat_t;
 #define __global__
 #endif
 
-typedef __global__ void (*MatMul)(mat_t, mat_t, mat_t, size_t);
+typedef void (*MatMul)(mat_t, mat_t, mat_t, size_t);
 
 /**
  * @brief Lukes Main Code
