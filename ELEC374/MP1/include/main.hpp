@@ -11,6 +11,11 @@
 
 #pragma once
 
+#include <stdio.h>
+#include <iostream>
+#include <unistd.h>
+#include <inttypes.h>
+
 typedef float* mat_t;
 
 #define MAT_SIZE(n) (sizeof(float)*n*n)
@@ -18,14 +23,16 @@ typedef float* mat_t;
 
 #define FREE(p) if(!p){ free(p); p = NULL; }
 
-/**
- * @brief Get the Dev Properties object
- * MP1 - Part 1
- */
-extern void getDevProperties(void);
+#ifndef __global__
+#define __global__
+#endif
+
+typedef __global__ void (*MatMul)(mat_t, mat_t, mat_t, size_t);
 
 /**
  * @brief Lukes Main Code
  * 
  */
 extern void lukesCode(void);
+
+extern void run_test_single(MatMul kernel, size_t mat_n);

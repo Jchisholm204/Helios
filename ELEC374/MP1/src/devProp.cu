@@ -1,3 +1,14 @@
+/**
+ * @file devProp.cu
+ * @author Jacob Chisholm (https://Jchisholm204.github.io)
+ * @brief 
+ * @version 0.1
+ * @date 2025-03-07
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+#include "devProp.hpp"
 #include <stdio.h>
 
 static int getCudaCoresPerSM(int major, int minor) {

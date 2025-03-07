@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2025
  * 
  */
-#include "kernel_add.h"
+#include "kAdd.hpp"
 
 __global__ void __noinline__ cudaAddKernel(float *A, float *B, float *C, size_t n){
     int index = blockIdx.x*blockDim.x + threadIdx.x;
