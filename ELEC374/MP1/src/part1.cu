@@ -1,6 +1,3 @@
-#ifndef _INFO_H_
-#define _INFO_H_
-
 #include <stdio.h>
 
 static int getCudaCoresPerSM(int major, int minor) {
@@ -15,7 +12,7 @@ static int getCudaCoresPerSM(int major, int minor) {
     return 0; // Unknown
 }
 
-static void getDevProperties(void){
+void getDevProperties(void){
     int dc = 0;
     cudaGetDeviceCount(&dc);
     printf("There are %d CUDA Devices in this system\n", dc);
@@ -37,5 +34,3 @@ static void getDevProperties(void){
 
 }
 
-
-#endif

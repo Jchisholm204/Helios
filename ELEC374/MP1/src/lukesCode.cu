@@ -78,8 +78,7 @@ void printMatrix(float* M, int width) {
 }
  
  
-int main(int argc, char* argv[])
-{
+void lukesCode(void){
     // Gets information about devices connected
     int nd;
     cudaGetDeviceCount(&nd);
@@ -221,5 +220,4 @@ int main(int argc, char* argv[])
     cudaFree(d_P);
  
     cudaDeviceReset();
-    return 0;
 }
