@@ -28,7 +28,6 @@ void getDevProperties(void){
     cudaGetDeviceCount(&n_dev);
     printf("There are %d CUDA Devices in this system\n", n_dev);
     for (int i = 0; i < n_dev; i++){
-        // printf("================================================\n");
         cudaDeviceProp dp;
         cudaGetDeviceProperties(&dp, 0);
 

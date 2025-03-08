@@ -12,7 +12,8 @@
 
 #include "main.hpp"
 
-extern int MAT_compare(mat_t A, mat_t B, float rng);
+extern int MAT_compare(mat_t A, mat_t B, size_t size, float rng);
 extern void MAT_print(mat_t Mat, size_t n);
 extern void MAT_fillRand(mat_t Mat, size_t N, int max_i, float div);
 extern void MAT_fill(mat_t Mat, size_t N, float val);
+extern void cpuMatMul(mat_t P, mat_t M, mat_t N, size_t size);

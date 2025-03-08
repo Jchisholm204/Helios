@@ -15,6 +15,11 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
+enum eKernel {
+    eKernel_ssm,
+    eKernel_msm,
+    eKernel_tiled
+};
 
 /**
  * @brief Single Stream Matrix Multiplication

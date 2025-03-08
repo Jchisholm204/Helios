@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <inttypes.h>
+#include <vector>
 
 typedef float* mat_t;
 
@@ -26,7 +27,22 @@ typedef float* mat_t;
 #define __global__
 #endif
 
-typedef void (*MatMul)(mat_t, mat_t, mat_t, size_t);
+#ifndef eKernel
+enum eKernel;
+#endif
+
+typedef struct testParams {
+    enum eKernel kernel;
+    int dim_grid;
+    int dim_block;
+    size_t mat_n;
+    float t_mem_alloc;
+    float t_mem_host_to_device;
+    float t_mem_device_to_host;
+    float t_cpu_compute;
+    float t_gpu_compute;
+    bool test_success;
+} testParams_t;
 
 /**
  * @brief Lukes Main Code
@@ -34,4 +50,6 @@ typedef void (*MatMul)(mat_t, mat_t, mat_t, size_t);
  */
 extern void lukesCode(void);
 
-extern void run_test_single(MatMul kernel, size_t mat_n);
+extern void run_test_single(testParams_t &params);
+
+extern void print_test(testParams_t &result, int tn = -1);

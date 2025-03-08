@@ -14,8 +14,8 @@
 __global__ void __noinline__ kMatMul_ssm(mat_t P, mat_t M, mat_t N, size_t size){
     int row = blockIdx.y*blockDim.y + threadIdx.y;
     int col = blockIdx.x*blockDim.x + threadIdx.x;
-    row = row % size;
-    col = col % size;
+    row = row > size ? size : row;
+    col = col > size ? size : col;
     for(int i = row; i < size; i+=gridDim.x){
         for(int j = col; j < size; j+=gridDim.y){
             float pVal = 0;
