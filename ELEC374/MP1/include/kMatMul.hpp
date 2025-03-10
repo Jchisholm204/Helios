@@ -10,10 +10,28 @@
  */
 #pragma once
 
-#include "main.hpp"
+#include <stdio.h>
+#include <iostream>
+#include <inttypes.h>
+#include <vector>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+
+#ifndef mat_t
+typedef float* mat_t;
+#endif
+
+#ifndef MAT_SIZE
+#define MAT_SIZE(n) (sizeof(float)*n*n)
+#endif
+#ifndef MAT
+#define MAT(n, row, col) (n*row + col)
+#endif
+
+#ifndef FREE
+#define FREE(p) if(!p){ free(p); p = NULL; }
+#endif
 
 enum eKernel {
     eKernel_ssm,

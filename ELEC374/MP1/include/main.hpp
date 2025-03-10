@@ -16,6 +16,8 @@
 #include <inttypes.h>
 #include <vector>
 
+#include "kMatMul.hpp"
+
 typedef float* mat_t;
 
 #define MAT_SIZE(n) (sizeof(float)*n*n)
@@ -27,9 +29,6 @@ typedef float* mat_t;
 #define __global__
 #endif
 
-#ifndef eKernel
-enum eKernel;
-#endif
 
 typedef struct testParams {
     enum eKernel kernel;
