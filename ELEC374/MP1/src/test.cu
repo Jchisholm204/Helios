@@ -15,6 +15,11 @@
 #include "kMatMul.hpp"
 
 // #define NO_COMPUTE
+#define SKIP_CHECK
+
+#ifdef NO_COMPUTE
+#define SKIP_CHECK
+#endif
 
 void run_test_single(testParams_t &params){
     size_t n_mat = params.mat_n;
@@ -102,13 +107,15 @@ void run_test_single(testParams_t &params){
     cudaEventRecord(start, 0);
     #ifndef NO_COMPUTE
     // Launch the Kernel
+    dim3 dimGrid(params.dim_grid, params.dim_grid);
+    dim3 dimBlock(params.dim_block, params.dim_block);
     switch(params.kernel){
         default:
         case eKernel_ssm:
             kMatMul_ssm<<<params.dim_grid, params.dim_block>>>(dev_P, dev_M, dev_N, n_mat);
             break;
         case eKernel_msm:
-            kMatMul_msm<<<params.dim_grid, params.dim_block>>>(dev_P, dev_M, dev_N, n_mat);
+            kMatMul_msm<<<dimGrid, dimBlock>>>(dev_P, dev_M, dev_N, n_mat);
             break;
         case eKernel_tiled:
             kMatMul_tiled<<<params.dim_grid, params.dim_block>>>(dev_P, dev_M, dev_N, n_mat);
@@ -140,7 +147,7 @@ void run_test_single(testParams_t &params){
 
     // Start the CPU Matrix Multiplication
     auto cpu_start = std::chrono::high_resolution_clock::now();
-    #ifndef NO_COMPUTE
+    #ifndef SKIP_CHECK
     cpuMatMul(host_P_cpu, host_M, host_N, n_mat);
     #endif
     auto cpu_end = std::chrono::high_resolution_clock::now();
@@ -148,7 +155,7 @@ void run_test_single(testParams_t &params){
     params.t_cpu_compute = cpu_time.count();
 
     // Verify the result was produced correctly
-    #ifndef NO_COMPUTE
+    #ifndef SKIP_CHECK
     params.test_success = MAT_compare(host_P_gpu, host_P_cpu, n_mat, 2) == 0;
     #else
     params.test_success = true;

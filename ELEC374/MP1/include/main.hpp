@@ -49,11 +49,6 @@ typedef struct testParams {
     bool test_success;
 } testParams_t;
 
-/**
- * @brief Lukes Main Code
- * 
- */
-extern void lukesCode(void);
 
 extern void run_test_single(testParams_t &params);
 

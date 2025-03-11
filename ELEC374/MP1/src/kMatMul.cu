@@ -30,13 +30,15 @@ __global__ void __noinline__ kMatMul_ssm(mat_t P, mat_t M, mat_t N, size_t size)
 __global__ void __noinline__ kMatMul_msm(mat_t P, mat_t M, mat_t N, size_t size){
     int row = blockIdx.y*blockDim.y + threadIdx.y;
     int col = blockIdx.x*blockDim.x + threadIdx.x;
-    row = row % size;
-    col = col % size;
-    float pVal = 0;
-    for (int k = 0; k < size; k++){
-        pVal += M[MAT(size, row, k)] * N[MAT(size, k, col)];
+    // row = row > size ? size : row;
+    // col = col > size ? size : col;
+    if (row < size && col < size){
+        float pVal = 0;
+        for (int k = 0; k < size; k++){
+            pVal += M[MAT(size, row, k)] * N[MAT(size, k, col)];
+        }
+        P[MAT(size, row, col)] = pVal;
     }
-    P[MAT(size, row, col)] = pVal;
 }
 
 #define TILE_WIDTH 32
