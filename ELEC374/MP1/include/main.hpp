@@ -20,10 +20,16 @@
 
 typedef float* mat_t;
 
+#ifndef MAT_SIZE
 #define MAT_SIZE(n) (sizeof(float)*n*n)
+#endif
+#ifndef MAT
 #define MAT(n, row, col) (n*row + col)
+#endif
 
+#ifndef FREE
 #define FREE(p) if(!p){ free(p); p = NULL; }
+#endif
 
 #ifndef __global__
 #define __global__

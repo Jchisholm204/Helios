@@ -14,6 +14,8 @@
 #include "cpuMatMul.hpp"
 #include "kMatMul.hpp"
 
+// #define NO_COMPUTE
+
 void run_test_single(testParams_t &params){
     size_t n_mat = params.mat_n;
     // printf("Running test with matrix size:: %ld\n", n_mat);
@@ -98,6 +100,7 @@ void run_test_single(testParams_t &params){
 
     // Start Kernel Event
     cudaEventRecord(start, 0);
+    #ifndef NO_COMPUTE
     // Launch the Kernel
     switch(params.kernel){
         default:
@@ -111,6 +114,7 @@ void run_test_single(testParams_t &params){
             kMatMul_tiled<<<params.dim_grid, params.dim_block>>>(dev_P, dev_M, dev_N, n_mat);
             break;
     };
+    #endif
     // Benchmark the Memory
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
@@ -136,13 +140,19 @@ void run_test_single(testParams_t &params){
 
     // Start the CPU Matrix Multiplication
     auto cpu_start = std::chrono::high_resolution_clock::now();
+    #ifndef NO_COMPUTE
     cpuMatMul(host_P_cpu, host_M, host_N, n_mat);
+    #endif
     auto cpu_end = std::chrono::high_resolution_clock::now();
     auto cpu_time = std::chrono::duration_cast<std::chrono::milliseconds>(cpu_end - cpu_start);
     params.t_cpu_compute = cpu_time.count();
 
     // Verify the result was produced correctly
+    #ifndef NO_COMPUTE
     params.test_success = MAT_compare(host_P_gpu, host_P_cpu, n_mat, 2) == 0;
+    #else
+    params.test_success = true;
+    #endif
 
 
     // Optionally, debug print the results
