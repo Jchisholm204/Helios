@@ -82,7 +82,7 @@ target_compile_options(${EXECUTABLE} PRIVATE
     #$<$<CONFIG:Release>:-Os -g0>
 
     # Maximum Optimization
-     -O3
+     -O0
      #-O0
      -fopenmp
 )

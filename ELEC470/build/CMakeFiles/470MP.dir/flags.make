@@ -6,5 +6,5 @@ C_DEFINES =
 
 C_INCLUDES = -I/home/jacob/.local/include -I/usr/include/openmpi-x86_64 -I/home/jacob/Documents/Helios/ELEC470/include
 
-C_FLAGS =  -isystem  -g -std=gnu99 -g -O3 -fopenmp
+C_FLAGS =  -isystem  -g -std=gnu99 -g -O0 -fopenmp
 

@@ -16,11 +16,14 @@
 #include <pthread.h>
 #include <time.h>
 
-#define BENCH_INIT clock_t bench_start_time = clock()
-#define BENCH_START bench_start_time = clock()
-#define BENCH_END   (float)(1000.0*(clock()-bench_start_time)/CLOCKS_PER_SEC)
+#define BENCH_INIT double bench_start_time = omp_get_wtime()
+#define BENCH_START bench_start_time = omp_get_wtime()
+#define BENCH_END   (float)(1000.0*(omp_get_wtime()-bench_start_time))
 
-#define N_THREADS 1
+#define N_THREADS 8
+#define WORK_MAT (1<<12)
+#define WORK_VEC (1<<24)
+#define N_TRIALS 10
 
 struct thread_ini {
     float *A, *B;
@@ -40,15 +43,10 @@ float dot_product(float *A, float *B, size_t n){
 }
 
 float dot_product_omp(float *A, float *B, size_t n){
-    // NULL Check
     if(!A || !B) return 0.0;
-    // Compute Result
     float res = 0.0;
     omp_set_num_threads(N_THREADS);
-// #pragma omp parallel
-//     if(omp_get_thread_num() == 0)
-//         printf("OMP Threads = %d\n", omp_get_num_threads());
-#pragma omp parallel for reduction(+:res)
+    #pragma omp parallel for schedule(static, n / N_THREADS) reduction(+:res)
     for(size_t i = 0; i < n; i++){
         res += A[i] * B[i];
     }
@@ -125,61 +123,93 @@ void compare_vec(float *A, float *B, size_t n){
 
 int main(int argc, char **argv){
     BENCH_INIT;
-    size_t n = 16;
     // Allocate Vectors
-    float *A = malloc(n*sizeof(float));
-    float *B = malloc(n*sizeof(float));
+    float *A = malloc(WORK_VEC*sizeof(float));
+    float *B = malloc(WORK_VEC*sizeof(float));
     // Create matrix
-    float **M = malloc(n*sizeof(float*));
-    for(int i = 0; i < n; i++){
-        M[i] = malloc(n*sizeof(float));
-        for(int j = 0; j < n; j++){
+    float **M = malloc(WORK_MAT*sizeof(float*));
+    for(int i = 0; i < WORK_MAT; i++){
+        M[i] = malloc(WORK_MAT*sizeof(float));
+        for(int j = 0; j < WORK_MAT; j++){
             M[i][j] = 1;
         }
     }
 
     // Fill Vectors
-    for(size_t i = 0; i < n; i++){
+    for(size_t i = 0; i < WORK_VEC; i++){
         A[i] = 2;
-        B[i] = 1;
+        B[i] = 2;
     }
 
-    BENCH_START;
-    float omp = dot_product_omp(A, B, n);
-    printf("OMP Result = %0.2f\n", omp);
-    printf("OMP Time = %0.2f\n", BENCH_END);
-    BENCH_START;
-    float st = dot_product(A, B, n);
-    printf("ST  Result = %0.2f\n", st);
-    printf("ST  Time = %0.2f\n", BENCH_END);
-    BENCH_START;
-    float pth = dot_product_pthread(A, B, n);
-    printf("PTH Result = %0.2f\n", pth);
-    printf("PTH Time = %0.2f\n", BENCH_END);
-    BENCH_START;
-    float *Vref = mdot(M, A, n);
-    printf("MDOT Result:\n");
-    printf("MDOT Time = %0.2f\n", BENCH_END);
+
+    printf("N Threads = %d\n", N_THREADS);
+    printf("N Trials = %d\n", N_TRIALS);
+    printf("Work Mat = %d\n", WORK_MAT);
+    printf("Work Vec = %d\n", WORK_VEC);
+    printf("Starting Tests\n");
+
+    float time = 0;
+    for(int i = 0; i < N_TRIALS; i++){
+        BENCH_START;
+        float st = dot_product(A, B, WORK_VEC);
+        time += BENCH_END;
+    }
+    // printf("ST  Result = %0.2f\n", dot_product(A, B, WORK_VEC));
+    printf("ST  Time = %0.4f\n", time/N_TRIALS);
+    time = 0;
+    for(int i = 0; i < N_TRIALS; i++){
+        BENCH_START;
+        float omp = dot_product_omp(A, B, WORK_VEC);
+        time += BENCH_END;
+    }
+    // printf("OMP Result = %0.2f\n", dot_product_omp(A, B, n));
+    printf("OMP Time = %0.4f\n", time/N_TRIALS);
+    time = 0;
+    for(int i = 0; i < N_TRIALS; i++){
+        BENCH_START;
+        float pth = dot_product_pthread(A, B, WORK_VEC);
+        time += BENCH_END;
+    }
+    // printf("PTH Result = %0.2f\n", dot_product_pthread(A, B, n));
+    printf("PTH Time = %0.4f\n", time/N_TRIALS);
+
+
+    time = 0;
+    for(int i = 0; i < N_TRIALS; i++){
+        BENCH_START;
+        float *Vref = mdot(M, A, WORK_MAT);
+        time += BENCH_END;
+        free(Vref);
+    }
+    // printf("MDOT Result:\n");
+    printf("MDOT Time = %0.2f\n", time/N_TRIALS);
     // print_vec(V, n);
-    BENCH_START;
-    float *V = mdot_pll(M, A, n);
-    printf("PLL Result:\n");
-    printf("PLL Time = %0.2f\n", BENCH_END);
+    time = 0;
+    for(int i = 0; i < N_TRIALS; i++){
+        BENCH_START;
+        float *V = mdot_pll(M, A, WORK_MAT);
+        time += BENCH_END;
+        free(V);
+    }
+    // printf("PLL Result:\n");
+    printf("PLL Time = %0.2f\n", time/N_TRIALS);
     // print_vec(V, n);
-    compare_vec(V, Vref, n);
-    free(V);
-    BENCH_START;
-    V = mdot_epc(M, A, n);
-    printf("EPC Result:\n");
-    printf("EPC Time = %0.2f\n", BENCH_END);
+    // compare_vec(V, Vref, WORK_MAT);
+    time = 0;
+    for(int i = 0; i < N_TRIALS; i++){
+        BENCH_START;
+        float *V = mdot_epc(M, A, WORK_MAT);
+        time += BENCH_END;
+        free(V);
+    }
+    // printf("EPC Result:\n");
+    printf("EPC Time = %0.2f\n", time/N_TRIALS);
     // print_vec(V, n);
-    compare_vec(V, Vref, n);
-    free(V);
+    // compare_vec(V, Vref, WORK_MAT);
 
     // Free Memory
-    for(int i = 0; i < n; i++)
+    for(int i = 0; i < WORK_MAT; i++)
         free(M[i]);
-    free(Vref);
     free(M);
     free(A);
     free(B);
