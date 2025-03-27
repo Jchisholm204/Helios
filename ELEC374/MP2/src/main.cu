@@ -21,14 +21,14 @@
 #include "kMatMul.hpp"
 #include "cpuMatMul.hpp"
 
-#define N_TESTS 10
-#define N_MAT 128
+#define N_TESTS 1
+#define N_MAT 4096
 #define N_MAT_MIN 256
 // #define N_MAT_MAX 1024
 #define N_MAT_MAX 4097
 // #define N_MAT_MIN 8
 // #define N_MAT_MAX 64
-#define BLOCK_WIDTH 2
+#define BLOCK_WIDTH 32
  
 int calc_test(testParams_t *tests, int n_tests, int ident){
     testParams_t average, variation;
@@ -159,8 +159,8 @@ void run_test(void){
  
 int main(int argc, char** argv) {
     getDevProperties();
-    // run_test();
-    // return 0;
+    run_test();
+    return 0;
     // for(int i = 256; i < 1025; i = i*2){
     for(int i = N_MAT_MIN; i < (N_MAT_MAX+1); i = i*2){
         run_tests_mt(i, N_TESTS, BLOCK_WIDTH);

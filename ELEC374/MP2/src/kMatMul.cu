@@ -42,7 +42,7 @@ __global__ void __noinline__ kMatMul_msm(mat_t P, mat_t M, mat_t N, size_t size)
 }
 
 
-#define TILE_WIDTH 2
+#define TILE_WIDTH 32
 
 __global__ void kMatMul_tiled(mat_t P, mat_t M, mat_t N, size_t Width) {
     __shared__ float s_M[TILE_WIDTH][TILE_WIDTH + 1];
