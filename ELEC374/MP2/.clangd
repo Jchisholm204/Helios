@@ -1,0 +1,10 @@
+CompileFlags:
+  Add:
+    # - -std=c++11
+    # - --cuda-path=/usr/local/cuda-12.8
+    - -L/usr/local/cuda-12.8/lib64
+    - -I/usr/local/cuda-12.8/include
+    - -I/home/jacob/Documents/Helios/ELEC374/MP2/include
+    # - --cuda-gpu-arch=sm_86
+    # - -fcuda-rdc
+    # - --cuda-host-only  # Skip device compilation in clangd

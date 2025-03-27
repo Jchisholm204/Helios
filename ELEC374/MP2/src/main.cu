@@ -21,14 +21,14 @@
 #include "kMatMul.hpp"
 #include "cpuMatMul.hpp"
 
-#define N_TESTS 2
-#define N_MAT 512
+#define N_TESTS 10
+#define N_MAT 128
 #define N_MAT_MIN 256
 // #define N_MAT_MAX 1024
-#define N_MAT_MAX 4096
+#define N_MAT_MAX 4097
 // #define N_MAT_MIN 8
 // #define N_MAT_MAX 64
-#define BLOCK_WIDTH 32
+#define BLOCK_WIDTH 2
  
 int calc_test(testParams_t *tests, int n_tests, int ident){
     testParams_t average, variation;
@@ -39,7 +39,7 @@ int calc_test(testParams_t *tests, int n_tests, int ident){
     average.t_cpu_compute = 0;
     average.t_gpu_compute = 0;
     average.test_success = 1;
-    for(int i = 0; i < n_tests; i++){
+    for(int i = 1; i < n_tests; i++){
         average.t_mem_alloc += tests[i].t_mem_alloc;
         average.t_mem_host_to_device += tests[i].t_mem_host_to_device;
         average.t_mem_device_to_host += tests[i].t_mem_device_to_host;
@@ -82,6 +82,7 @@ int calc_test(testParams_t *tests, int n_tests, int ident){
     variation.t_mem_device_to_host = sqrt(variation.t_mem_device_to_host);
     variation.t_cpu_compute = sqrt(variation.t_cpu_compute);
     variation.t_gpu_compute = sqrt(variation.t_gpu_compute);
+    variation.test_success = average.test_success;
     printf("Variance:\n");
     print_test(variation, ident);
     return 0;
@@ -107,9 +108,9 @@ int run_tests_mt(size_t n_mat, size_t n_tests, int block_width){
     printf("Running %d tests with matrix dim %d block width: %d\n", n_tests, n_mat, block_width);
     testParams_t *tests = (testParams_t*)malloc(sizeof(testParams_t)*n_tests);
     for(int i = 0; i < n_tests; i++){
-        tests[i].kernel = eKernel_msm;
+        tests[i].kernel = eKernel_tiled;
         tests[i].dim_block = block_width;
-        tests[i].dim_grid = n_mat/block_width;
+        tests[i].dim_grid = (n_mat)/block_width;
         tests[i].mat_n = n_mat;
         run_test_single(tests[i]);
         // print_test(tests[i], i);
@@ -124,9 +125,9 @@ void run_test(void){
     testParams_t tests[N_TESTS];
     printf("Running %d tests with matrix dim %d\n", N_TESTS, N_MAT);
     for(int i = 0; i < N_TESTS; i++){
-        tests[i].kernel = eKernel_msm;
-        tests[i].dim_block = 32;
-        tests[i].dim_grid = (N_MAT+31)/32;
+        tests[i].kernel = eKernel_tiled;
+        tests[i].dim_block = BLOCK_WIDTH;
+        tests[i].dim_grid = (N_MAT+BLOCK_WIDTH-1)/BLOCK_WIDTH;
         tests[i].mat_n = N_MAT;
         run_test_single(tests[i]);
         print_test(tests[i], i);

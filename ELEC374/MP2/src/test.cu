@@ -118,7 +118,7 @@ void run_test_single(testParams_t &params){
             kMatMul_msm<<<dimGrid, dimBlock>>>(dev_P, dev_M, dev_N, n_mat);
             break;
         case eKernel_tiled:
-            kMatMul_tiled<<<params.dim_grid, params.dim_block>>>(dev_P, dev_M, dev_N, n_mat);
+            kMatMul_tiled<<<dimGrid, dimBlock>>>(dev_P, dev_M, dev_N, n_mat);
             break;
     };
     #endif
@@ -163,7 +163,9 @@ void run_test_single(testParams_t &params){
 
 
     // Optionally, debug print the results
+    // printf("Host:\n");
     // MAT_print(host_P_cpu, n_mat);
+    // printf("Device:\n");
     // MAT_print(host_P_gpu, n_mat);
 
     // Free Memory

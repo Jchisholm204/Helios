@@ -1,0 +1,115 @@
+There are 1 CUDA Devices in this system
+=======        NVIDIA GeForce RTX 3080         =======
+Core Clock: 1845.0 MHz
+Stream Processors: 68
+Cores: 8704
+Warp Size: 32
+Global Memory: 10.36 GB
+Constant Memory: 65.54 KB
+Shared Memory per Block: 49.15 KB
+Registers per Block: 65536
+Threads per Block: 1024
+Maximum Block Dimensions: 1024 x 1024 x 64
+Maximum Grid Size: 2147483647 x 65535 x 65535
+=======================================================
+Running 10 tests with matrix dim 256 block width: 16
+Average:
+======= Results for Test 256 =======
+Time to Allocate Device Memory = 0.07
+Host to Device Transfer Time = 0.04
+GPU Compute Time = 0.36
+CPU Compute Time = 0.00
+Device To Host Transfer Time = 0.03
+TEST PASSED
+=====================================
+Variance:
+======= Results for Test 256 =======
+Time to Allocate Device Memory = 0.02
+Host to Device Transfer Time = 0.01
+GPU Compute Time = 7.46
+CPU Compute Time = 0.00
+Device To Host Transfer Time = 0.01
+TEST PASSED
+=====================================
+============= TEST 256 COMPLETED =============
+Running 10 tests with matrix dim 512 block width: 16
+Average:
+======= Results for Test 512 =======
+Time to Allocate Device Memory = 0.17
+Host to Device Transfer Time = 0.16
+GPU Compute Time = 2.80
+CPU Compute Time = 0.00
+Device To Host Transfer Time = 0.10
+TEST PASSED
+=====================================
+Variance:
+======= Results for Test 512 =======
+Time to Allocate Device Memory = 0.04
+Host to Device Transfer Time = 0.05
+GPU Compute Time = 0.36
+CPU Compute Time = 0.00
+Device To Host Transfer Time = 0.01
+TEST PASSED
+=====================================
+============= TEST 512 COMPLETED =============
+Running 10 tests with matrix dim 1024 block width: 16
+Average:
+======= Results for Test 1024 =======
+Time to Allocate Device Memory = 0.26
+Host to Device Transfer Time = 0.74
+GPU Compute Time = 21.27
+CPU Compute Time = 0.00
+Device To Host Transfer Time = 0.38
+TEST PASSED
+=====================================
+Variance:
+======= Results for Test 1024 =======
+Time to Allocate Device Memory = 0.03
+Host to Device Transfer Time = 0.09
+GPU Compute Time = 2.59
+CPU Compute Time = 0.00
+Device To Host Transfer Time = 0.05
+TEST PASSED
+=====================================
+============= TEST 1024 COMPLETED =============
+Running 10 tests with matrix dim 2048 block width: 16
+Average:
+======= Results for Test 2048 =======
+Time to Allocate Device Memory = 0.28
+Host to Device Transfer Time = 2.48
+GPU Compute Time = 164.86
+CPU Compute Time = 0.00
+Device To Host Transfer Time = 1.37
+TEST PASSED
+=====================================
+Variance:
+======= Results for Test 2048 =======
+Time to Allocate Device Memory = 0.03
+Host to Device Transfer Time = 0.34
+GPU Compute Time = 18.66
+CPU Compute Time = 0.00
+Device To Host Transfer Time = 0.16
+TEST PASSED
+=====================================
+============= TEST 2048 COMPLETED =============
+Running 10 tests with matrix dim 4096 block width: 16
+Average:
+======= Results for Test 4096 =======
+Time to Allocate Device Memory = 0.34
+Host to Device Transfer Time = 9.35
+GPU Compute Time = 1304.40
+CPU Compute Time = 0.00
+Device To Host Transfer Time = 5.32
+TEST PASSED
+=====================================
+Variance:
+======= Results for Test 4096 =======
+Time to Allocate Device Memory = 0.06
+Host to Device Transfer Time = 1.07
+GPU Compute Time = 145.22
+CPU Compute Time = 0.00
+Device To Host Transfer Time = 0.61
+TEST PASSED
+=====================================
+============= TEST 4096 COMPLETED =============
+All Tests Complete

@@ -41,10 +41,12 @@ __global__ void __noinline__ kMatMul_msm(mat_t P, mat_t M, mat_t N, size_t size)
     }
 }
 
-#define TILE_WIDTH 32
+
+#define TILE_WIDTH 2
+
 __global__ void kMatMul_tiled(mat_t P, mat_t M, mat_t N, size_t Width) {
-    __shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
-    __shared__ float Nds[TILE_WIDTH][TILE_WIDTH + 1]; // Avoid bank conflicts
+    __shared__ float s_M[TILE_WIDTH][TILE_WIDTH + 1];
+    __shared__ float s_N[TILE_WIDTH][TILE_WIDTH + 1];
 
     int bx = blockIdx.x, by = blockIdx.y;
     int tx = threadIdx.x, ty = threadIdx.y;
@@ -52,28 +54,26 @@ __global__ void kMatMul_tiled(mat_t P, mat_t M, mat_t N, size_t Width) {
     int Row = by * TILE_WIDTH + ty;
     int Col = bx * TILE_WIDTH + tx;
 
-    float Pvalue = 0.0f;
-
-    for (int ph = 0; ph < (Width + TILE_WIDTH - 1) / TILE_WIDTH; ++ph) {
-        if (Row < Width && (ph * TILE_WIDTH + tx) < Width)
-            Mds[ty][tx] = M[Row * Width + ph * TILE_WIDTH + tx];
-        else
-            Mds[ty][tx] = 0.0f; // Avoid out-of-bounds memory access
-
-        if (Col < Width && (ph * TILE_WIDTH + ty) < Width)
-            Nds[ty][tx] = N[(ph * TILE_WIDTH + ty) * Width + Col];
-        else
-            Nds[ty][tx] = 0.0f;
+    float temp = 0.0f;
+    for(int i = 0; i < (Width + TILE_WIDTH-1)/TILE_WIDTH; i++){
+        int t_x = i*TILE_WIDTH + tx;
+        int t_y = i*TILE_WIDTH + ty;
+        // if(t_y + Col < Width)
+            s_M[ty][tx] = M[MAT(Width, Row, t_x)];
+        // if(t_x + Row < Width)
+            s_N[ty][tx] = N[MAT(Width, t_y, Col)];
 
         __syncthreads();
 
         for (int k = 0; k < TILE_WIDTH; ++k) {
-            Pvalue += Mds[ty][k] * Nds[k][tx];
+            temp += s_M[ty][k] * s_N[k][tx];
         }
 
         __syncthreads();
     }
 
-    if (Row < Width && Col < Width)
-        P[Row * Width + Col] = Pvalue;
+        P[MAT(Width, Row, Col)] = temp;
 }
+
+
+

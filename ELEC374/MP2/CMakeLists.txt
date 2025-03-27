@@ -8,9 +8,9 @@ find_package(CUDA QUIET REQUIRED)
 
 set(EXECUTABLE ${CMAKE_PROJECT_NAME})
 enable_language(CUDA)
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS ON)
+# set(CMAKE_C_STANDARD 99)
+# set(CMAKE_C_STANDARD_REQUIRED ON)
+# set(CMAKE_C_EXTENSIONS ON)
 
 # Add additional include directories for standard libraries
 include_directories(SYSTEM ${CMAKE_C_COMPILER_INCLUDE_DIRS} kernels utility)
