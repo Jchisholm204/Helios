@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/jacob/Documents/Helios/ELEC470
+CMAKE_SOURCE_DIR = /home/jacob/Documents/github/Helios/ELEC470
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/jacob/Documents/Helios/ELEC470/build
+CMAKE_BINARY_DIR = /home/jacob/Documents/github/Helios/ELEC470/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/470MP.dir/depend.make
@@ -70,32 +70,32 @@ include CMakeFiles/470MP.dir/progress.make
 include CMakeFiles/470MP.dir/flags.make
 
 CMakeFiles/470MP.dir/src/main.c.o: CMakeFiles/470MP.dir/flags.make
-CMakeFiles/470MP.dir/src/main.c.o: /home/jacob/Documents/Helios/ELEC470/src/main.c
+CMakeFiles/470MP.dir/src/main.c.o: /home/jacob/Documents/github/Helios/ELEC470/src/main.c
 CMakeFiles/470MP.dir/src/main.c.o: CMakeFiles/470MP.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jacob/Documents/Helios/ELEC470/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/470MP.dir/src/main.c.o"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/470MP.dir/src/main.c.o -MF CMakeFiles/470MP.dir/src/main.c.o.d -o CMakeFiles/470MP.dir/src/main.c.o -c /home/jacob/Documents/Helios/ELEC470/src/main.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jacob/Documents/github/Helios/ELEC470/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/470MP.dir/src/main.c.o"
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/470MP.dir/src/main.c.o -MF CMakeFiles/470MP.dir/src/main.c.o.d -o CMakeFiles/470MP.dir/src/main.c.o -c /home/jacob/Documents/github/Helios/ELEC470/src/main.c
 
 CMakeFiles/470MP.dir/src/main.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/470MP.dir/src/main.c.i"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jacob/Documents/Helios/ELEC470/src/main.c > CMakeFiles/470MP.dir/src/main.c.i
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jacob/Documents/github/Helios/ELEC470/src/main.c > CMakeFiles/470MP.dir/src/main.c.i
 
 CMakeFiles/470MP.dir/src/main.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/470MP.dir/src/main.c.s"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jacob/Documents/Helios/ELEC470/src/main.c -o CMakeFiles/470MP.dir/src/main.c.s
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jacob/Documents/github/Helios/ELEC470/src/main.c -o CMakeFiles/470MP.dir/src/main.c.s
 
 CMakeFiles/470MP.dir/src/mpi.c.o: CMakeFiles/470MP.dir/flags.make
-CMakeFiles/470MP.dir/src/mpi.c.o: /home/jacob/Documents/Helios/ELEC470/src/mpi.c
+CMakeFiles/470MP.dir/src/mpi.c.o: /home/jacob/Documents/github/Helios/ELEC470/src/mpi.c
 CMakeFiles/470MP.dir/src/mpi.c.o: CMakeFiles/470MP.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jacob/Documents/Helios/ELEC470/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/470MP.dir/src/mpi.c.o"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/470MP.dir/src/mpi.c.o -MF CMakeFiles/470MP.dir/src/mpi.c.o.d -o CMakeFiles/470MP.dir/src/mpi.c.o -c /home/jacob/Documents/Helios/ELEC470/src/mpi.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/jacob/Documents/github/Helios/ELEC470/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/470MP.dir/src/mpi.c.o"
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/470MP.dir/src/mpi.c.o -MF CMakeFiles/470MP.dir/src/mpi.c.o.d -o CMakeFiles/470MP.dir/src/mpi.c.o -c /home/jacob/Documents/github/Helios/ELEC470/src/mpi.c
 
 CMakeFiles/470MP.dir/src/mpi.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/470MP.dir/src/mpi.c.i"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jacob/Documents/Helios/ELEC470/src/mpi.c > CMakeFiles/470MP.dir/src/mpi.c.i
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/jacob/Documents/github/Helios/ELEC470/src/mpi.c > CMakeFiles/470MP.dir/src/mpi.c.i
 
 CMakeFiles/470MP.dir/src/mpi.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/470MP.dir/src/mpi.c.s"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jacob/Documents/Helios/ELEC470/src/mpi.c -o CMakeFiles/470MP.dir/src/mpi.c.s
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/jacob/Documents/github/Helios/ELEC470/src/mpi.c -o CMakeFiles/470MP.dir/src/mpi.c.s
 
 # Object files for target 470MP
 470MP_OBJECTS = \
@@ -111,7 +111,7 @@ CMakeFiles/470MP.dir/src/mpi.c.s: cmake_force
 470MP: /usr/lib/gcc/x86_64-redhat-linux/14/libgomp.so
 470MP: /usr/lib64/libpthread.a
 470MP: CMakeFiles/470MP.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/jacob/Documents/Helios/ELEC470/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking C executable 470MP"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/jacob/Documents/github/Helios/ELEC470/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking C executable 470MP"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/470MP.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -123,6 +123,6 @@ CMakeFiles/470MP.dir/clean:
 .PHONY : CMakeFiles/470MP.dir/clean
 
 CMakeFiles/470MP.dir/depend:
-	cd /home/jacob/Documents/Helios/ELEC470/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/jacob/Documents/Helios/ELEC470 /home/jacob/Documents/Helios/ELEC470 /home/jacob/Documents/Helios/ELEC470/build /home/jacob/Documents/Helios/ELEC470/build /home/jacob/Documents/Helios/ELEC470/build/CMakeFiles/470MP.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/jacob/Documents/github/Helios/ELEC470/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/jacob/Documents/github/Helios/ELEC470 /home/jacob/Documents/github/Helios/ELEC470 /home/jacob/Documents/github/Helios/ELEC470/build /home/jacob/Documents/github/Helios/ELEC470/build /home/jacob/Documents/github/Helios/ELEC470/build/CMakeFiles/470MP.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/470MP.dir/depend
 
