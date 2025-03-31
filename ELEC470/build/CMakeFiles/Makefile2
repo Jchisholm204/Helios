@@ -81,12 +81,12 @@ clean: CMakeFiles/470MP.dir/clean
 CMakeFiles/470MP.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/470MP.dir/build.make CMakeFiles/470MP.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/470MP.dir/build.make CMakeFiles/470MP.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jacob/Documents/Helios/ELEC470/build/CMakeFiles --progress-num=1,2 "Built target 470MP"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/jacob/Documents/Helios/ELEC470/build/CMakeFiles --progress-num=1,2,3 "Built target 470MP"
 .PHONY : CMakeFiles/470MP.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/470MP.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jacob/Documents/Helios/ELEC470/build/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jacob/Documents/Helios/ELEC470/build/CMakeFiles 3
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/470MP.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/jacob/Documents/Helios/ELEC470/build/CMakeFiles 0
 .PHONY : CMakeFiles/470MP.dir/rule

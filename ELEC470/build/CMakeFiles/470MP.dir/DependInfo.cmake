@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/jacob/Documents/Helios/ELEC470/src/main.c" "CMakeFiles/470MP.dir/src/main.c.o" "gcc" "CMakeFiles/470MP.dir/src/main.c.o.d"
+  "/home/jacob/Documents/Helios/ELEC470/src/mpi.c" "CMakeFiles/470MP.dir/src/mpi.c.o" "gcc" "CMakeFiles/470MP.dir/src/mpi.c.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

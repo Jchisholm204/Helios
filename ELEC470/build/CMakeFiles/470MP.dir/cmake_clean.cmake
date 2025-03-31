@@ -3,6 +3,8 @@ file(REMOVE_RECURSE
   "470MP.pdb"
   "CMakeFiles/470MP.dir/src/main.c.o"
   "CMakeFiles/470MP.dir/src/main.c.o.d"
+  "CMakeFiles/470MP.dir/src/mpi.c.o"
+  "CMakeFiles/470MP.dir/src/mpi.c.o.d"
 )
 
 # Per-language clean rules from dependency scanning.

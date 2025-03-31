@@ -153,6 +153,30 @@ src/main.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/470MP.dir/build.make CMakeFiles/470MP.dir/src/main.c.s
 .PHONY : src/main.c.s
 
+src/mpi.o: src/mpi.c.o
+.PHONY : src/mpi.o
+
+# target to build an object file
+src/mpi.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/470MP.dir/build.make CMakeFiles/470MP.dir/src/mpi.c.o
+.PHONY : src/mpi.c.o
+
+src/mpi.i: src/mpi.c.i
+.PHONY : src/mpi.i
+
+# target to preprocess a source file
+src/mpi.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/470MP.dir/build.make CMakeFiles/470MP.dir/src/mpi.c.i
+.PHONY : src/mpi.c.i
+
+src/mpi.s: src/mpi.c.s
+.PHONY : src/mpi.s
+
+# target to generate assembly for a file
+src/mpi.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/470MP.dir/build.make CMakeFiles/470MP.dir/src/mpi.c.s
+.PHONY : src/mpi.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -165,6 +189,9 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/mpi.o"
+	@echo "... src/mpi.i"
+	@echo "... src/mpi.s"
 .PHONY : help
 
 

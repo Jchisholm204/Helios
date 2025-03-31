@@ -121,7 +121,9 @@ void compare_vec(float *A, float *B, size_t n){
     printf("PASS\n");
 }
 
+extern int mpi_main(int argc, char** argv);
 int main(int argc, char **argv){
+    return mpi_main(argc, argv);
     BENCH_INIT;
     // Allocate Vectors
     float *A = malloc(WORK_VEC*sizeof(float));
