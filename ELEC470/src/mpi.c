@@ -1,12 +1,17 @@
 /**
  * @file main.c
  * @author Jacob Chisholm (https://Jchisholm204.github.io)
- * @brief 
+ * @brief MPI Vector/Matrix Dot Product Code
  * @version 2.1
- * @date 2024-05-22
+ * @date 2024-05-30
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
+ * When I wrote this I had a singular thought... How creative can I make this code?
+ * As a result, I wrote this code as though MPI uses zero copy transfers and assumed
+ *  that network delay is an imaginary concept. 
+ *      Please ignore my error log, 
+ *      - Jacob Chisholm
  * 
  */
 
@@ -15,14 +20,11 @@
 #include <time.h>
 #include <mpi.h>
 
-#define BENCH_INIT double bench_start_time = omp_get_wtime()
-#define BENCH_START bench_start_time = omp_get_wtime()
-#define BENCH_END   (float)(1000.0*(omp_get_wtime()-bench_start_time))
 
-// #define WORK_MAT (1<<12)
-// #define WORK_VEC (1<<24)
-#define WORK_MAT (8)
-#define WORK_VEC (8)
+#define WORK_MAT ((1ULL<<15))
+#define WORK_VEC ((1ULL<<15))
+// #define WORK_MAT (16)
+// #define WORK_VEC (16)
 #define N_TRIALS 1
 
 int procid, nprocs;
@@ -45,23 +47,26 @@ float dot_product_mpi(float *A, float *B, size_t n){
 }
 
 float * mdot_mpi(float *M, float *V, size_t n){
+    // I'm going to need this right?
     float *T = malloc(n*sizeof(float));
+    // Result Matrix, allocate to procs, return to all procs 
     float *R = malloc(n*sizeof(float));
     for(int i =0; i < n; i++)
         R[i] = 0;
+    // Broadcast V to all arrays
     MPI_Bcast(V, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    // Block iterate over the array
     for(int i = 0; i < n; i+=nprocs){
         MPI_Scatter(&M[i*n], n, MPI_FLOAT, T, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
         for(int j = 0; j < n; j++)
             R[i+procid] += T[j]*V[j];
-        // printf("proc %d res = %0.2f\n", procid, R[i+procid]);
-        MPI_Gather(&R[i+procid], 1, MPI_FLOAT, &R[i], 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
+        for(int p = 0; p < nprocs; p++)
+            MPI_Bcast(&R[i+p], 1, MPI_FLOAT, p, MPI_COMM_WORLD);
     }
     free(T);
     MPI_Barrier(MPI_COMM_WORLD);
-    // MPI_Reduce(R, R, n, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
-    if(procid == 0)
-        print_vec(R, n);
+    // if(procid == 0)
+    //     print_vec(R, n);
     return R;
 }
 
@@ -88,8 +93,8 @@ int mpi_main(int argc, char** argv){
 
         printf("N Threads = %d\n", nprocs);
         printf("N Trials = %d\n", N_TRIALS);
-        printf("Work Mat = %d\n", WORK_MAT);
-        printf("Work Vec = %d\n", WORK_VEC);
+        printf("Work Mat = %lld\n", WORK_MAT);
+        printf("Work Vec = %lld\n", WORK_VEC);
         printf("Starting Tests\n");
     }
 
