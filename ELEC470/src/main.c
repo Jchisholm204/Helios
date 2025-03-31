@@ -123,20 +123,11 @@ void compare_vec(float *A, float *B, size_t n){
 
 extern int mpi_main(int argc, char** argv);
 
-int run_test(size_t WORK_VEC, size_t WORK_MAT){
+int run_test_vec(size_t WORK_VEC){
     BENCH_INIT;
     // Allocate Vectors
     float *A = malloc(WORK_VEC*sizeof(float));
     float *B = malloc(WORK_VEC*sizeof(float));
-    // Create matrix
-    // float **M = malloc(WORK_MAT*sizeof(float*));
-    // for(int i = 0; i < WORK_MAT; i++){
-    //     M[i] = malloc(WORK_MAT*sizeof(float));
-    //     for(int j = 0; j < WORK_MAT; j++){
-    //         M[i][j] = 1;
-    //     }
-    // }
-
     // Fill Vectors
     for(size_t i = 0; i < WORK_VEC; i++){
         A[i] = 2;
@@ -174,45 +165,74 @@ int run_test(size_t WORK_VEC, size_t WORK_MAT){
     printf("PTH Time = %0.4f\n", time);
 
 
-    // time = 0;
-    // for(int i = 0; i < N_TRIALS; i++){
-    //     BENCH_START;
-    //     float *Vref = mdot(M, A, WORK_MAT);
-    //     time += BENCH_END;
-    //     free(Vref);
-    // }
-    // // printf("MDOT Result:\n");
-    // printf("MDOT Time = %0.2f\n", time/N_TRIALS);
-    // // print_vec(V, n);
-    // time = 0;
-    // for(int i = 0; i < N_TRIALS; i++){
-    //     BENCH_START;
-    //     float *V = mdot_pll(M, A, WORK_MAT);
-    //     time += BENCH_END;
-    //     free(V);
-    // }
-    // // printf("PLL Result:\n");
-    // printf("PLL Time = %0.2f\n", time/N_TRIALS);
-    // // print_vec(V, n);
-    // // compare_vec(V, Vref, WORK_MAT);
-    // time = 0;
-    // for(int i = 0; i < N_TRIALS; i++){
-    //     BENCH_START;
-    //     float *V = mdot_epc(M, A, WORK_MAT);
-    //     time += BENCH_END;
-    //     free(V);
-    // }
+    free(A);
+    free(B);
+    return 0;
+}
+
+int run_test_mat(size_t WORK_MAT){
+    BENCH_INIT;
+    // Allocate Vectors
+    float *A = malloc(WORK_MAT*sizeof(float));
+    // Create matrix
+    float **M = malloc(WORK_MAT*sizeof(float*));
+    for(int i = 0; i < WORK_MAT; i++){
+        M[i] = malloc(WORK_MAT*sizeof(float));
+        for(int j = 0; j < WORK_MAT; j++){
+            M[i][j] = 1;
+        }
+    }
+
+    // Fill Vectors
+    for(size_t i = 0; i < WORK_MAT; i++){
+        A[i] = 2;
+    }
+
+
+    // printf("Work Mat = %d\n", WORK_MAT);
+    // printf("Work Vec = %ld\n", WORK_VEC);
+    printf("Starting Tests\n");
+
+    float time = 0;
+
+    time = 0;
+    for(int i = 0; i < N_TRIALS; i++){
+        BENCH_START;
+        float *Vref = mdot(M, A, WORK_MAT);
+        time += BENCH_END;
+        free(Vref);
+    }
+    // printf("MDOT Result:\n");
+    printf("Single Thread Time = %0.2f\n", time/N_TRIALS);
+    // print_vec(V, n);
+    time = 0;
+    for(int i = 0; i < N_TRIALS; i++){
+        BENCH_START;
+        float *V = mdot_pll(M, A, WORK_MAT);
+        time += BENCH_END;
+        free(V);
+    }
+    // printf("PLL Result:\n");
+    printf("OMP COL Time = %0.2f\n", time/N_TRIALS);
+    // print_vec(V, n);
+    // compare_vec(V, Vref, WORK_MAT);
+    time = 0;
+    for(int i = 0; i < N_TRIALS; i++){
+        BENCH_START;
+        float *V = mdot_epc(M, A, WORK_MAT);
+        time += BENCH_END;
+        free(V);
+    }
     // printf("EPC Result:\n");
-    // printf("EPC Time = %0.2f\n", time/N_TRIALS);
+    printf("OMP Row Time = %0.2f\n", time/N_TRIALS);
     // print_vec(V, n);
     // compare_vec(V, Vref, WORK_MAT);
 
     // Free Memory
-    // for(int i = 0; i < WORK_MAT; i++)
-    //     free(M[i]);
-    // free(M);
+    for(int i = 0; i < WORK_MAT; i++)
+        free(M[i]);
+    free(M);
     free(A);
-    free(B);
     return 0;
 }
 
@@ -221,9 +241,9 @@ int main(int argc, char **argv){
     // return mpi_main(argc, argv);
     printf("N Threads = %d\n", N_THREADS);
     printf("N Trials = %d\n", N_TRIALS);
-    for(int i = 20; i < 27; i++){
+    for(int i = 8; i < 15; i++){
         printf("Running Test 2^%d\n", i);
-        run_test(1<<i, 1<<i);
+        run_test_mat(1<<i);
     }
     return 0;
 }
