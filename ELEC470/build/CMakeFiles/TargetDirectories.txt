@@ -1,3 +1,0 @@
-/home/jacob/Documents/github/Helios/ELEC470/build/CMakeFiles/470MP.dir
-/home/jacob/Documents/github/Helios/ELEC470/build/CMakeFiles/edit_cache.dir
-/home/jacob/Documents/github/Helios/ELEC470/build/CMakeFiles/rebuild_cache.dir
