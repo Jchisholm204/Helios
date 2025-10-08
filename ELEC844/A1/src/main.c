@@ -24,6 +24,9 @@ int main(int argc, char **argv){
 
     world_loader(d->grid, eWorld2C);
 
+    grid_index(d->grid, 9, 3)->state = eStateExplored;
+    grid_index(d->grid, 9, 4)->state = eStateFrontier;
+
     disp_drawGrid(d);
     struct path path;
     path.n_voxels = 4;

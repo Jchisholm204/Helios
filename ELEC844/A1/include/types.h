@@ -23,6 +23,7 @@ struct xy{
 enum eVoxelState {
     eStateEmpty,
     eStateExplored,
+    eStateFrontier,
     eStateBlocked,
     eStatePath,
     eStateSource,

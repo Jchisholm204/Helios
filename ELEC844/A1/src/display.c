@@ -157,7 +157,11 @@ void disp_drawGrid(disp_t *pDisplay){
             SDL_Rect r = {IN_PIXELS(x)+PX_BORDER+2, IN_PIXELS(y)+PX_BORDER+2, (PIXEL_PER_GRID-3), (PIXEL_PER_GRID-3)};
             switch(v->state){
                 case eStateExplored:
-                    SDL_SetRenderDrawColor(pDisplay->sdl_ren, 200, 200, 200, 255);
+                    SDL_SetRenderDrawColor(pDisplay->sdl_ren, 210, 210, 210, 255);
+                    SDL_RenderFillRect(pDisplay->sdl_ren, &r);
+                    break;
+                case eStateFrontier:
+                    SDL_SetRenderDrawColor(pDisplay->sdl_ren, 100, 100, 100, 255);
                     SDL_RenderFillRect(pDisplay->sdl_ren, &r);
                     break;
                 case eStateBlocked:
