@@ -17,14 +17,12 @@
 #include <SDL2/SDL.h>
 
 #include "display.h"
+#include "worlds.h"
 
 int main(int argc, char **argv){
-    disp_t *d = disp_init(19, 19);
+    disp_t *d = disp_init(WORLD_X, WORLD_Y);
 
-    grid_index(d->grid, 4, 3)->state = eStateSource;
-    grid_index(d->grid, 10, 14)->state = eStateGoal;
-    grid_index(d->grid, 9, 4)->state = eStateBlocked;
-    grid_index(d->grid, 4, 4)->state = eStateExplored;
+    world_loader(d->grid, eWorld2C);
 
     disp_drawGrid(d);
     struct path path;
