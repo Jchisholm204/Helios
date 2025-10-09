@@ -14,9 +14,27 @@
 #include "linked_queue.h"
 #include "types.h"
 
+#include <math.h>
+#include <stdlib.h>
+
+// heuristic function template
 typedef float (*heuristic_fn)(struct voxel* s, struct voxel* d);
 
-float dist(struct voxel* s, struct voxel* d);
+static float hfn_zero(struct voxel* s, struct voxel* d) {
+    return 0;
+}
+
+static float hfn_euclean(struct voxel* s, struct voxel* d) {
+    return sqrt(pow(s->y - d->y, 2) + pow(s->x - d->x, 2));
+}
+
+static float hfn_manhattan(struct voxel* s, struct voxel* d) {
+    return abs(s->x - d->x) + abs(s->y - d->y);
+}
+
+static float hfn_inflated(struct voxel* s, struct voxel* d) {
+    return 100 * hfn_euclean(s, d);
+}
 
 struct search {
     heuristic_fn heuristic;
@@ -25,6 +43,16 @@ struct search {
     struct voxel* target;
     struct queued_voxel* queue;
     int finished;
+    // BenchMarking Data
+    struct {
+        size_t n_explored;
+        size_t n_evaluated;
+        size_t queue_max;
+        size_t queue_ttl;
+        size_t queue_final;
+        size_t n_path;
+        float path_length;
+    } bmd;
 };
 
 static void search_free(struct search** ppSearch) {
@@ -60,16 +88,45 @@ static struct search* search_init(heuristic_fn hfn, struct grid* pGrid) {
     }
 
     // Error condition if start or target is not found
-    if (!s->start || !s->target)
+    if (!s->start || !s->target){
         search_free(&s);
+        return NULL;
+    }
+
     s->start->cost = 0;
     // Push the start node
     queue_push(&s->queue, s->start, 0);
+    
+    // Zero out BenchMarking data
+    s->bmd.n_explored = 0;
+    s->bmd.n_evaluated = 0;
+    s->bmd.queue_max = 0;
+    s->bmd.queue_ttl = 0;
+    s->bmd.queue_final = 0;
+    s->bmd.n_path = 0;
+    s->bmd.path_length = 0;
+
     return s;
+}
+
+static void search_swapGoal(struct search *pSearch){
+    if(!pSearch) return;
+    struct voxel *tv;
+    tv = pSearch->start;
+    pSearch->start = pSearch->target;
+    pSearch->target = tv;
+    pSearch->target->state = eStateGoal;
+    pSearch->start->state = eStateSource;
+    pSearch->start->cost = 0;
+    pSearch->target->cost = FLT_MAX;
+    (void)queue_pop(&pSearch->queue);
+    queue_push(&pSearch->queue, pSearch->start, 0);
 }
 
 int search_stepA(struct search* pSearch);
 
 struct path* search_backtrace(struct search* pSearch);
+
+void search_printBM(FILE* out, struct search *pSearch);
 
 #endif

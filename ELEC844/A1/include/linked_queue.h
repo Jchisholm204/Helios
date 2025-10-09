@@ -6,8 +6,8 @@
  * @date Created: 2025-10-08
  * @modified Last Modified: 2025-10-08
  *
- * This is the simplest way I could think to make a priority queue without memory reallocating.
- * This queue should not hold onto any voxel memory.
+ * This is the simplest way I could think to make a priority queue without
+ * memory reallocating. This queue should not hold onto any voxel memory.
  *
  * @copyright Copyright (c) 2025
  */
@@ -97,6 +97,17 @@ static inline int queue_push(struct queued_voxel** head, struct voxel* v,
     }
     // Should insert or fail before this point
     return -9;
+}
+
+static inline size_t queue_length(struct queued_voxel* head) {
+    if (!head)
+        return 0;
+    if (!head->next)
+        return 1;
+    size_t size = 0;
+    for (; head; head = head->next)
+        size++;
+    return size;
 }
 
 #endif

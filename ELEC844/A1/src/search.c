@@ -21,11 +21,23 @@ float dist(struct voxel* s, struct voxel* d) {
 int search_stepA(struct search* pSearch) {
     if (!pSearch)
         return -1;
+    // Benchmark Queue Data
+    pSearch->bmd.queue_final = queue_length(pSearch->queue);
+    pSearch->bmd.queue_max = pSearch->bmd.queue_max < pSearch->bmd.queue_final
+                                 ? pSearch->bmd.queue_final
+                                 : pSearch->bmd.queue_max;
+    pSearch->bmd.queue_ttl += pSearch->bmd.queue_final;
 
     // Grab the lowest cost node
     struct voxel* current = queue_pop(&pSearch->queue);
     if (!current)
         return -3;
+    pSearch->bmd.n_explored++;
+
+    if(current == pSearch->target){
+        pSearch->finished = 1;
+        return 0;
+    }
 
     if (current != pSearch->start && current != pSearch->target)
         current->state = eStateExplored;
@@ -39,13 +51,15 @@ int search_stepA(struct search* pSearch) {
             // Null check for voxels off the edge of the map
             if (!nv)
                 continue;
+            // Increment number of nodes evaluated
+            pSearch->bmd.n_evaluated++;
 
             // Found the target
-            if (nv == pSearch->target) {
-                nv->parent = current;
-                pSearch->finished = 1;
-                return 0;
-            }
+            // if (nv == pSearch->target) {
+            //     nv->parent = current;
+            //     pSearch->finished = 1;
+            //     return 0;
+            // }
 
             // Do not explore blocked nodes
             if (nv->state == eStateBlocked)
@@ -62,6 +76,9 @@ int search_stepA(struct search* pSearch) {
             }
         }
     }
+
+    // Benchmark Path Length
+    pSearch->bmd.path_length = pSearch->target->cost;
 
     return 1;
 }
@@ -96,6 +113,21 @@ struct path* search_backtrace(struct search* pSearch) {
     struct voxel* v = v_end;
     for (size_t i = length; i-- > 0 && v; v = v->parent)
         p->voxels[i] = v;
+    
+    // Add the length to Benchmark struct
+    pSearch->bmd.n_path = length;
 
     return p;
+}
+
+void search_printBM(FILE *out, struct search* pSearch) {
+    fprintf(out, "Nodes Explored: %ld\n", pSearch->bmd.n_explored);
+    fprintf(out, "Nodes Evaluated: %ld\n", pSearch->bmd.n_evaluated);
+    fprintf(out, "Queue Max: %ld\n", pSearch->bmd.queue_max);
+    fprintf(out, "Queue Total Elements: %ld\n", pSearch->bmd.queue_ttl);
+    fprintf(out, "Queue Average Elements: %0.2f\n", (float)pSearch->bmd.queue_ttl/(float)pSearch->bmd.n_explored);
+    fprintf(out, "Queue Final Length: %ld\n", pSearch->bmd.queue_final);
+    fprintf(out, "Path Length: %ld\n", pSearch->bmd.n_path);
+    fprintf(out, "Path Distance: %0.2f\n", pSearch->bmd.path_length);
+
 }

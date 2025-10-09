@@ -8,7 +8,8 @@
  *
  * @copyright Copyright (c) 2024
  *
- * ELEC 844 Assignment 1
+ * ELEC 844 Assignment 1:
+ *  A* and
  *
  */
 
@@ -26,13 +27,14 @@ int main(int argc, char** argv) {
     disp_t* d = disp_init(WORLD_X, WORLD_Y);
 
     // Load the world
-    world_loader(d->grid, eWorld2B);
+    world_loader(d->grid, eWorld1B);
 
     // Setup the search
     grid_zero(d->grid);
 
     // Select heuristic here
-    struct search* s = search_init(dist, d->grid);
+    struct search* s = search_init(hfn_euclean, d->grid);
+    search_swapGoal(s);
 
     // SDL loop until finished
     SDL_Event e;
@@ -44,11 +46,13 @@ int main(int argc, char** argv) {
 
         // Check to see if the search has finished, if not run next iteration
         if (!s->finished) {
-            int r = search_stepA(s);
+            search_stepA(s);
         }
 
         // Backtrace the path
         struct path* p = search_backtrace(s);
+        // Print out the search results
+        search_printBM(stdout, s);
         // clears screen - must be run before other draw functions
         disp_clr(d);
         // Draw grid and path
@@ -59,8 +63,20 @@ int main(int argc, char** argv) {
         // free the path
         path_free(&p);
 
+        if (s->finished){
+            goto wait_exit;
+        }
+
         // Run a delay for the animation
         SDL_Delay(50);
+    }
+wait_exit:
+    printf("Finished Search!\n");
+    while (1) {
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT)
+                goto exit;
+        }
     }
 
 exit:
