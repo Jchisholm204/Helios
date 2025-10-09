@@ -161,7 +161,7 @@ void disp_drawGrid(disp_t *pDisplay){
                     SDL_RenderFillRect(pDisplay->sdl_ren, &r);
                     break;
                 case eStateFrontier:
-                    SDL_SetRenderDrawColor(pDisplay->sdl_ren, 100, 100, 100, 255);
+                    SDL_SetRenderDrawColor(pDisplay->sdl_ren, 140, 140, 140, 255);
                     SDL_RenderFillRect(pDisplay->sdl_ren, &r);
                     break;
                 case eStateBlocked:
@@ -207,7 +207,7 @@ void disp_drawPath(disp_t* pDisplay, struct path *pPath){
         sy = v->y;
         gx = vn->x;
         gy = vn->y;
-        printf("Drawing Path: (%d, %d) -> (%d, %d)\n", sx, sy, gx, gy);
+        // printf("Drawing Path: (%d, %d) -> (%d, %d)\n", sx, sy, gx, gy);
         // SDL_RenderDrawLine(pDisplay->sdl_ren, 
         draw_arrow(pDisplay->sdl_ren, 
                 IN_PIXELS(sx)+PX_BORDER+PIXEL_PER_GRID/2, IN_PIXELS(sy)+PX_BORDER+PIXEL_PER_GRID/2, 

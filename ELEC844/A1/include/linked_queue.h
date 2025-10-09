@@ -42,6 +42,7 @@ static inline int queue_push(struct queued_voxel **head, struct voxel *v, float 
     if(!new_node) return -1;
     new_node->v = v;
     new_node->cost = cost;
+    new_node->next = NULL;
 
     // Case where queue is empty
     if(!*head){

@@ -22,37 +22,42 @@
 
 
 int main(int argc, char **argv){
+
+    // Initialize the display
     disp_t *d = disp_init(WORLD_X, WORLD_Y);
 
-    world_loader(d->grid, eWorld1A);
+    // Load the world
+    world_loader(d->grid, eWorld2B);
 
-    // grid_index(d->grid, 9, 3)->state = eStateExplored;
-    // grid_index(d->grid, 9, 4)->state = eStateFrontier;
-
-
-    struct path path;
-    path.n_voxels = 4;
-    path.voxels = malloc(path.n_voxels*sizeof(struct voxel*));
-    path.voxels[0] = grid_index(d->grid, 2, 3);
-    path.voxels[1] = grid_index(d->grid, 3, 3);
-    path.voxels[2] = grid_index(d->grid, 4, 4);
-    path.voxels[3] = grid_index(d->grid, 4, 5);
-    // disp_drawPath(d, &path);
+    // Setup the search
     grid_zero(d->grid);
+    struct search *s = search_init(dist, d->grid);
+
+    // SDL loop until finished
     SDL_Event e;
     while(1){
         while(SDL_PollEvent(&e)){
             if(e.type == SDL_QUIT)
                 goto exit;
         }
-        int r = search_stepA(dist, d->grid, grid_index(d->grid, 4, 9), grid_index(d->grid, 14, 9));
-        printf("Explored Grid with return code %d\n", r);
+        if(!s->finished){
+            int r = search_stepA(s);
+            // printf("Search Returned %d\n", r);
+        }
+
+        // Backtrace the path
+        struct path *p = search_backtrace(s);
         disp_drawGrid(d);
+        disp_drawPath(d, p);
+        if(p)
+            if(p->voxels) free(p->voxels);
+        if(p) free(p);
         disp_render(d);
-        SDL_Delay(500);
+        SDL_Delay(200);
     }
 
 exit:
+    search_free(&s);
     printf("Shutting Down..\n");
     disp_exit(&d);
     return 0;

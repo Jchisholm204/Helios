@@ -23,17 +23,18 @@ struct search {
     struct grid *pGrid;
     struct voxel *start;
     struct voxel *target;
-    struct queued_voxel **queue;
+    struct queued_voxel *queue;
+    int finished;
 };
 
-void search_free(struct search **ppSearch){
+static void search_free(struct search **ppSearch){
     if(!ppSearch) return;
     if(!*ppSearch) return;
     free(*ppSearch);
     *ppSearch = NULL;
 }
 
-struct search *search_init(heuristic_fn hfn, struct grid *pGrid){
+static struct search *search_init(heuristic_fn hfn, struct grid *pGrid){
     if(!pGrid) return NULL;
     if(!pGrid->voxels) return NULL;
     // Allocate the search structure
@@ -44,6 +45,7 @@ struct search *search_init(heuristic_fn hfn, struct grid *pGrid){
     s->queue = NULL;
     s->start = NULL;
     s->target = NULL;
+    s->finished = 0;
     size_t n_voxels = pGrid->size.x*pGrid->size.y;
     for(size_t i = 0; i < n_voxels; i++){
         if(pGrid->voxels[i].state == eStateSource)
@@ -53,12 +55,17 @@ struct search *search_init(heuristic_fn hfn, struct grid *pGrid){
     }
 
     // Error condition if start or target is not found
-    if(!s->start || s->target)
+    if(!s->start || !s->target)
         search_free(&s);
+    s->start->cost = 0;
+    // Push the start node
+    queue_push(&s->queue, s->start, 0);
     return s;
 }
 
 
 int search_stepA(struct search *pSearch);
+
+struct path *search_backtrace(struct search *pSearch);
 
 #endif
