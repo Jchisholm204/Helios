@@ -20,21 +20,28 @@
 // heuristic function template
 typedef float (*heuristic_fn)(struct voxel* s, struct voxel* d);
 
-static float hfn_zero(struct voxel* s, struct voxel* d) {
+#define HFN(name) float name (struct voxel* s, struct voxel* d)
+
+static HFN(hfn_zero) {
     return 0;
 }
 
-static float hfn_euclean(struct voxel* s, struct voxel* d) {
+static HFN(hfn_euclean){
     return sqrt(pow(s->y - d->y, 2) + pow(s->x - d->x, 2));
 }
 
-static float hfn_manhattan(struct voxel* s, struct voxel* d) {
+static HFN(hfn_manhattan){
     return abs(s->x - d->x) + abs(s->y - d->y);
 }
 
-static float hfn_inflated(struct voxel* s, struct voxel* d) {
+static HFN(hfn_inflated){
     return 100 * hfn_euclean(s, d);
 }
+
+enum eSearchType {
+    eSearchA,
+    eSearchLPA
+};
 
 struct search {
     heuristic_fn heuristic;
@@ -53,7 +60,22 @@ struct search {
         size_t n_path;
         float path_length;
     } bmd;
+    int (*search_fn)(struct search *pSearch);
 };
+
+int search_stepA(struct search* pSearch);
+
+int search_stepLPA(struct search* pSearch);
+
+struct path* search_backtrace(struct search* pSearch);
+
+void search_update(struct search* pSearch, struct queued_voxel **queue);
+
+void search_printBM(FILE* out, struct search* pSearch);
+
+static int search_runsearch(struct search *pSearch){
+    return pSearch->search_fn(pSearch);
+}
 
 static void search_free(struct search** ppSearch) {
     if (!ppSearch)
@@ -64,7 +86,8 @@ static void search_free(struct search** ppSearch) {
     *ppSearch = NULL;
 }
 
-static struct search* search_init(heuristic_fn hfn, struct grid* pGrid) {
+static struct search* search_init(heuristic_fn hfn, struct grid* pGrid,
+                                  enum eSearchType type) {
     if (!pGrid)
         return NULL;
     if (!pGrid->voxels)
@@ -88,15 +111,21 @@ static struct search* search_init(heuristic_fn hfn, struct grid* pGrid) {
     }
 
     // Error condition if start or target is not found
-    if (!s->start || !s->target){
+    if (!s->start || !s->target) {
         search_free(&s);
         return NULL;
     }
 
-    s->start->cost = 0;
+    if (type == eSearchLPA) {
+        s->start->cost = FLT_MAX;
+        s->start->lookahead = 0;
+    } else {
+        s->start->cost = 0;
+        s->start->lookahead = FLT_MAX;
+    }
     // Push the start node
-    queue_push(&s->queue, s->start, 0);
-    
+    queue_push(&s->queue, s->start, hfn(s->start, s->target), 0);
+
     // Zero out BenchMarking data
     s->bmd.n_explored = 0;
     s->bmd.n_evaluated = 0;
@@ -106,27 +135,35 @@ static struct search* search_init(heuristic_fn hfn, struct grid* pGrid) {
     s->bmd.n_path = 0;
     s->bmd.path_length = 0;
 
+    // Setup the search function
+    switch(type){
+        case eSearchLPA:
+            s->search_fn = search_stepLPA;
+            break;
+        case eSearchA:
+        default:
+            s->search_fn = search_stepA;
+            break;
+    }
+
     return s;
 }
 
-static void search_swapGoal(struct search *pSearch){
-    if(!pSearch) return;
-    struct voxel *tv;
+static void search_swapGoal(struct search* pSearch) {
+    if (!pSearch)
+        return;
+    struct voxel* tv;
     tv = pSearch->start;
     pSearch->start = pSearch->target;
     pSearch->target = tv;
     pSearch->target->state = eStateGoal;
     pSearch->start->state = eStateSource;
     pSearch->start->cost = 0;
+    pSearch->start->lookahead = 0;
     pSearch->target->cost = FLT_MAX;
-    (void)queue_pop(&pSearch->queue);
-    queue_push(&pSearch->queue, pSearch->start, 0);
+    pSearch->target->lookahead = FLT_MAX;
+    (void) queue_pop(&pSearch->queue);
+    queue_push(&pSearch->queue, pSearch->start, 0, 0);
 }
-
-int search_stepA(struct search* pSearch);
-
-struct path* search_backtrace(struct search* pSearch);
-
-void search_printBM(FILE* out, struct search *pSearch);
 
 #endif

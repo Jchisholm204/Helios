@@ -56,7 +56,7 @@ static int w1b[WORLD_X][WORLD_Y] = {
 };
 
 static int w2a[WORLD_X][WORLD_Y] = {
-//   0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18
+    //   0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 0
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 1
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 2
@@ -79,7 +79,7 @@ static int w2a[WORLD_X][WORLD_Y] = {
 };
 
 static int w2b[WORLD_X][WORLD_Y] = {
-//   0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18
+    //   0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 0
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 1
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 2
@@ -102,7 +102,7 @@ static int w2b[WORLD_X][WORLD_Y] = {
 };
 
 static int w2c[WORLD_X][WORLD_Y] = {
-//   0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18
+    //   0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 0
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 1
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 2
@@ -124,55 +124,121 @@ static int w2c[WORLD_X][WORLD_Y] = {
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 18
 };
 
-int world_loader(struct grid *pGrid, enum eWorlds world){
-    if(!pGrid) return -1;
-    if(!pGrid->voxels) return -1;
+int world_loader(struct grid* pGrid, enum eWorlds world) {
+    if (!pGrid)
+        return -1;
+    if (!pGrid->voxels)
+        return -1;
 
     // Verify the grid is at least the size of the worlds
-    if(pGrid->size.x < WORLD_X) return -3;
-    if(pGrid->size.y < WORLD_Y) return -3;
+    if (pGrid->size.x < WORLD_X)
+        return -3;
+    if (pGrid->size.y < WORLD_Y)
+        return -3;
 
     // Figure out what world to use
-    int (*w)[WORLD_Y];
-    switch (world){
-        case eWorld1A:
-            w = w1a;
-            break;
-        case eWorld1B:
-            w = w1b;
-            break;
-        case eWorld2A:
-            w = w2a;
-            break;
-        case eWorld2B:
-            w = w2b;
-            break;
-        case eWorld2C:
-            w = w2c;
-            break;
-        default:
-            w = NULL;
-            break;
+    int(*w)[WORLD_Y];
+    switch (world) {
+    case eWorld1A:
+        w = w1a;
+        break;
+    case eWorld1B:
+        w = w1b;
+        break;
+    case eWorld2A:
+        w = w2a;
+        break;
+    case eWorld2B:
+        w = w2b;
+        break;
+    case eWorld2C:
+        w = w2c;
+        break;
+    default:
+        w = NULL;
+        break;
     }
-    if(!w) return -2;
-    
+    if (!w)
+        return -2;
+
     // Load the world
-    for(size_t x = 0; x < WORLD_X; x++){
-        for(size_t y = 0; y < WORLD_Y; y++){
-            struct voxel *v = grid_index(pGrid, x, y);
-            if(!v) continue;
+    for (size_t x = 0; x < WORLD_X; x++) {
+        for (size_t y = 0; y < WORLD_Y; y++) {
+            struct voxel* v = grid_index(pGrid, x, y);
+            if (!v)
+                continue;
             int val = w[y][x];
-            if(val == 1){
+            if (val == 1) {
                 v->state = eStateBlocked;
-            }
-            else if(val == 2){
+            } else if (val == 2) {
                 v->state = eStateSource;
-            }
-            else if(val == 3){
+            } else if (val == 3) {
                 v->state = eStateGoal;
-            }
-            else{
+            } else {
                 v->state = eStateEmpty;
+            }
+        }
+    }
+    return 0;
+}
+
+int world_updater(struct grid* pGrid, enum eWorlds world, struct queued_voxel **queue) {
+    if (!pGrid)
+        return -1;
+    if (!pGrid->voxels)
+        return -1;
+
+    // Verify the grid is at least the size of the worlds
+    if (pGrid->size.x < WORLD_X)
+        return -3;
+    if (pGrid->size.y < WORLD_Y)
+        return -3;
+
+    // Figure out what world to use
+    int(*w)[WORLD_Y];
+    switch (world) {
+    case eWorld1A:
+        w = w1a;
+        break;
+    case eWorld1B:
+        w = w1b;
+        break;
+    case eWorld2A:
+        w = w2a;
+        break;
+    case eWorld2B:
+        w = w2b;
+        break;
+    case eWorld2C:
+        w = w2c;
+        break;
+    default:
+        w = NULL;
+        break;
+    }
+    if (!w)
+        return -2;
+
+    // Load the world
+    for (size_t x = 0; x < WORLD_X; x++) {
+        for (size_t y = 0; y < WORLD_Y; y++) {
+            struct voxel* v = grid_index(pGrid, x, y);
+            if (!v)
+                continue;
+            int val = w[y][x];
+            enum eVoxelState new_state;
+            if (val == 1) {
+                new_state = eStateBlocked;
+            } else if (val == 2) {
+                new_state = eStateSource;
+            } else if (val == 3) {
+                new_state = eStateGoal;
+            } else {
+                new_state = eStateEmpty;
+            }
+            if (new_state != v->state){
+                v->state = new_state;
+                queue_push(queue, v, 0, 0);
             }
         }
     }

@@ -27,14 +27,14 @@ int main(int argc, char** argv) {
     disp_t* d = disp_init(WORLD_X, WORLD_Y);
 
     // Load the world
-    world_loader(d->grid, eWorld1B);
+    world_loader(d->grid, eWorld2A);
 
     // Setup the search
     grid_zero(d->grid);
 
     // Select heuristic here
-    struct search* s = search_init(hfn_euclean, d->grid);
-    search_swapGoal(s);
+    struct search* s = search_init(hfn_euclean, d->grid, eSearchLPA);
+    // search_swapGoal(s);
 
     // SDL loop until finished
     SDL_Event e;
@@ -42,11 +42,22 @@ int main(int argc, char** argv) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT)
                 goto exit;
+            if (e.type == SDL_KEYDOWN) {
+                if (e.key.keysym.sym == SDLK_SPACE) {
+
+                    if (s->finished) {
+                        struct queued_voxel* update_list = NULL;
+                        world_updater(d->grid, eWorld2C, &update_list);
+                        search_update(s, &update_list);
+                        s->finished = 0;
+                    }
+                }
+            }
         }
 
         // Check to see if the search has finished, if not run next iteration
         if (!s->finished) {
-            search_stepA(s);
+            search_runsearch(s);
         }
 
         // Backtrace the path
@@ -62,10 +73,6 @@ int main(int argc, char** argv) {
         disp_render(d);
         // free the path
         path_free(&p);
-
-        if (s->finished){
-            goto wait_exit;
-        }
 
         // Run a delay for the animation
         SDL_Delay(50);

@@ -20,6 +20,7 @@ struct queued_voxel {
     struct voxel* v;
     struct queued_voxel* next;
     float cost;
+    float cost_s;
 };
 
 /**
@@ -52,10 +53,11 @@ static inline struct voxel* queue_pop(struct queued_voxel** head) {
  * @param head pointer to the queue handle (head of the queue)
  * @param v pointer to the voxel to push into the queue
  * @param cost queue cost of the voxel (lower cost popped first)
+ * @param cost_s secondary queue cost
  * @return 0 on success
  */
 static inline int queue_push(struct queued_voxel** head, struct voxel* v,
-                             float cost) {
+                             float cost, float cost_s) {
     if (!head)
         return -1;
     // Setup the new node
@@ -64,6 +66,7 @@ static inline int queue_push(struct queued_voxel** head, struct voxel* v,
         return -1;
     new_node->v = v;
     new_node->cost = cost;
+    new_node->cost_s = cost_s;
     new_node->next = NULL;
 
     // Case where queue is empty
@@ -74,7 +77,7 @@ static inline int queue_push(struct queued_voxel** head, struct voxel* v,
 
     // Case where insert happens at the head
     struct queued_voxel* qvc = *head;
-    if (cost < qvc->cost) {
+    if (cost < qvc->cost || (cost == qvc->cost && cost_s < qvc->cost_s)) {
         new_node->next = qvc;
         *head = new_node;
         return 0;
@@ -88,7 +91,7 @@ static inline int queue_push(struct queued_voxel** head, struct voxel* v,
             return 0;
         }
         // Insert node is less cost than the next in the chain (goes before it)
-        if (cost < qvc->next->cost) {
+        if (cost < qvc->next->cost || (cost == qvc->cost && cost_s < qvc->next->cost_s)) {
             new_node->next = qvc->next;
             qvc->next = new_node;
             return 0;
@@ -108,6 +111,36 @@ static inline size_t queue_length(struct queued_voxel* head) {
     for (; head; head = head->next)
         size++;
     return size;
+}
+
+/**
+ * @brief Find and remove an element from the queue
+ *
+ * @param head 
+ * @param v voxel to try and remove 
+ * @return 1 on removal, 0 if voxel is not in the queue
+ */
+static inline int queue_find_remove(struct queued_voxel **head, struct voxel *v){
+    if(!head) return -1;
+    if(!*head) return -1;
+    struct queued_voxel *qv = *head;
+    // Check if the top node is the node to remove
+    if(qv->v == v){
+        *head = (*head)->next;
+        free(qv);
+        return 1;
+    }
+    
+    for(; qv && qv->next; qv = qv->next){
+        if(qv->next->v == v){
+            struct queued_voxel *t = qv->next;
+            qv->next = qv->next->next;
+            free(t);
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 #endif

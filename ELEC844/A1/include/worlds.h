@@ -13,6 +13,7 @@
 #define _WORLDS_H_
 
 #include "types.h"
+#include "linked_queue.h"
 
 // Do not change without adjusting world arrays
 #define WORLD_X 19
@@ -28,5 +29,6 @@ enum eWorlds {
 };
 
 int world_loader(struct grid* pGrid, enum eWorlds world);
+int world_updater(struct grid *pGrid, enum eWorlds world, struct queued_voxel **updated);
 
 #endif

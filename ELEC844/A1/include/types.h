@@ -35,6 +35,7 @@ struct voxel {
     int x, y;
     enum eVoxelState state;
     float cost;
+    float lookahead;
     struct voxel* parent;
 };
 
@@ -81,6 +82,7 @@ static inline struct grid* grid_init(size_t n_cols, size_t n_rows) {
             v->x = x;
             v->y = y;
             v->cost = FLT_MAX;
+            v->lookahead = FLT_MAX;
             v->parent = NULL;
         }
     }
@@ -99,6 +101,7 @@ static inline void grid_reset(struct grid* pGrid) {
         for (size_t y = 0; y < n_rows; y++) {
             struct voxel* v = grid_index(pGrid, x, y);
             v->cost = FLT_MAX;
+            v->lookahead = FLT_MAX;
             v->parent = NULL;
             v->state = eStateEmpty;
         }
@@ -117,6 +120,7 @@ static inline void grid_zero(struct grid* pGrid) {
         for (size_t y = 0; y < n_rows; y++) {
             struct voxel* v = grid_index(pGrid, x, y);
             v->cost = FLT_MAX;
+            v->lookahead = FLT_MAX;
             v->parent = NULL;
         }
     }
