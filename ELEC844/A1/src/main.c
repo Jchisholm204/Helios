@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2024
  *
  * ELEC 844 Assignment 1:
- *  A* and
+ *  A* and LPA*
  *
  */
 
