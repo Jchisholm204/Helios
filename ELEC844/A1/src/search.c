@@ -98,9 +98,6 @@ void lpa_update_node(struct search* pSearch, struct voxel* v) {
                 if (v != pred)
                     v->parent = pred;
             }
-
-            if (v != pSearch->start && v != pSearch->target)
-                v->state = eStateExplored;
         }
     }
 
@@ -131,12 +128,18 @@ int search_stepLPA(struct search* pSearch) {
     struct voxel* current = queue_pop(&pSearch->queue);
     if (!current)
         return -3;
-    pSearch->bmd.n_explored++;
 
+    // Collect more stats
+    pSearch->bmd.n_explored++;
+    if (current != pSearch->start && current != pSearch->target)
+        current->state = eStateExplored;
+
+    // Completion Condition
     if (current->cost > pSearch->target->cost &&
         pSearch->target->cost == pSearch->target->lookahead)
         pSearch->finished = 1;
 
+    // Update/Explore Conditions
     if (current->cost > current->lookahead) {
         current->cost = current->lookahead;
     } else {
@@ -144,8 +147,6 @@ int search_stepLPA(struct search* pSearch) {
         lpa_update_node(pSearch, current);
     }
 
-    if (current != pSearch->start && current != pSearch->target)
-        current->state = eStateExplored;
 
     // Process all nearby voxels
     for (int x = -1; x <= 1; x++) {
@@ -208,6 +209,15 @@ struct path* search_backtrace(struct search* pSearch) {
 }
 
 void search_update(struct search* pSearch, struct queued_voxel** queue) {
+    if(!pSearch) return;
+    if(pSearch->type == eSearchA){
+        grid_zero(pSearch->pGrid);
+        while(queue_pop(queue));
+        while(queue_pop(&pSearch->queue));
+        pSearch->start->cost = 0;
+        queue_push(&pSearch->queue, pSearch->start, 0, 0);
+        return;
+    }
     struct voxel* v = queue_pop(queue);
     for (; v; v = queue_pop(queue)) {
         for (int x = -1; x <= 1; x++) {

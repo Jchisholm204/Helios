@@ -182,7 +182,8 @@ int world_loader(struct grid* pGrid, enum eWorlds world) {
     return 0;
 }
 
-int world_updater(struct grid* pGrid, enum eWorlds world, struct queued_voxel **queue) {
+int world_updater(struct grid* pGrid, enum eWorlds world,
+                  struct queued_voxel** queue) {
     if (!pGrid)
         return -1;
     if (!pGrid->voxels)
@@ -230,14 +231,16 @@ int world_updater(struct grid* pGrid, enum eWorlds world, struct queued_voxel **
             if (val == 1) {
                 new_state = eStateBlocked;
             } else if (val == 2) {
-                new_state = eStateSource;
+                continue;
             } else if (val == 3) {
-                new_state = eStateGoal;
+                continue;
             } else {
                 new_state = eStateEmpty;
             }
-            if (new_state != v->state){
-                v->state = new_state;
+            if (new_state != v->state) {
+                if (!(new_state == eStateEmpty &&
+                    (v->state == eStateFrontier || v->state == eStateExplored)))
+                    v->state = new_state;
                 queue_push(queue, v, 0, 0);
             }
         }

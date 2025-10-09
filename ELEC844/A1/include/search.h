@@ -61,6 +61,7 @@ struct search {
         float path_length;
     } bmd;
     int (*search_fn)(struct search *pSearch);
+    enum eSearchType type;
 };
 
 int search_stepA(struct search* pSearch);
@@ -102,6 +103,7 @@ static struct search* search_init(heuristic_fn hfn, struct grid* pGrid,
     s->start = NULL;
     s->target = NULL;
     s->finished = 0;
+    s->type = type;
     size_t n_voxels = pGrid->size.x * pGrid->size.y;
     for (size_t i = 0; i < n_voxels; i++) {
         if (pGrid->voxels[i].state == eStateSource)
