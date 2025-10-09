@@ -31,7 +31,7 @@ typedef struct {
 
 disp_t *disp_init(size_t n_cols, size_t n_rows);
 
-void disp_setSpeed(disp_t *pDisplay, int ms_per_item);
+void disp_clr(disp_t *pDisplay);
 
 void disp_drawGrid(disp_t *pDisplay);
 

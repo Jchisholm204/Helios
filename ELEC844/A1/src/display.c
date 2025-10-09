@@ -19,6 +19,9 @@
 
 #define FONT "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf"
 
+void draw_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, int x, int y);
+void draw_arrow(SDL_Renderer *ren, int x1, int y1, int x2, int y2, int size);
+
 disp_t *disp_init(size_t n_cols, size_t n_rows){
     // Create the Display Object
     disp_t *pDisp = malloc(sizeof(disp_t));
@@ -66,51 +69,11 @@ alloc_failure:
     return NULL;
 }
 
-void disp_setSpeed(disp_t *pDisplay, int ms_per_item){
-    if(!pDisplay) return;
-    pDisplay->ms_per_item = ms_per_item;
-}
 
-void draw_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, int x, int y) {
-    SDL_Color color = {0, 0, 0, 255};  // white text
-
-    SDL_Surface *surface = TTF_RenderText_Solid(font, text, color);
-    if (!surface) {
-        return;
-    }
-
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
-    if (!texture) {
-        fprintf(stderr, "CreateTexture Error: %s\n", SDL_GetError());
-        return;
-    }
-
-    SDL_Rect dst = {x, y, 0, 0};
-    SDL_QueryTexture(texture, NULL, NULL, &dst.w, &dst.h);
-    SDL_RenderCopy(renderer, texture, NULL, &dst);
-    SDL_DestroyTexture(texture);
-}
-
-void draw_arrow(SDL_Renderer *ren, int x1, int y1, int x2, int y2, int size)
-{
-    // Draw main line
-    SDL_RenderDrawLine(ren, x1, y1, x2, y2);
-
-    // Calculate the arrowhead angle
-    double angle = atan2(y2 - y1, x2 - x1);
-    double arrow_angle = M_PI / 6; // 30 degrees
-    double arrow_length = size;
-
-    // Left side of arrowhead
-    int x3 = x2 - arrow_length * cos(angle - arrow_angle);
-    int y3 = y2 - arrow_length * sin(angle - arrow_angle);
-    SDL_RenderDrawLine(ren, x2, y2, x3, y3);
-
-    // Right side of arrowhead
-    int x4 = x2 - arrow_length * cos(angle + arrow_angle);
-    int y4 = y2 - arrow_length * sin(angle + arrow_angle);
-    SDL_RenderDrawLine(ren, x2, y2, x4, y4);
+void disp_clr(disp_t *pDisplay){
+    // Clear the screen
+    SDL_SetRenderDrawColor(pDisplay->sdl_ren, 255, 255, 255, 255);
+    SDL_RenderClear(pDisplay->sdl_ren);
 }
 
 void disp_drawGrid(disp_t *pDisplay){
@@ -118,11 +81,6 @@ void disp_drawGrid(disp_t *pDisplay){
     if(!pDisplay->grid) return;
     size_t max_x = pDisplay->grid->size.x;
     size_t max_y = pDisplay->grid->size.y;
-
-    // Clear the screen
-    SDL_SetRenderDrawColor(pDisplay->sdl_ren, 255, 255, 255, 255);
-    SDL_RenderClear(pDisplay->sdl_ren);
-
 
     // Draw the grid on the screen (x)
     SDL_SetRenderDrawColor(pDisplay->sdl_ren, 0, 0, 0, 255);
@@ -184,6 +142,11 @@ void disp_drawGrid(disp_t *pDisplay){
         }
     }
 
+    // Render text on bottom of screen
+    
+    draw_text(pDisplay->sdl_ren, pDisplay->sdl_font, "ELEC 844 2D Search Simulator - Jacob Chisholm", 
+            IN_PIXELS(max_x)/4+PX_BORDER, IN_PIXELS(max_y) + PX_BORDER*1.2);
+
     // Call disp_render to render the frame
 }
 
@@ -239,3 +202,43 @@ void disp_exit(disp_t **ppDisplay){
     *ppDisplay = NULL;
 }
 
+void draw_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, int x, int y) {
+    SDL_Color color = {0, 0, 0, 255};  // white text
+
+    SDL_Surface *surface = TTF_RenderText_Solid(font, text, color);
+    if (!surface) {
+        return;
+    }
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    if (!texture) {
+        fprintf(stderr, "CreateTexture Error: %s\n", SDL_GetError());
+        return;
+    }
+
+    SDL_Rect dst = {x, y, 0, 0};
+    SDL_QueryTexture(texture, NULL, NULL, &dst.w, &dst.h);
+    SDL_RenderCopy(renderer, texture, NULL, &dst);
+    SDL_DestroyTexture(texture);
+}
+
+void draw_arrow(SDL_Renderer *ren, int x1, int y1, int x2, int y2, int size) {
+    // Draw main line
+    SDL_RenderDrawLine(ren, x1, y1, x2, y2);
+
+    // Calculate the arrowhead angle
+    double angle = atan2(y2 - y1, x2 - x1);
+    double arrow_angle = M_PI / 6; // 30 degrees
+    double arrow_length = size;
+
+    // Left side of arrowhead
+    int x3 = x2 - arrow_length * cos(angle - arrow_angle);
+    int y3 = y2 - arrow_length * sin(angle - arrow_angle);
+    SDL_RenderDrawLine(ren, x2, y2, x3, y3);
+
+    // Right side of arrowhead
+    int x4 = x2 - arrow_length * cos(angle + arrow_angle);
+    int y4 = y2 - arrow_length * sin(angle + arrow_angle);
+    SDL_RenderDrawLine(ren, x2, y2, x4, y4);
+}

@@ -74,17 +74,13 @@ struct path *search_backtrace(struct search *pSearch) {
 
     // printf("Got Path of length %ld!!\n", length);
 
-    struct path *p = malloc(sizeof(struct path));
-    if (!p) return NULL;
-
-    p->n_voxels = length;
-    p->voxels = malloc(length * sizeof(struct voxel *));
+    struct path *p = path_init(length);
     if (!p->voxels) {
         free(p);
         return NULL;
     }
 
-    // Fill in reverse order (start → end)
+    // Fill in reverse order (start -> end)
     struct voxel *v = v_end;
     for (size_t i = length; i-- > 0 && v; v = v->parent)
         p->voxels[i] = v;

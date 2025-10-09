@@ -36,8 +36,8 @@ mpirun: build
 	mpirun ./${BUILD_DIR}/844A1
 
 valgrind: build
-	mpirun valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --error-limit=no --log-file=valgrindout.txt ./build/844A1
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --error-limit=no --log-file=valgrindout.txt ./build/844A1
 
 cachegrind: build
-	mpirun valgrind --tool=callgrind --callgrind-out-file=callgrind.out ./build/844A1
+	valgrind --tool=callgrind --callgrind-out-file=callgrind.out ./build/844A1
 

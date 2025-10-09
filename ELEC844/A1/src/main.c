@@ -40,20 +40,26 @@ int main(int argc, char **argv){
             if(e.type == SDL_QUIT)
                 goto exit;
         }
+
+        // Check to see if the search has finished, if not run next iteration
         if(!s->finished){
             int r = search_stepA(s);
-            // printf("Search Returned %d\n", r);
         }
 
         // Backtrace the path
         struct path *p = search_backtrace(s);
+        // clears screen - must be run before other draw functions
+        disp_clr(d);
+        // Draw grid and path
         disp_drawGrid(d);
         disp_drawPath(d, p);
-        if(p)
-            if(p->voxels) free(p->voxels);
-        if(p) free(p);
+        // Render the display
         disp_render(d);
-        SDL_Delay(200);
+        // free the path
+        path_free(&p);
+
+        // Run a delay for the animation
+        SDL_Delay(50);
     }
 
 exit:

@@ -108,4 +108,24 @@ static inline void grid_free(struct grid **ppGrid){
     *ppGrid = NULL;
 }
 
+static inline struct path *path_init(size_t n_voxels){
+    struct path *p = malloc(sizeof(struct path));
+    if(!p) return NULL;
+    p->voxels = malloc(n_voxels*sizeof(struct voxel *));
+    if(!p->voxels){
+        free(p);
+        return NULL;
+    }
+    p->n_voxels = n_voxels;
+    return p;
+}
+
+static inline void path_free(struct path **ppPath){
+    if(!ppPath) return;
+    if(!*ppPath) return;
+    if((*ppPath)->voxels) free((*ppPath)->voxels);
+    free(*ppPath);
+    *ppPath = NULL;
+}
+
 #endif
