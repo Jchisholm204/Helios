@@ -1,7 +1,7 @@
 /**
  * @file display.c
  * @author Jacob Chisholm (https://Jchisholm204.github.io)
- * @brief 
+ * @brief
  * @version 0.1
  * @date Created: 2025-10-08
  * @modified Last Modified: 2025-10-08
@@ -10,49 +10,51 @@
  */
 
 #include "display.h"
+
 #include <SDL2/SDL_ttf.h>
 
 #define PIXEL_PER_GRID 40
-#define IN_PIXELS(x) (PIXEL_PER_GRID*x)
+#define IN_PIXELS(x) (PIXEL_PER_GRID * x)
 #define PX_BORDER 40
 #define ARROW_SIZE 8
 
 #define FONT "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf"
 
-void draw_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, int x, int y);
-void draw_arrow(SDL_Renderer *ren, int x1, int y1, int x2, int y2, int size);
+void draw_text(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x,
+               int y);
+void draw_arrow(SDL_Renderer* ren, int x1, int y1, int x2, int y2, int size);
 
-disp_t *disp_init(size_t n_cols, size_t n_rows){
+disp_t* disp_init(size_t n_cols, size_t n_rows) {
     // Create the Display Object
-    disp_t *pDisp = malloc(sizeof(disp_t));
-    if(!pDisp) 
+    disp_t* pDisp = malloc(sizeof(disp_t));
+    if (!pDisp)
         goto alloc_failure;
 
     pDisp->grid = grid_init(n_cols, n_rows);
-    if(!pDisp->grid)
+    if (!pDisp->grid)
         goto sdl_failure;
 
-    pDisp->ms_per_item = DISPD_MS_ITEM;
-
-    if(SDL_Init(SDL_INIT_VIDEO) != 0) 
+    if (SDL_Init(SDL_INIT_VIDEO) != 0)
         goto sdl_failure;
-    if(TTF_Init() != 0)
+    if (TTF_Init() != 0)
         goto sdl_failure;
 
     // Create the SDL window
-    pDisp->sdl_win = SDL_CreateWindow("844A1", 100, 100, 
-            IN_PIXELS(n_cols) + PX_BORDER*2, IN_PIXELS(n_rows)+PX_BORDER*2, SDL_WINDOW_SHOWN);
-    if(!pDisp->sdl_win) 
+    pDisp->sdl_win =
+        SDL_CreateWindow("844A1", 100, 100, IN_PIXELS(n_cols) + PX_BORDER * 2,
+                         IN_PIXELS(n_rows) + PX_BORDER * 2, SDL_WINDOW_SHOWN);
+    if (!pDisp->sdl_win)
         goto win_failure;
 
     // Create the SDL renderer
-    pDisp->sdl_ren = SDL_CreateRenderer(pDisp->sdl_win, -1, SDL_RENDERER_ACCELERATED);
-    if(!pDisp->sdl_ren){
+    pDisp->sdl_ren =
+        SDL_CreateRenderer(pDisp->sdl_win, -1, SDL_RENDERER_ACCELERATED);
+    if (!pDisp->sdl_ren) {
         goto ren_failure;
     }
 
     pDisp->sdl_font = TTF_OpenFont(FONT, 16);
-    if(!pDisp->sdl_font){
+    if (!pDisp->sdl_font) {
         printf("TTF Openfont Error: %s\n", TTF_GetError());
         goto ren_failure;
     }
@@ -63,133 +65,158 @@ ren_failure:
 win_failure:
     SDL_Quit();
 sdl_failure:
-    if(pDisp->grid) grid_free(&pDisp->grid);
+    if (pDisp->grid)
+        grid_free(&pDisp->grid);
     free(pDisp);
 alloc_failure:
     return NULL;
 }
 
-
-void disp_clr(disp_t *pDisplay){
+void disp_clr(disp_t* pDisplay) {
     // Clear the screen
     SDL_SetRenderDrawColor(pDisplay->sdl_ren, 255, 255, 255, 255);
     SDL_RenderClear(pDisplay->sdl_ren);
 }
 
-void disp_drawGrid(disp_t *pDisplay){
-    if(!pDisplay) return;
-    if(!pDisplay->grid) return;
+void disp_drawGrid(disp_t* pDisplay) {
+    if (!pDisplay)
+        return;
+    if (!pDisplay->grid)
+        return;
     size_t max_x = pDisplay->grid->size.x;
     size_t max_y = pDisplay->grid->size.y;
 
     // Draw the grid on the screen (x)
     SDL_SetRenderDrawColor(pDisplay->sdl_ren, 0, 0, 0, 255);
-    for(int i = 0; i < max_x; i++){
-        SDL_RenderDrawLine(pDisplay->sdl_ren, 
-                IN_PIXELS(i)+PX_BORDER, PX_BORDER, IN_PIXELS(i)+PX_BORDER, IN_PIXELS(max_y)+PX_BORDER);
+    for (int i = 0; i < max_x; i++) {
+        SDL_RenderDrawLine(pDisplay->sdl_ren, IN_PIXELS(i) + PX_BORDER,
+                           PX_BORDER, IN_PIXELS(i) + PX_BORDER,
+                           IN_PIXELS(max_y) + PX_BORDER);
         char text[20];
         snprintf(text, 20, "%d", i);
-        draw_text(pDisplay->sdl_ren, pDisplay->sdl_font, text, IN_PIXELS(i)+PX_BORDER+PIXEL_PER_GRID/3, PX_BORDER/2);
+        draw_text(pDisplay->sdl_ren, pDisplay->sdl_font, text,
+                  IN_PIXELS(i) + PX_BORDER + PIXEL_PER_GRID / 3, PX_BORDER / 2);
     }
     // Draw the final line
-    SDL_RenderDrawLine(pDisplay->sdl_ren, 
-            IN_PIXELS(max_x)+PX_BORDER, PX_BORDER, IN_PIXELS(max_x)+PX_BORDER, IN_PIXELS(max_y)+PX_BORDER);
+    SDL_RenderDrawLine(pDisplay->sdl_ren, IN_PIXELS(max_x) + PX_BORDER,
+                       PX_BORDER, IN_PIXELS(max_x) + PX_BORDER,
+                       IN_PIXELS(max_y) + PX_BORDER);
 
     // Draw the grid on the screen (y)
-    for(int i = 0; i < max_y; i++){
-        SDL_RenderDrawLine(pDisplay->sdl_ren, 
-                PX_BORDER, IN_PIXELS(i)+PX_BORDER, IN_PIXELS(max_x)+PX_BORDER, IN_PIXELS(i)+PX_BORDER);
+    for (int i = 0; i < max_y; i++) {
+        SDL_RenderDrawLine(pDisplay->sdl_ren, PX_BORDER,
+                           IN_PIXELS(i) + PX_BORDER,
+                           IN_PIXELS(max_x) + PX_BORDER,
+                           IN_PIXELS(i) + PX_BORDER);
         char text[20];
         snprintf(text, 20, "%d", i);
-        draw_text(pDisplay->sdl_ren, pDisplay->sdl_font, text,PX_BORDER/3, IN_PIXELS(i)+PX_BORDER+PIXEL_PER_GRID/3);
+        draw_text(pDisplay->sdl_ren, pDisplay->sdl_font, text, PX_BORDER / 3,
+                  IN_PIXELS(i) + PX_BORDER + PIXEL_PER_GRID / 3);
     }
     // Draw the final line
-    SDL_RenderDrawLine(pDisplay->sdl_ren, 
-            PX_BORDER, IN_PIXELS(max_y)+PX_BORDER, IN_PIXELS(max_x)+PX_BORDER, IN_PIXELS(max_y)+PX_BORDER);
+    SDL_RenderDrawLine(pDisplay->sdl_ren, PX_BORDER,
+                       IN_PIXELS(max_y) + PX_BORDER,
+                       IN_PIXELS(max_x) + PX_BORDER,
+                       IN_PIXELS(max_y) + PX_BORDER);
 
     // Render all voxels on screen
-    for(size_t x = 0; x < max_x; x++){
-        for(size_t y = 0; y < max_y; y++){
-            struct voxel *v = grid_index(pDisplay->grid, x, y);
-            if(!v) continue;
-            SDL_Rect r = {IN_PIXELS(x)+PX_BORDER+2, IN_PIXELS(y)+PX_BORDER+2, (PIXEL_PER_GRID-3), (PIXEL_PER_GRID-3)};
-            switch(v->state){
-                case eStateExplored:
-                    SDL_SetRenderDrawColor(pDisplay->sdl_ren, 210, 210, 210, 255);
-                    SDL_RenderFillRect(pDisplay->sdl_ren, &r);
-                    break;
-                case eStateFrontier:
-                    SDL_SetRenderDrawColor(pDisplay->sdl_ren, 140, 140, 140, 255);
-                    SDL_RenderFillRect(pDisplay->sdl_ren, &r);
-                    break;
-                case eStateBlocked:
-                    SDL_SetRenderDrawColor(pDisplay->sdl_ren, 0, 0, 0, 255);
-                    SDL_RenderFillRect(pDisplay->sdl_ren, &r);
-                    break;
-                case eStateSource:
-                    // Render the source
-                    draw_text(pDisplay->sdl_ren, pDisplay->sdl_font, "S", 
-                            IN_PIXELS(x)+PX_BORDER+PIXEL_PER_GRID/3, IN_PIXELS(y)+PX_BORDER+PIXEL_PER_GRID/3);
-                    break;
-                case eStateGoal:
-                    // Render the source
-                    draw_text(pDisplay->sdl_ren, pDisplay->sdl_font, "G", 
-                            IN_PIXELS(x)+PX_BORDER+PIXEL_PER_GRID/3, IN_PIXELS(y)+PX_BORDER+PIXEL_PER_GRID/3);
-                    break;
-                default:
-                    break;
+    for (size_t x = 0; x < max_x; x++) {
+        for (size_t y = 0; y < max_y; y++) {
+            struct voxel* v = grid_index(pDisplay->grid, x, y);
+            if (!v)
+                continue;
+            SDL_Rect r = {IN_PIXELS(x) + PX_BORDER + 2,
+                          IN_PIXELS(y) + PX_BORDER + 2, (PIXEL_PER_GRID - 3),
+                          (PIXEL_PER_GRID - 3)};
+            switch (v->state) {
+            case eStateExplored:
+                SDL_SetRenderDrawColor(pDisplay->sdl_ren, 210, 210, 210, 255);
+                SDL_RenderFillRect(pDisplay->sdl_ren, &r);
+                break;
+            case eStateFrontier:
+                SDL_SetRenderDrawColor(pDisplay->sdl_ren, 140, 140, 140, 255);
+                SDL_RenderFillRect(pDisplay->sdl_ren, &r);
+                break;
+            case eStateBlocked:
+                SDL_SetRenderDrawColor(pDisplay->sdl_ren, 0, 0, 0, 255);
+                SDL_RenderFillRect(pDisplay->sdl_ren, &r);
+                break;
+            case eStateSource:
+                // Render the source
+                draw_text(pDisplay->sdl_ren, pDisplay->sdl_font, "S",
+                          IN_PIXELS(x) + PX_BORDER + PIXEL_PER_GRID / 3,
+                          IN_PIXELS(y) + PX_BORDER + PIXEL_PER_GRID / 3);
+                break;
+            case eStateGoal:
+                // Render the source
+                draw_text(pDisplay->sdl_ren, pDisplay->sdl_font, "G",
+                          IN_PIXELS(x) + PX_BORDER + PIXEL_PER_GRID / 3,
+                          IN_PIXELS(y) + PX_BORDER + PIXEL_PER_GRID / 3);
+                break;
+            default:
+                break;
             }
         }
     }
 
     // Render text on bottom of screen
-    
-    draw_text(pDisplay->sdl_ren, pDisplay->sdl_font, "ELEC 844 2D Search Simulator - Jacob Chisholm", 
-            IN_PIXELS(max_x)/4+PX_BORDER, IN_PIXELS(max_y) + PX_BORDER*1.2);
+
+    draw_text(pDisplay->sdl_ren, pDisplay->sdl_font,
+              "ELEC 844 2D Search Simulator - Jacob Chisholm",
+              IN_PIXELS(max_x) / 4 + PX_BORDER,
+              IN_PIXELS(max_y) + PX_BORDER * 1.2);
 
     // Call disp_render to render the frame
 }
 
-void disp_drawPath(disp_t* pDisplay, struct path *pPath){
-    if(!pDisplay) return;
-    if(!pDisplay->grid) return;
-    if(!pPath) return;
-    if(!pPath->voxels) return;
+void disp_drawPath(disp_t* pDisplay, struct path* pPath) {
+    if (!pDisplay)
+        return;
+    if (!pDisplay->grid)
+        return;
+    if (!pPath)
+        return;
+    if (!pPath->voxels)
+        return;
     size_t max_x = pDisplay->grid->size.x;
     size_t max_y = pDisplay->grid->size.y;
 
     // Draw the Path
     SDL_SetRenderDrawColor(pDisplay->sdl_ren, 255, 0, 0, 255);
-    for(size_t i = 0; i < pPath->n_voxels-1; i++){
-        struct voxel *v = pPath->voxels[i];
-        struct voxel *vn = pPath->voxels[i+1];
-        if(!v) continue;
-        if(!vn) continue;
+    for (size_t i = 0; i < pPath->n_voxels - 1; i++) {
+        struct voxel* v = pPath->voxels[i];
+        struct voxel* vn = pPath->voxels[i + 1];
+        if (!v)
+            continue;
+        if (!vn)
+            continue;
         int sx = 0, sy = 0, gx = 0, gy = 0;
         sx = v->x;
         sy = v->y;
         gx = vn->x;
         gy = vn->y;
         // printf("Drawing Path: (%d, %d) -> (%d, %d)\n", sx, sy, gx, gy);
-        // SDL_RenderDrawLine(pDisplay->sdl_ren, 
-        draw_arrow(pDisplay->sdl_ren, 
-                IN_PIXELS(sx)+PX_BORDER+PIXEL_PER_GRID/2, IN_PIXELS(sy)+PX_BORDER+PIXEL_PER_GRID/2, 
-                IN_PIXELS(gx)+PX_BORDER+PIXEL_PER_GRID/2, IN_PIXELS(gy)+PX_BORDER+PIXEL_PER_GRID/2,
-                ARROW_SIZE);
-
+        // SDL_RenderDrawLine(pDisplay->sdl_ren,
+        draw_arrow(pDisplay->sdl_ren,
+                   IN_PIXELS(sx) + PX_BORDER + PIXEL_PER_GRID / 2,
+                   IN_PIXELS(sy) + PX_BORDER + PIXEL_PER_GRID / 2,
+                   IN_PIXELS(gx) + PX_BORDER + PIXEL_PER_GRID / 2,
+                   IN_PIXELS(gy) + PX_BORDER + PIXEL_PER_GRID / 2, ARROW_SIZE);
     }
 
     // Call disp_render to render the frame
 }
 
-void disp_render(disp_t *pDisplay){
+void disp_render(disp_t* pDisplay) {
     // Render the output
     SDL_RenderPresent(pDisplay->sdl_ren);
 }
 
-void disp_exit(disp_t **ppDisplay){
-    if(!ppDisplay) return;
-    if(!(*ppDisplay)) return;
+void disp_exit(disp_t** ppDisplay) {
+    if (!ppDisplay)
+        return;
+    if (!(*ppDisplay))
+        return;
 
     // Shutdown SDL
     SDL_DestroyRenderer((*ppDisplay)->sdl_ren);
@@ -202,15 +229,16 @@ void disp_exit(disp_t **ppDisplay){
     *ppDisplay = NULL;
 }
 
-void draw_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, int x, int y) {
-    SDL_Color color = {0, 0, 0, 255};  // white text
+void draw_text(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x,
+               int y) {
+    SDL_Color color = {0, 0, 0, 255}; // white text
 
-    SDL_Surface *surface = TTF_RenderText_Solid(font, text, color);
+    SDL_Surface* surface = TTF_RenderText_Solid(font, text, color);
     if (!surface) {
         return;
     }
 
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     if (!texture) {
         fprintf(stderr, "CreateTexture Error: %s\n", SDL_GetError());
@@ -223,7 +251,7 @@ void draw_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, int x, 
     SDL_DestroyTexture(texture);
 }
 
-void draw_arrow(SDL_Renderer *ren, int x1, int y1, int x2, int y2, int size) {
+void draw_arrow(SDL_Renderer* ren, int x1, int y1, int x2, int y2, int size) {
     // Draw main line
     SDL_RenderDrawLine(ren, x1, y1, x2, y2);
 

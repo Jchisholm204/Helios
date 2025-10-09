@@ -18,7 +18,7 @@
 #define WORLD_X 19
 #define WORLD_Y 19
 
-enum eWorlds{
+enum eWorlds {
     eWorld1A,
     eWorld1B,
     eWorld2A,
@@ -27,6 +27,6 @@ enum eWorlds{
     eWorld_n
 };
 
-int world_loader(struct grid *pGrid, enum eWorlds world);
+int world_loader(struct grid* pGrid, enum eWorlds world);
 
 #endif

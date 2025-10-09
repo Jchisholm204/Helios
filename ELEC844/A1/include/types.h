@@ -1,7 +1,7 @@
 /**
  * @file types.h
  * @author Jacob Chisholm (https://Jchisholm204.github.io)
- * @brief 
+ * @brief
  * @version 0.1
  * @date Created: 2025-10-08
  * @modified Last Modified: 2025-10-08
@@ -12,11 +12,11 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
-#include <stddef.h>
-#include <malloc.h>
 #include <float.h>
+#include <malloc.h>
+#include <stddef.h>
 
-struct xy{
+struct xy {
     int x;
     int y;
 };
@@ -35,33 +35,38 @@ struct voxel {
     int x, y;
     enum eVoxelState state;
     float cost;
-    struct voxel *parent;
-    int open;
+    struct voxel* parent;
 };
 
 struct grid {
-    struct voxel *voxels;
+    struct voxel* voxels;
     struct xy size;
 };
 
 struct path {
     size_t n_voxels;
-    struct voxel **voxels;
+    struct voxel** voxels;
 };
 
-static inline struct voxel *grid_index(struct grid *pGrid, size_t col, size_t row){
-    if(!pGrid) return NULL;
-    if(!pGrid->voxels) return NULL;
-    if(col >= pGrid->size.x) return NULL;
-    if(row >= pGrid->size.y) return NULL;
-    return &(pGrid->voxels[row*pGrid->size.x+col]);
+static inline struct voxel* grid_index(struct grid* pGrid, size_t col,
+                                       size_t row) {
+    if (!pGrid)
+        return NULL;
+    if (!pGrid->voxels)
+        return NULL;
+    if (col >= pGrid->size.x)
+        return NULL;
+    if (row >= pGrid->size.y)
+        return NULL;
+    return &(pGrid->voxels[row * pGrid->size.x + col]);
 }
 
-static inline struct grid *grid_init(size_t n_cols, size_t n_rows){
-    struct grid *g = malloc(sizeof(struct grid));
-    if(!g) return NULL;
-    g->voxels = malloc(n_cols*n_rows*sizeof(struct voxel));
-    if(!g->voxels) {
+static inline struct grid* grid_init(size_t n_cols, size_t n_rows) {
+    struct grid* g = malloc(sizeof(struct grid));
+    if (!g)
+        return NULL;
+    g->voxels = malloc(n_cols * n_rows * sizeof(struct voxel));
+    if (!g->voxels) {
         free(g);
         return NULL;
     }
@@ -69,50 +74,71 @@ static inline struct grid *grid_init(size_t n_cols, size_t n_rows){
     g->size.x = n_cols;
     g->size.y = n_rows;
 
-    for(size_t x = 0; x < n_cols; x++){
-        for(size_t y = 0; y < n_rows; y++){
-            struct voxel *v = grid_index(g, x, y);
+    for (size_t x = 0; x < n_cols; x++) {
+        for (size_t y = 0; y < n_rows; y++) {
+            struct voxel* v = grid_index(g, x, y);
             v->state = eStateEmpty;
             v->x = x;
             v->y = y;
             v->cost = FLT_MAX;
             v->parent = NULL;
-            v->open = 1;
         }
     }
     return g;
 }
 
-// Zero out Grid Weights
-static inline void grid_zero(struct grid *pGrid){
-    if(!pGrid) return;
-    if(!pGrid->voxels) return;
+// Reset the Grid (same as zero but resets state)
+static inline void grid_reset(struct grid* pGrid) {
+    if (!pGrid)
+        return;
+    if (!pGrid->voxels)
+        return;
     size_t n_cols = pGrid->size.x;
     size_t n_rows = pGrid->size.y;
-    for(size_t x = 0; x < n_cols; x++){
-        for(size_t y = 0; y < n_rows; y++){
-            struct voxel *v = grid_index(pGrid, x, y);
+    for (size_t x = 0; x < n_cols; x++) {
+        for (size_t y = 0; y < n_rows; y++) {
+            struct voxel* v = grid_index(pGrid, x, y);
             v->cost = FLT_MAX;
             v->parent = NULL;
-            v->open = 1;
+            v->state = eStateEmpty;
         }
     }
-
 }
 
-static inline void grid_free(struct grid **ppGrid){
-    if(!ppGrid) return;
-    if(!(*ppGrid)) return;
-    if((*ppGrid)->voxels) free((*ppGrid)->voxels);
+// Zero out Grid Weights
+static inline void grid_zero(struct grid* pGrid) {
+    if (!pGrid)
+        return;
+    if (!pGrid->voxels)
+        return;
+    size_t n_cols = pGrid->size.x;
+    size_t n_rows = pGrid->size.y;
+    for (size_t x = 0; x < n_cols; x++) {
+        for (size_t y = 0; y < n_rows; y++) {
+            struct voxel* v = grid_index(pGrid, x, y);
+            v->cost = FLT_MAX;
+            v->parent = NULL;
+        }
+    }
+}
+
+static inline void grid_free(struct grid** ppGrid) {
+    if (!ppGrid)
+        return;
+    if (!(*ppGrid))
+        return;
+    if ((*ppGrid)->voxels)
+        free((*ppGrid)->voxels);
     free(*ppGrid);
     *ppGrid = NULL;
 }
 
-static inline struct path *path_init(size_t n_voxels){
-    struct path *p = malloc(sizeof(struct path));
-    if(!p) return NULL;
-    p->voxels = malloc(n_voxels*sizeof(struct voxel *));
-    if(!p->voxels){
+static inline struct path* path_init(size_t n_voxels) {
+    struct path* p = malloc(sizeof(struct path));
+    if (!p)
+        return NULL;
+    p->voxels = malloc(n_voxels * sizeof(struct voxel*));
+    if (!p->voxels) {
         free(p);
         return NULL;
     }
@@ -120,10 +146,13 @@ static inline struct path *path_init(size_t n_voxels){
     return p;
 }
 
-static inline void path_free(struct path **ppPath){
-    if(!ppPath) return;
-    if(!*ppPath) return;
-    if((*ppPath)->voxels) free((*ppPath)->voxels);
+static inline void path_free(struct path** ppPath) {
+    if (!ppPath)
+        return;
+    if (!*ppPath)
+        return;
+    if ((*ppPath)->voxels)
+        free((*ppPath)->voxels);
     free(*ppPath);
     *ppPath = NULL;
 }

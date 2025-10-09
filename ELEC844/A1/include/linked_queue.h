@@ -1,10 +1,13 @@
 /**
  * @file linked_queue.h
  * @author Jacob Chisholm (https://Jchisholm204.github.io)
- * @brief 
+ * @brief Linked List Priority Queue
  * @version 0.1
  * @date Created: 2025-10-08
  * @modified Last Modified: 2025-10-08
+ *
+ * This is the simplest way I could think to make a priority queue without memory reallocating.
+ * This queue should not hold onto any voxel memory.
  *
  * @copyright Copyright (c) 2025
  */
@@ -13,20 +16,28 @@
 #define _LINKED_QUEUE_H_
 #include "types.h"
 
-struct queued_voxel{
-    struct voxel *v;
-    struct queued_voxel *next;
+struct queued_voxel {
+    struct voxel* v;
+    struct queued_voxel* next;
     float cost;
 };
 
-static inline struct voxel *queue_pop(struct queued_voxel **head){
-    if(!head) return NULL;
-    if(!*head) return NULL;
+/**
+ * @brief Pop the lowest cost item from the queue
+ *
+ * @param head pointer to the head of the queue
+ * @return popped voxel
+ */
+static inline struct voxel* queue_pop(struct queued_voxel** head) {
+    if (!head)
+        return NULL;
+    if (!*head)
+        return NULL;
 
     // Get a pointer to the current head
-    struct queued_voxel *top = *head;
+    struct queued_voxel* top = *head;
     // Dereference the head to get the return voxel
-    struct voxel *top_voxel = top->v;
+    struct voxel* top_voxel = top->v;
     // Change the head to be the next voxel
     *head = top->next;
     // Free the previous head
@@ -35,38 +46,49 @@ static inline struct voxel *queue_pop(struct queued_voxel **head){
     return top_voxel;
 }
 
-static inline int queue_push(struct queued_voxel **head, struct voxel *v, float cost){
-    if(!head) return -1;
+/**
+ * @brief Push a voxel into the priority queue
+ *
+ * @param head pointer to the queue handle (head of the queue)
+ * @param v pointer to the voxel to push into the queue
+ * @param cost queue cost of the voxel (lower cost popped first)
+ * @return 0 on success
+ */
+static inline int queue_push(struct queued_voxel** head, struct voxel* v,
+                             float cost) {
+    if (!head)
+        return -1;
     // Setup the new node
-    struct queued_voxel *new_node = malloc(sizeof(struct queued_voxel));
-    if(!new_node) return -1;
+    struct queued_voxel* new_node = malloc(sizeof(struct queued_voxel));
+    if (!new_node)
+        return -1;
     new_node->v = v;
     new_node->cost = cost;
     new_node->next = NULL;
 
     // Case where queue is empty
-    if(!*head){
+    if (!*head) {
         *head = new_node;
         return 0;
     }
 
     // Case where insert happens at the head
-    struct queued_voxel *qvc = *head;
-    if(cost < qvc->cost){
+    struct queued_voxel* qvc = *head;
+    if (cost < qvc->cost) {
         new_node->next = qvc;
         *head = new_node;
         return 0;
     }
 
     // Traverse the current queue to find the insert point
-    while(qvc != NULL){
+    while (qvc != NULL) {
         // Handle reaching the end of the queue
-        if(qvc->next == NULL){
+        if (qvc->next == NULL) {
             qvc->next = new_node;
             return 0;
         }
         // Insert node is less cost than the next in the chain (goes before it)
-        if(cost < qvc->next->cost){
+        if (cost < qvc->next->cost) {
             new_node->next = qvc->next;
             qvc->next = new_node;
             return 0;
