@@ -14,6 +14,7 @@
 
 #include <stddef.h>
 #include <malloc.h>
+#include <float.h>
 
 struct xy{
     int x;
@@ -33,6 +34,9 @@ enum eVoxelState {
 struct voxel {
     int x, y;
     enum eVoxelState state;
+    float cost;
+    struct voxel *parent;
+    int open;
 };
 
 struct grid {
@@ -46,6 +50,8 @@ struct path {
 };
 
 static inline struct voxel *grid_index(struct grid *pGrid, size_t col, size_t row){
+    if(!pGrid) return NULL;
+    if(!pGrid->voxels) return NULL;
     if(col >= pGrid->size.x) return NULL;
     if(row >= pGrid->size.y) return NULL;
     return &(pGrid->voxels[row*pGrid->size.x+col]);
@@ -69,9 +75,29 @@ static inline struct grid *grid_init(size_t n_cols, size_t n_rows){
             v->state = eStateEmpty;
             v->x = x;
             v->y = y;
+            v->cost = FLT_MAX;
+            v->parent = NULL;
+            v->open = 1;
         }
     }
     return g;
+}
+
+// Zero out Grid Weights
+static inline void grid_zero(struct grid *pGrid){
+    if(!pGrid) return;
+    if(!pGrid->voxels) return;
+    size_t n_cols = pGrid->size.x;
+    size_t n_rows = pGrid->size.y;
+    for(size_t x = 0; x < n_cols; x++){
+        for(size_t y = 0; y < n_rows; y++){
+            struct voxel *v = grid_index(pGrid, x, y);
+            v->cost = FLT_MAX;
+            v->parent = NULL;
+            v->open = 1;
+        }
+    }
+
 }
 
 static inline void grid_free(struct grid **ppGrid){
