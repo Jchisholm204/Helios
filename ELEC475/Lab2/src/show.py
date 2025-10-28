@@ -67,7 +67,7 @@ class SnoutNetVisualizer:
     def create_test_loader(self, batch_size=1, num_workers=0):
         """Create test data loader"""
         test_dataset = SnoutDataset(
-            labels_file="oxford-iiit-pet-noses/train_noses.txt",
+            labels_file="oxford-iiit-pet-noses/test_noses.txt",
             img_dir="oxford-iiit-pet-noses/images-original/images",
             target_size=227,
         )
@@ -162,7 +162,8 @@ class SnoutNetVisualizer:
             ax = axes[row, col]
 
             # Denormalize image
-            image_np = self.denormalize_image(images[i])
+            # image_np = self.denormalize_image(images[i])
+            image_np = images[i].permute(1, 2, 0).cpu().numpy()
 
             # Display image
             ax.imshow(image_np)
