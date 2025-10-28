@@ -16,6 +16,7 @@ import time
 from datetime import datetime
 
 from model import SnoutNet
+from model_alexnet import AlexNetRegressor
 from dataloader import SnoutDataset
 
 
@@ -294,7 +295,8 @@ def main():
 
     # Create model
     print("Creating SnoutNet model...")
-    model = SnoutNet(input_channels=3, input_size=config['target_size'])
+    # model = SnoutNet(input_channels=3, input_size=config['target_size'])
+    model = AlexNetRegressor()
 
     # Print model info
     total_params = sum(p.numel() for p in model.parameters())
@@ -309,7 +311,7 @@ def main():
 
     # Create timestamped save directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    save_dir = f"./checkpoints/snoutnet_{timestamp}"
+    save_dir = f"./checkpoints/alexnet_{timestamp}"
 
     # Train the model
     print("Starting training...")
