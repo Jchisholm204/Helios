@@ -71,7 +71,6 @@ class SnoutNetTester:
             labels_file="oxford-iiit-pet-noses/test_noses.txt",
             img_dir="oxford-iiit-pet-noses/images-original/images",
             target_size=227,
-            file_format='pet_noses'
         )
         
         test_loader = DataLoader(
@@ -312,7 +311,6 @@ def main():
         labels_file="oxford-iiit-pet-noses/test_noses.txt",
         img_dir="oxford-iiit-pet-noses/images-original/images",
         target_size=227,
-        file_format='pet_noses'
     )
     
     # Evaluate model
