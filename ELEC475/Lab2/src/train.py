@@ -220,7 +220,7 @@ def create_data_loaders(batch_size=32, num_workers=4, target_size=227):
     train_dataset = SnoutDataset(
         labels_file="oxford-iiit-pet-noses/train_noses.txt",
         img_dir="oxford-iiit-pet-noses/images-original/images",
-        transform=transform,
+        transform=None,
         target_size=target_size,
     )
 
@@ -228,7 +228,7 @@ def create_data_loaders(batch_size=32, num_workers=4, target_size=227):
     val_dataset = SnoutDataset(
         labels_file="oxford-iiit-pet-noses/test_noses.txt",
         img_dir="oxford-iiit-pet-noses/images-original/images",
-        transform=transform,
+        transform=None,
         target_size=target_size,
     )
 
