@@ -44,29 +44,97 @@ class SnoutDataset(Dataset):
     def __len__(self):
         return len(self.labels)
 
+    # def __getitem__(self, idx):
+    #     # Load image
+    #     filename = self.labels.iloc[idx]['filename']
+    #     img_path = os.path.join(self.img_dir, filename)
+    #     image = Image.open(img_path).convert('RGB')
+    #     # Store original size before resizing
+    #     orig_w, orig_h = image.size
+    #
+    #     # Normalize label coordinates
+    #     x = self.labels.iloc[idx]['x'] / orig_w
+    #     y = self.labels.iloc[idx]['y'] / orig_h
+    #     label = torch.tensor([x, y], dtype=torch.float32)
+    #
+    #     # Always resize to the same (H, W)
+    #     base_transform = transforms.Resize(
+    #         (self.target_size, self.target_size))
+    #     image = base_transform(image)
+    #
+    #     # Apply optional user-defined transform (e.g. augmentation)
+    #     if self.transform:
+    #         image = self.transform(image)
+    #
+    #     # Ensure output is a tensor
+    #     if not isinstance(image, torch.Tensor):
+    #         image = transforms.ToTensor()(image)
+    #
+    #     return image, label
+
     def __getitem__(self, idx):
-        # Load image
+        # Load image and get original size
         filename = self.labels.iloc[idx]['filename']
         img_path = os.path.join(self.img_dir, filename)
         image = Image.open(img_path).convert('RGB')
-        # Store original size before resizing
         orig_w, orig_h = image.size
+        target_size = self.target_size  # e.g., 227
+        # Load and normalize label coordinates based on original size
 
-        # Normalize label coordinates
-        x = self.labels.iloc[idx]['x'] / orig_w
-        y = self.labels.iloc[idx]['y'] / orig_h
-        label = torch.tensor([x, y], dtype=torch.float32)
+        orig_x = self.labels.iloc[idx]['x']
+        orig_y = self.labels.iloc[idx]['y']
 
-        # Always resize to the same (H, W)
-        base_transform = transforms.Resize(
-            (self.target_size, self.target_size))
+        # --- 1. Aspect Ratio Preserving Resize & Padding (Letterboxing) ---
+
+        # Determine scaling factor to fit the image inside the target_size (227x227)
+        scale_factor = min(target_size / orig_w, target_size / orig_h)
+
+        # Calculate new scaled dimensions
+        new_w = int(orig_w * scale_factor)
+        new_h = int(orig_h * scale_factor)
+
+        # Calculate padding needed to center the image in the 227x227 frame
+        pad_w = target_size - new_w
+        pad_h = target_size - new_h
+
+        # Padding is divided across two sides (left/right or top/bottom)
+        pad_left = pad_w // 2
+        pad_top = pad_h // 2
+
+        # Define the base transform sequence
+        base_transform = transforms.Compose([
+            # Resize to the new scaled dimensions
+            transforms.Resize((new_h, new_w)),
+            # Pad to make it a perfect 227x227 (pad_left, pad_top, pad_right, pad_bottom)
+            transforms.Pad((pad_left, pad_top, pad_w -
+                            pad_left, pad_h - pad_top), fill=0),
+        ])
+
         image = base_transform(image)
 
-        # Apply optional user-defined transform (e.g. augmentation)
+        # --- 2. Adjust Coordinates to Account for Scaling and Padding ---
+
+        # Scale the original coordinates
+        scaled_x = orig_x * scale_factor
+        scaled_y = orig_y * scale_factor
+
+        # Apply the padding offset (in pixels)
+        padded_x = scaled_x + pad_left
+        padded_y = scaled_y + pad_top
+
+        # Normalize the final padded coordinate by the target size (227)
+        final_x_norm = padded_x / target_size
+        final_y_norm = padded_y / target_size
+
+        label = torch.tensor([final_x_norm, final_y_norm], dtype=torch.float32)
+
+        # --- 3. Apply Augmentations and Final Conversion ---
+
+        # Apply optional user-defined transform (e.g., ColorJitter, Gaussian Blur, Normalize)
         if self.transform:
             image = self.transform(image)
 
-        # Ensure output is a tensor
+        # Ensure output is a tensor (e.g., handles ToTensor if not in self.transform)
         if not isinstance(image, torch.Tensor):
             image = transforms.ToTensor()(image)
 
