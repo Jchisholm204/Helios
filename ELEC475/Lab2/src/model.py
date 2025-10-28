@@ -16,15 +16,15 @@ class SnoutNet(nn.Module):
         # Convolutional layers
         # 227x227x3 -> 57x57x64
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=4, padding=0)
-        self.bn1 = nn.BatchNorm2d(64)
+        self.bn1 = nn.InstanceNorm2d(64, affine=True)
 
         # 57x57x64 -> 15x15x128
         self.conv2 = nn.Conv2d(64, 128, kernel_size=3, stride=4, padding=0)
-        self.bn2 = nn.BatchNorm2d(128)
+        self.bn2 = nn.InstanceNorm2d(128, affine=True)
 
         # 15x15x128 -> 4x4x256
         self.conv3 = nn.Conv2d(128, 256, kernel_size=3, stride=4, padding=0)
-        self.bn3 = nn.BatchNorm2d(256)
+        self.bn3 = nn.InstanceNorm2d(256, affine=True)
 
         # Calculate the size after conv layers
         # 227x227x3 -> 57x57x64 -> 15x15x128 -> 4x4x256

@@ -254,7 +254,7 @@ def main():
 
     # Hyperparameters
     config = {
-        'batch_size': 16,
+        'batch_size': 1,
         'num_epochs': 50,
         'learning_rate': 0.001,
         'weight_decay': 1e-3,
