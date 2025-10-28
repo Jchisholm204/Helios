@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from torchvision import transforms
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -198,9 +199,24 @@ def create_data_loaders(batch_size=32, num_workers=4, target_size=227):
     """Create training and validation data loaders"""
 
     # Data transforms (no augmentation as specified)
-    transform = None  # Will use default transform from SnoutDataset
+    # transform = None  # Will use default transform from SnoutDataset
 
-    # Training dataset
+    transform = transforms.Compose([
+        transforms.Resize((227, 227)),
+        transforms.ColorJitter(
+            brightness=0.2,  # +/-20% brightness
+            contrast=0.2,    # +/-20% contrast
+            saturation=0.2   # +/-20% saturation
+        ),
+        transforms.GaussianBlur(
+            kernel_size=3, sigma=(0.1, 2.0)),  # smooth noise
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
+    ])
+
+
+# Training dataset
     train_dataset = SnoutDataset(
         labels_file="oxford-iiit-pet-noses/train_noses.txt",
         img_dir="oxford-iiit-pet-noses/images-original/images",
@@ -208,7 +224,7 @@ def create_data_loaders(batch_size=32, num_workers=4, target_size=227):
         target_size=target_size,
     )
 
-    # Validation dataset (using test partition)
+# Validation dataset (using test partition)
     val_dataset = SnoutDataset(
         labels_file="oxford-iiit-pet-noses/test_noses.txt",
         img_dir="oxford-iiit-pet-noses/images-original/images",
@@ -216,7 +232,8 @@ def create_data_loaders(batch_size=32, num_workers=4, target_size=227):
         target_size=target_size,
     )
 
-    # Data loaders
+
+# Data loaders
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
