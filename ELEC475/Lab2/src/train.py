@@ -17,6 +17,7 @@ from datetime import datetime
 
 from model import SnoutNet
 from model_alexnet import AlexNetRegressor
+from model_vgg import VGG16Regressor
 from dataloader import SnoutDataset
 
 
@@ -296,7 +297,8 @@ def main():
     # Create model
     print("Creating SnoutNet model...")
     # model = SnoutNet(input_channels=3, input_size=config['target_size'])
-    model = AlexNetRegressor()
+    # model = AlexNetRegressor()
+    model = VGG16Regressor()
 
     # Print model info
     total_params = sum(p.numel() for p in model.parameters())
@@ -311,7 +313,7 @@ def main():
 
     # Create timestamped save directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    save_dir = f"./checkpoints/alexnet_{timestamp}"
+    save_dir = f"./checkpoints/vgg_{timestamp}"
 
     # Train the model
     print("Starting training...")
