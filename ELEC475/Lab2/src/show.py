@@ -19,6 +19,8 @@ import argparse
 from model import SnoutNet
 from model_improved import ImprovedSnoutNet, SnoutNetWithSpatialAttention
 from dataloader import SnoutDataset
+from model_alexnet import AlexNetRegressor
+from model_vgg import VGG16Regressor
 
 
 class SnoutNetVisualizer:
@@ -50,7 +52,8 @@ class SnoutNetVisualizer:
             print("Detected: SnoutNetWithSpatialAttention")
         else:
             # Original SnoutNet
-            model = SnoutNet(input_channels=3, input_size=227).to(self.device)
+            # model = SnoutNet(input_channels=3, input_size=227).to(self.device)
+            model = AlexNetRegressor().to(self.device)
             print("Detected: Original SnoutNet")
 
             # Initialize FC layers for original model

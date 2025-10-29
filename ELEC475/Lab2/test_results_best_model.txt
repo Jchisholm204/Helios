@@ -1,21 +1,21 @@
 SnoutNet Test Results
 ==================================================
-Model: checkpoints/snoutnet_20251028_011751/best_model.pth
+Model: checkpoints/vgg_20251028_172031/best_model.pth
 Device: cuda
 Test samples: 698
 
 Distance Statistics (pixels):
-min_distance: 0.0392
-max_distance: 0.5701
-mean_distance: 0.2822
-std_distance: 0.0830
-median_distance: 0.2912
-p25_distance: 0.2367
-p75_distance: 0.3356
-p90_distance: 0.3743
-p95_distance: 0.4048
+min_distance: 0.0341
+max_distance: 0.6916
+mean_distance: 0.2982
+std_distance: 0.0757
+median_distance: 0.3096
+p25_distance: 0.2723
+p75_distance: 0.3375
+p90_distance: 0.3761
+p95_distance: 0.4012
 
 Performance:
-Total inference time: 0.1366 seconds
-Average inference time: 0.1957 ms
-Throughput: 5109.85 samples/second
+Total inference time: 0.1538 seconds
+Average inference time: 0.2203 ms
+Throughput: 4538.81 samples/second
