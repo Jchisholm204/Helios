@@ -14,6 +14,8 @@ from torch.utils.data import DataLoader
 import time
 
 from model import SnoutNet
+from model_vgg import VGG16Regressor
+from model_alexnet import AlexNetRegressor
 from model_improved import ImprovedSnoutNet, SnoutNetWithSpatialAttention
 from dataloader import SnoutDataset
 
@@ -45,7 +47,8 @@ class SnoutNetTester:
             print("Detected: SnoutNetWithSpatialAttention")
         else:
             # Original SnoutNet
-            model = SnoutNet(input_channels=3, input_size=227).to(self.device)
+            # model = SnoutNet(input_channels=3, input_size=227).to(self.device)
+            model = VGG16Regressor().to(self.device)
             print("Detected: Original SnoutNet")
             
             # Initialize FC layers for original model
@@ -71,7 +74,6 @@ class SnoutNetTester:
             labels_file="oxford-iiit-pet-noses/test_noses.txt",
             img_dir="oxford-iiit-pet-noses/images-original/images",
             target_size=227,
-            file_format='pet_noses'
         )
         
         test_loader = DataLoader(
@@ -312,7 +314,6 @@ def main():
         labels_file="oxford-iiit-pet-noses/test_noses.txt",
         img_dir="oxford-iiit-pet-noses/images-original/images",
         target_size=227,
-        file_format='pet_noses'
     )
     
     # Evaluate model
