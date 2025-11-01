@@ -15,7 +15,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 NUM_CLASSES = 21
 
 # Hyperparameters (Adjust these based on your system/lab requirements)
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.01
 MOMENTUM = 0.9
 WEIGHT_DECAY = 1e-4
 NUM_EPOCHS = 20
@@ -266,7 +266,7 @@ def train_model(model, train_loader, val_loader, num_epochs=NUM_EPOCHS, model_na
         momentum=MOMENTUM,
         weight_decay=WEIGHT_DECAY
     )
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
+    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
 
     # Loss Function: Cross-Entropy Loss
     # We set ignore_index=255 to skip calculation on the PASCAL VOC 'void' label
@@ -308,7 +308,7 @@ def train_model(model, train_loader, val_loader, num_epochs=NUM_EPOCHS, model_na
             # Backward pass and optimize
             loss.backward()
             optimizer.step()
-            scheduler.step()
+            # scheduler.step()
 
             total_loss += loss.item() * images.size(0)
 
