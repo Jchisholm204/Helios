@@ -23,7 +23,7 @@ NUM_CLASSES = 21
 # ====================================================================
 
 # Learning Rate: Restore the effective high LR that gave the 0.43 baseline.
-LEARNING_RATE = 0.0008
+LEARNING_RATE = 0.0005
 
 # Number of Epochs for KD Training (Must be increased from 4)
 NUM_KD_EPOCHS = 20
@@ -36,7 +36,7 @@ ALPHA = 1.0
 
 # Weight for Response-Based KD Loss (L_KD - KL Divergence)
 # Reduced from 1.0 to 0.1 for stability.
-BETA = 0.001
+BETA = 0.0005
 
 # Weight for Feature-Based KD Loss (L_Feature - Cosine Embedding Loss)
 # Reduced drastically from 0.5 (which caused collapse) to 0.005 for stability.
@@ -143,10 +143,13 @@ def train_kd_model(teacher_model, student_model, train_loader, val_loader,
         optimizer = optim.SGD(student_model.parameters(),
                               lr=lr, momentum=0.9, weight_decay=1e-3)
         # Add scheduler RIGHT HERE
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            T_max=num_epochs,
-            eta_min=lr * 0.01  # End at 1% of starting LR
+            mode='max',
+            factor=0.5,
+            patience=5,
+            verbose=True,
+            min_lr=lr * 0.01  # End at 1% of starting LR
         )
 
     # --- AMP Setup: Initialize the scaler for mixed precision training ---
@@ -254,7 +257,7 @@ def train_kd_model(teacher_model, student_model, train_loader, val_loader,
         )
         history['val_miou'].append(current_miou)
         history['val_loss'].append(avg_val_loss)
-        scheduler.step()
+        scheduler.step(avg_val_loss)
 
         # Print metrics (essential for tracking progress)
         print(f"Epoch {epoch+1}/{num_epochs}: Train Loss: {
@@ -283,7 +286,7 @@ def main():
     train_loader, val_loader = load_pascal_voc_data(batch_size=8)
 
     # --- Supervised Checkpoint Name (Ensure this path is correct!) ---
-    SUPERVISED_CHECKPOINT = 'trained/Student_Supervised_best.pth'
+    SUPERVISED_CHECKPOINT = 'pre_optim/Student_Supervised_best.pth'
 
     # Ensure the checkpoint exists before proceeding
     if not os.path.exists(SUPERVISED_CHECKPOINT):
