@@ -23,7 +23,7 @@ NUM_CLASSES = 21
 # ====================================================================
 
 # Learning Rate: Restore the effective high LR that gave the 0.43 baseline.
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.0008
 
 # Number of Epochs for KD Training (Must be increased from 4)
 NUM_KD_EPOCHS = 20
@@ -36,7 +36,7 @@ ALPHA = 1.0
 
 # Weight for Response-Based KD Loss (L_KD - KL Divergence)
 # Reduced from 1.0 to 0.1 for stability.
-BETA = 0.002
+BETA = 0.001
 
 # Weight for Feature-Based KD Loss (L_Feature - Cosine Embedding Loss)
 # Reduced drastically from 0.5 (which caused collapse) to 0.005 for stability.
@@ -142,6 +142,12 @@ def train_kd_model(teacher_model, student_model, train_loader, val_loader,
     else:
         optimizer = optim.SGD(student_model.parameters(),
                               lr=lr, momentum=0.9, weight_decay=1e-3)
+        # Add scheduler RIGHT HERE
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=num_epochs,
+            eta_min=lr * 0.01  # End at 1% of starting LR
+        )
 
     # --- AMP Setup: Initialize the scaler for mixed precision training ---
     scaler = GradScaler()
@@ -177,10 +183,14 @@ def train_kd_model(teacher_model, student_model, train_loader, val_loader,
                 #                        soft_targets, reduction='batchmean')
                 if mode == 'response' or mode == 'both':
                     logits_t = teacher_output['out']
+                    B, C, H, W = logits_s.shape
+                    logits_s_flat = logits_s.permute(0, 2, 3, 1).reshape(-1, C)
+                    logits_t_flat = logits_t.permute(0, 2, 3, 1).reshape(-1, C)
 
                     # CORRECT: Use log_softmax directly, not softmax().log()
-                    student_log_probs = F.log_softmax(logits_s / TAU, dim=1)
-                    teacher_probs = F.softmax(logits_t / TAU, dim=1)
+                    student_log_probs = F.log_softmax(
+                        logits_s_flat / TAU, dim=1)
+                    teacher_probs = F.softmax(logits_t_flat / TAU, dim=1)
 
                     # Apply temperature scaling to KD loss
                     loss_kd = (TAU ** 2) * F.kl_div(
@@ -244,6 +254,7 @@ def train_kd_model(teacher_model, student_model, train_loader, val_loader,
         )
         history['val_miou'].append(current_miou)
         history['val_loss'].append(avg_val_loss)
+        scheduler.step()
 
         # Print metrics (essential for tracking progress)
         print(f"Epoch {epoch+1}/{num_epochs}: Train Loss: {
