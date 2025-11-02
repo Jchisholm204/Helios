@@ -134,7 +134,7 @@ def load_pascal_voc_data(batch_size=8, image_size=(520, 520), n_workers=8):
         batch_size=batch_size,
         shuffle=True,  # Shuffle training data
         num_workers=n_workers,
-        pin_memory=True
+        pin_memory=False
     )
 
     # --- Validation Dataset ---
@@ -155,7 +155,7 @@ def load_pascal_voc_data(batch_size=8, image_size=(520, 520), n_workers=8):
         batch_size=batch_size,
         shuffle=False,
         num_workers=n_workers,
-        pin_memory=True
+        pin_memory=False
     )
 
     print(f"Training dataset size: {len(train_dataset)} images.")
