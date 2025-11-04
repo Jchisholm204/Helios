@@ -108,17 +108,11 @@ void spacial_invalidate(struct spacial* pSpace, struct xy point) {
 int spacial_check(struct spacial* pSpace, struct xy point) {
     int x = point.x;
     int y = point.y;
-    int block_idx = (y / BLOCK_SIZE) + (x % BLOCK_SIZE);
-    if (block_idx >= pSpace->n_blocks)
-        return 1;
-    struct _spacial_block* block = &pSpace->blocks[block_idx];
-    if (!block)
-        return 1;
-    // if the block does not have any invalid points in it, return not in
-    // collision
-    if (!block->collision)
-        return 0;
-    // struct voxel* v = &block->voxels[block->n_elements++];
+    // Find the Voxel
+    int voxel_idx = (y * pSpace->dim.y) + x;
+    struct voxel* v = &pSpace->voxels[voxel_idx];
+    // Check the voxel state
+    if(v->state == eStateBlocked) return 1;
     return 0;
 }
 
