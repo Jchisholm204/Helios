@@ -36,6 +36,14 @@ int main(int argc, char** argv) {
 
     struct spacial *sp = spacial_init((struct xy){100, 100});
     gen_world(sp, 4);
+    spacial_getV(sp, (struct xy){25, 50})->state = eStateSource;
+    spacial_addV(sp, (struct xy){25, 50});
+    spacial_addV(sp, (struct xy){30, 50});
+    struct voxel *v = spacial_nearest(sp, (struct xy){75, 60});
+    printf("Nearest: %3.2f %3.2f\n", v->x, v->y);
+    
+
+
     // SDL loop until finished
     SDL_Event e;
     while (1) {

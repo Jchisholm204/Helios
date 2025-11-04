@@ -15,8 +15,8 @@
 
 #include <float.h>
 #include <malloc.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define BLOCK_SIZE 5
 
@@ -32,22 +32,25 @@ struct _spacial_block {
 struct spacial {
     struct xy dim;
     struct _spacial_block* blocks;
-    struct voxel *voxels;
+    struct voxel* voxels;
     size_t n_blocks;
     size_t n_voxels;
 };
 
 extern struct spacial* spacial_init(struct xy dim);
 
-extern void spacial_free(struct spacial **ppSpacial);
+extern void spacial_free(struct spacial** ppSpacial);
 
-extern void spacial_invalidate(struct spacial *pSpace, struct xy point);
+extern void spacial_invalidate(struct spacial* pSpace, struct xy point);
 
-extern int spacial_check(struct spacial *pSpace, struct xy point);
+extern int spacial_check(struct spacial* pSpace, struct xy point);
 
-extern int spacial_checkp(struct spacial *pSpace, struct xy p1, struct xy p2);
+extern int spacial_checkPth(struct spacial* pSpace, struct xy p1, struct xy p2);
 
-extern struct voxel **spacial_nearby(struct spacial *pSpace, struct xy point, float radius);
+extern void spacial_addV(struct spacial* pSpace, struct xy point);
 
+extern struct voxel* spacial_nearest(struct spacial* pSpace, struct xy point);
+
+extern struct voxel* spacial_getV(struct spacial* pSpace, struct xy point);
 
 #endif

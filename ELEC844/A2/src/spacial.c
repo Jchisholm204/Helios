@@ -11,7 +11,10 @@
 
 #include "spacial.h"
 
+#include <math.h>
+#include <memory.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 struct spacial* spacial_init(struct xy dim) {
     struct spacial* s = malloc(sizeof(struct spacial));
@@ -97,28 +100,88 @@ void spacial_invalidate(struct spacial* pSpace, struct xy point) {
     v->x = x;
     v->state = eStateBlocked;
     block->collision = true;
-    if(block->n_voxels >= (block->v_len-2)){
-        block->v_len *= 2;
-        block->voxels = realloc(block->voxels, block->v_len);
-    }
-    block->voxels[block->n_voxels++] = v;
+    // if (block->n_voxels >= (block->v_len - 2)) {
+    //     block->v_len *= 2;
+    //     block->voxels = realloc(block->voxels, block->v_len);
+    // }
+    // block->voxels[block->n_voxels++] = v;
 }
 
 // Return 1 if in collision
 int spacial_check(struct spacial* pSpace, struct xy point) {
-    int x = point.x;
-    int y = point.y;
-    // Find the Voxel
-    int voxel_idx = (y * pSpace->dim.y) + x;
-    struct voxel* v = &pSpace->voxels[voxel_idx];
+    struct voxel* v = spacial_getV(pSpace, point);
     // Check the voxel state
-    if(v->state == eStateBlocked) return 1;
+    if (v->state == eStateBlocked)
+        return 1;
     return 0;
 }
 
-int spacial_checkp(struct spacial* pSpace, struct xy p1, struct xy p2) {
+// Return 1 if in collision
+int spacial_checkPth(struct spacial* pSpace, struct xy p1, struct xy p2) {
+    if (!pSpace)
+        return 1;
+    float x_d = (p1.x - p2.x);
+    float y_d = (p1.y - p2.y);
+    float d = sqrt(pow(x_d, 2) + pow(y_d, 2));
+    float x_inc = x_d / d;
+    float y_inc = y_d / d;
+    float x = p1.x;
+    float y = p1.y;
+    for (int i = 0; i < d; i++) {
+        if (spacial_check(pSpace, (struct xy) {x, y}))
+            return 1;
+        x += x_inc;
+        y += y_inc;
+    }
+    return 0;
 }
 
-struct voxel** spacial_nearby(struct spacial* pSpace, struct xy point,
-                              float radius) {
+void spacial_addV(struct spacial* pSpace, struct xy point) {
+    if (!pSpace)
+        return;
+    // Find the block
+    int block_idx = (point.y / BLOCK_SIZE) + (point.x % BLOCK_SIZE);
+    if (block_idx >= pSpace->n_blocks)
+        return;
+    struct _spacial_block* block = &pSpace->blocks[block_idx];
+    if (!block)
+        return;
+    if (block->n_voxels >= (block->v_len - 2)) {
+        block->v_len *= 2;
+        block->voxels = realloc(block->voxels, block->v_len);
+    }
+    struct voxel* v = spacial_getV(pSpace, point);
+    v->x = point.x;
+    v->y = point.y;
+    if (v->state == eStateEmpty)
+        v->state = eStateExplored;
+    block->voxels[block->n_voxels++] = v;
+}
+
+
+struct voxel* spacial_getV(struct spacial* pSpace, struct xy point) {
+    if (!pSpace)
+        return NULL;
+    int voxel_idx = (point.y * pSpace->dim.y) + point.x;
+    return &pSpace->voxels[voxel_idx];
+}
+
+struct voxel* spacial_nearest(struct spacial* pSpace, struct xy point) {
+    if (!pSpace)
+        return NULL;
+    struct voxel *closest = NULL;
+    float closest_dist = FLT_MAX;
+    for (int b_idx = 0; b_idx < pSpace->n_blocks; b_idx++) {
+        struct _spacial_block* block = &pSpace->blocks[b_idx];
+        for (int i = 0; i < block->n_voxels; i++) {
+            struct voxel* v = block->voxels[i];
+            float d_v = sqrt(pow(v->x - point.x, 2) + pow(v->y - point.y, 2));
+            // Add points closer than the radius
+            if (d_v < closest_dist) {
+                closest = v;
+                closest_dist = d_v;
+            }
+        }
+    }
+    return closest;
 }

@@ -118,12 +118,16 @@ void disp_drawPoints(disp_t* pDisplay, struct spacial* pSpace) {
     size_t grid_size = pSpace->dim.x * pSpace->dim.y;
     for (int i = 0; i < pSpace->n_voxels; i++) {
         struct voxel *v = &pSpace->voxels[i];
+        int x = i % pSpace->dim.x;
+        int y = i / pSpace->dim.y;
         if(v->state == eStateEmpty) continue;
         if(v->state == eStateBlocked)
             SDL_SetRenderDrawColor(pDisplay->sdl_ren, 255, 0, 0, 255);
+        else if(v->state == eStateSource)
+            SDL_SetRenderDrawColor(pDisplay->sdl_ren, 0, 200, 200, 255);
         else
             SDL_SetRenderDrawColor(pDisplay->sdl_ren, 0, 0, 0, 255);
-        SDL_Rect r = {IN_PIXELS(v->x) + PX_BORDER, IN_PIXELS(v->y) + PX_BORDER,
+        SDL_Rect r = {IN_PIXELS(x) + PX_BORDER, IN_PIXELS(y) + PX_BORDER,
                       PIXEL_PER_GRID, PIXEL_PER_GRID};
         SDL_RenderFillRect(pDisplay->sdl_ren, &r);
     }
