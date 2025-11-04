@@ -14,35 +14,23 @@
  */
 
 #include "display.h"
+#include "rrt.h"
+#include "spacial.h"
+#include "worlds.h"
 
 #include <SDL.h>
 #include <SDL2/SDL.h>
 #include <stdio.h>
-#include "spacial.h"
-
-void gen_world(struct spacial *s, int l){
-    for(int x = 45; x < 55; x++){
-        for(int y = l; y < 100-l; y++){
-            spacial_invalidate(s, (struct xy){x, y});
-        }
-    }
-}
+#include <time.h>
 
 int main(int argc, char** argv) {
-
 
     // Initialize the display
     disp_t* d = disp_init(100);
 
-    struct spacial *sp = spacial_init((struct xy){100, 100});
-    gen_world(sp, 4);
-    spacial_getV(sp, (struct xy){25, 50})->state = eStateSource;
-    spacial_addV(sp, (struct xy){25, 50});
-    spacial_addV(sp, (struct xy){30, 50});
-    struct voxel *v = spacial_nearest(sp, (struct xy){75, 60});
-    printf("Nearest: %3.2f %3.2f\n", v->x, v->y);
-    
-
+    rrt_t* planner =
+        rrt_init(gen_world1A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
+    struct spacial* sp = planner->pSpace;
 
     // SDL loop until finished
     SDL_Event e;
@@ -52,6 +40,7 @@ int main(int argc, char** argv) {
                 goto exit;
         }
 
+        rrt_main(planner);
         disp_clr(d);
         // Draw grid and path
         disp_drawGrid(d);

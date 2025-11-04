@@ -117,19 +117,28 @@ void disp_drawPoints(disp_t* pDisplay, struct spacial* pSpace) {
         return;
     size_t grid_size = pSpace->dim.x * pSpace->dim.y;
     for (int i = 0; i < pSpace->n_voxels; i++) {
-        struct voxel *v = &pSpace->voxels[i];
+        struct voxel* v = &pSpace->voxels[i];
         int x = i % pSpace->dim.x;
         int y = i / pSpace->dim.y;
-        if(v->state == eStateEmpty) continue;
-        if(v->state == eStateBlocked)
+        if (v->state == eStateEmpty)
+            continue;
+        if (v->state == eStateBlocked)
             SDL_SetRenderDrawColor(pDisplay->sdl_ren, 255, 0, 0, 255);
-        else if(v->state == eStateSource)
+        else if (v->state == eStateSource || v->state == eStateGoal)
             SDL_SetRenderDrawColor(pDisplay->sdl_ren, 0, 200, 200, 255);
         else
             SDL_SetRenderDrawColor(pDisplay->sdl_ren, 0, 0, 0, 255);
         SDL_Rect r = {IN_PIXELS(x) + PX_BORDER, IN_PIXELS(y) + PX_BORDER,
                       PIXEL_PER_GRID, PIXEL_PER_GRID};
         SDL_RenderFillRect(pDisplay->sdl_ren, &r);
+
+        // Draw path to parent if it exists
+        if (v->parent) {
+            SDL_RenderDrawLine(pDisplay->sdl_ren, IN_PIXELS(x) + PX_BORDER,
+                               IN_PIXELS(y) + PX_BORDER,
+                               IN_PIXELS(v->parent->x) + PX_BORDER,
+                               IN_PIXELS(v->parent->y) + PX_BORDER);
+        }
     }
 }
 

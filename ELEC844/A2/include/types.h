@@ -21,6 +21,8 @@ struct xy {
     int y;
 };
 
+typedef struct xy xy_t;
+
 enum eVoxelState {
     eStateEmpty,
     eStateExplored,

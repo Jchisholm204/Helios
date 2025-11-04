@@ -37,7 +37,7 @@ struct spacial {
     size_t n_voxels;
 };
 
-extern struct spacial* spacial_init(struct xy dim);
+extern struct spacial* spacial_init(xy_t dim);
 
 extern void spacial_free(struct spacial** ppSpacial);
 

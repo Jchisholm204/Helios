@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct spacial* spacial_init(struct xy dim) {
+struct spacial* spacial_init(xy_t dim) {
     struct spacial* s = malloc(sizeof(struct spacial));
     if (!s)
         return NULL;
