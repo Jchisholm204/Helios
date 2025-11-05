@@ -7,13 +7,15 @@
  * @modified Last Modified: 2025-11-04
  *
  * @copyright Copyright (c) 2025
+ * Definition for World Loader:
+ *  - Takes one input (the spacial world)
+ *  - Gives one output (world_info struct)
+ *  - Must return the world_info on all conditions
  */
 
 #ifndef _WORLDS_H_
 #define _WORLDS_H_
 #include "spacial.h"
-
-typedef xy_t (*world_loader_fn)(struct spacial*, xy_t);
 
 #define BLOCK(s_x, s_y, e_x, e_y) \
     for(int x = s_x; x < e_x; x++){ \
@@ -22,47 +24,61 @@ typedef xy_t (*world_loader_fn)(struct spacial*, xy_t);
     } \
 
 
-static xy_t gen_world1A(struct spacial* s, xy_t wd) {
+static struct world_info gen_world1A(struct spacial* s) {
+    struct world_info wi = {
+        .start = {25, 50},
+        .target = {75, 50},
+        .dim = {100, 100}
+    };
+
     if (!s)
         // Return goal point on null
-        return (xy_t) {wd.x - 25, 50};
+        return wi;
     // Place main obstacle
     for (int x = 45; x < 55; x++) {
-        for (int y = 25; y < wd.y - 25; y++) {
+        for (int y = 25; y < 75; y++) {
             spacial_invalidate(s, (struct xy) {x, y});
         }
     }
     // Place start point
-    spacial_addV(s, (xy_t) {25, 50});
     spacial_getV(s, (xy_t) {25, 50})->state = eStateSource;
-    spacial_getV(s, (xy_t) {wd.x - 25, 50})->state = eStateGoal;
+    spacial_getV(s, (xy_t) {75, 50})->state = eStateGoal;
 
     // Return goal point
-    return (xy_t) {wd.x - 25, 50};
+    return wi;
 }
 
-static xy_t gen_world1B(struct spacial* s, xy_t wd) {
+static struct world_info gen_world1B(struct spacial* s) {
+    struct world_info wi = {
+        .start = {25, 50},
+        .target = {75, 50},
+        .dim = {100, 100}
+    };
     if (!s)
         // Return goal point on null
-        return (xy_t) {wd.x - 25, 50};
+        return wi;
     for (int x = 45; x < 55; x++) {
-        for (int y = 4; y < wd.y - 4; y++) {
+        for (int y = 4; y < 96; y++) {
             spacial_invalidate(s, (struct xy) {x, y});
         }
     }
     // Place start point
-    spacial_addV(s, (xy_t) {25, 50});
     spacial_getV(s, (xy_t) {25, 50})->state = eStateSource;
-    spacial_getV(s, (xy_t) {wd.x - 25, 50})->state = eStateGoal;
+    spacial_getV(s, (xy_t) {75, 50})->state = eStateGoal;
 
     // Return goal point
-    return (xy_t) {wd.x - 25, 50};
+    return wi;
 }
 
-static xy_t gen_world2A(struct spacial *s, xy_t wd){
+static struct world_info gen_world2A(struct spacial *s){
+    struct world_info wi = {
+        .start = {25, 50},
+        .target = {75, 50},
+        .dim = {100, 100}
+    };
     if (!s)
         // Return goal point on null
-        return (xy_t) {wd.x - 25, 50};
+        return wi;
     // Top Block
     BLOCK(10, 35, 40, 40);
     // Back
@@ -73,18 +89,22 @@ static xy_t gen_world2A(struct spacial *s, xy_t wd){
     BLOCK(10, 35, 15, 49);
     BLOCK(10, 51, 15, 65);
     // Place start point
-    spacial_addV(s, (xy_t) {25, 50});
     spacial_getV(s, (xy_t) {25, 50})->state = eStateSource;
-    spacial_getV(s, (xy_t) {wd.x - 25, 50})->state = eStateGoal;
+    spacial_getV(s, (xy_t) {75, 50})->state = eStateGoal;
 
     // Return goal point
-    return (xy_t) {wd.x - 25, 50};
+    return wi;
 }
 
-static xy_t gen_world2B(struct spacial *s, xy_t wd){
+static struct world_info gen_world2B(struct spacial *s){
+    struct world_info wi = {
+        .start = {25, 50},
+        .target = {75, 50},
+        .dim = {100, 100}
+    };
     if (!s)
         // Return goal point on null
-        return (xy_t) {wd.x - 25, 50};
+        return wi;
 
     // Top Block
     BLOCK(60, 35, 90, 40);
@@ -96,18 +116,22 @@ static xy_t gen_world2B(struct spacial *s, xy_t wd){
     BLOCK(85, 35, 90, 49);
     BLOCK(85, 51, 90, 65);
     // Place start point
-    spacial_addV(s, (xy_t) {25, 50});
     spacial_getV(s, (xy_t) {25, 50})->state = eStateSource;
-    spacial_getV(s, (xy_t) {wd.x - 25, 50})->state = eStateGoal;
+    spacial_getV(s, (xy_t) {75, 50})->state = eStateGoal;
 
     // Return goal point
-    return (xy_t) {wd.x - 25, 50};
+    return wi;
 }
 
-static xy_t gen_world2C(struct spacial *s, xy_t wd){
+static struct world_info gen_world2C(struct spacial *s){
+    struct world_info wi = {
+        .start = {25, 50},
+        .target = {75, 50},
+        .dim = {100, 100}
+    };
     if (!s)
         // Return goal point on null
-        return (xy_t) {wd.x - 25, 50};
+        return wi;
     // Top Block
     BLOCK(10, 35, 40, 40);
     // Back
@@ -128,12 +152,11 @@ static xy_t gen_world2C(struct spacial *s, xy_t wd){
     BLOCK(85, 35, 90, 49);
     BLOCK(85, 51, 90, 65);
     // Place start point
-    spacial_addV(s, (xy_t) {25, 50});
     spacial_getV(s, (xy_t) {25, 50})->state = eStateSource;
-    spacial_getV(s, (xy_t) {wd.x - 25, 50})->state = eStateGoal;
+    spacial_getV(s, (xy_t) {75, 50})->state = eStateGoal;
 
     // Return goal point
-    return (xy_t) {wd.x - 25, 50};
+    return wi;
 }
 
 #endif

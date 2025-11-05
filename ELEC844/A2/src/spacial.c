@@ -11,20 +11,32 @@
 
 #include "spacial.h"
 
+#include "linked_queue.h"
+
 #include <math.h>
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-struct spacial* spacial_init(xy_t dim) {
+struct voxel* worldV(spacial_t* pSpace, xy_t p) {
+    if (!pSpace)
+        return NULL;
+    if (p.x >= pSpace->info.dim.x || p.y >= pSpace->info.dim.y)
+        return NULL;
+    if (p.x < 0 || p.y < 0)
+        return NULL;
+    size_t idx = p.y * pSpace->info.dim.y + p.x;
+    return &pSpace->voxels[idx];
+}
+
+struct spacial* spacial_init(world_loader_fn world_loader) {
     struct spacial* s = malloc(sizeof(struct spacial));
     if (!s)
         return NULL;
-    s->dim = dim;
+    // Use null pass into the loader to get world info
+    s->info = world_loader(NULL);
     // Sub elements of top block
-    s->n_blocks = BLOCK_SIZE * BLOCK_SIZE;
-    s->n_voxels = dim.x * dim.y;
-    s->n_added = 0;
+    s->n_voxels = s->info.dim.x * s->info.dim.y;
 
     // Create the collision grid (row major)
     s->voxels = malloc(s->n_voxels * sizeof(struct voxel));
@@ -36,32 +48,65 @@ struct spacial* spacial_init(xy_t dim) {
         struct voxel* v = &s->voxels[i];
         v->state = eStateEmpty;
         v->parent = NULL;
+        v->cost = 0;
+        v->lookahead = 0;
+        v->y = i / s->info.dim.y;
+        v->x = i % s->info.dim.x;
     }
+    // Use world loader to get the obstacles
+    (void) world_loader(s);
+    return s;
+}
 
-    // Create the blocks
-    s->blocks = malloc(s->n_blocks * sizeof(struct _spacial_block));
-    if (!s->blocks) {
-        free(s->voxels);
-        free(s);
+spacial_tree_t* spacial_tree_init(spacial_t* pSpace, xy_t start) {
+    // Bounds check the start node (also null checks pSpace)
+    struct voxel* vStart = worldV(pSpace, start);
+    if (!vStart)
+        return NULL;
+    // Allocate the tree structure
+    spacial_tree_t* t = malloc(sizeof(spacial_tree_t));
+    if (!t)
+        return NULL;
+    t->n_voxels = 0;
+    t->pSpace = pSpace;
+
+    // Init the tree head
+    t->pHead = malloc(sizeof(struct spacial_branch));
+    if (!t->pHead) {
+        free(t);
         return NULL;
     }
-    for (int i = 0; i < s->n_blocks; i++) {
-        struct _spacial_block* b = &s->blocks[i];
-        b->n_voxels = 0;
-        b->v_len = s->n_voxels / s->n_blocks;
-        b->voxels = malloc(sizeof(struct voxel*) * b->v_len);
-        b->collision = false;
-        if (!b->voxels) {
-            for (int j = 0; j < i; j++)
-                free(s->blocks[j].voxels);
-            free(s->blocks);
-            free(s->voxels);
-            free(s);
-            return NULL;
-        }
-    }
+    struct spacial_branch* h = t->pHead;
+    h->voxel.x = start.x;
+    h->voxel.y = start.y;
+    h->voxel.parent = NULL;
+    h->voxel.state = eStateSource;
+    h->voxel.cost = 0;
+    h->voxel.lookahead = 0;
+    h->pWorld = vStart;
+    h->kd_split = SPLIT_X;
+    h->pLess = NULL;
+    h->pMore = NULL;
+    h->pParent = NULL;
+    return t;
+}
 
-    return s;
+void tree_free_branch(struct spacial_branch* b) {
+    if (b->pLess) {
+        tree_free_branch(b->pLess);
+    }
+    if (b->pMore) {
+        tree_free_branch(b->pMore);
+    }
+    free(b);
+}
+
+void spacial_tree_free(spacial_tree_t** ppTree) {
+    struct spacial_branch* h = (*ppTree)->pHead;
+    // Free the branches
+    tree_free_branch(h);
+    free(*ppTree);
+    *ppTree = NULL;
 }
 
 void spacial_free(struct spacial** ppSpacial) {
@@ -69,13 +114,6 @@ void spacial_free(struct spacial** ppSpacial) {
         return;
     if (!*ppSpacial)
         return;
-    if ((*ppSpacial)->blocks) {
-        for (int i = 0; i < (*ppSpacial)->n_blocks; i++) {
-            if ((*ppSpacial)->blocks[i].voxels)
-                free((*ppSpacial)->blocks[i].voxels);
-        }
-        free((*ppSpacial)->blocks);
-    }
     if ((*ppSpacial)->voxels)
         free((*ppSpacial)->voxels);
     free(*ppSpacial);
@@ -85,32 +123,16 @@ void spacial_free(struct spacial** ppSpacial) {
 void spacial_invalidate(struct spacial* pSpace, struct xy point) {
     if (!pSpace)
         return;
-    int x = point.x;
-    int y = point.y;
-    // Find the block
-    int block_idx = (y / BLOCK_SIZE) + (x % BLOCK_SIZE);
-    if (block_idx >= pSpace->n_blocks)
+    struct voxel* v = worldV(pSpace, point);
+    if (!v) {
         return;
-    struct _spacial_block* block = &pSpace->blocks[block_idx];
-    if (!block)
-        return;
-    // Find the point in the global grid
-    int voxel_idx = (y * pSpace->dim.y) + (x);
-    struct voxel* v = &pSpace->voxels[voxel_idx];
-    v->y = y;
-    v->x = x;
+    }
     v->state = eStateBlocked;
-    block->collision = true;
-    // if (block->n_voxels >= (block->v_len - 2)) {
-    //     block->v_len *= 2;
-    //     block->voxels = realloc(block->voxels, block->v_len);
-    // }
-    // block->voxels[block->n_voxels++] = v;
 }
 
 // Return 1 if in collision
 int spacial_check(struct spacial* pSpace, struct xy point) {
-    struct voxel* v = spacial_getV(pSpace, point);
+    struct voxel* v = worldV(pSpace, point);
     if (!v)
         return 1;
     // Check the voxel state
@@ -139,74 +161,107 @@ int spacial_checkPth(struct spacial* pSpace, struct xy p1, struct xy p2) {
     return 0;
 }
 
-void spacial_addV(struct spacial* pSpace, struct xy point) {
-    if (!pSpace)
-        return;
-    if (point.x >= pSpace->dim.x || point.y >= pSpace->dim.y)
-        return;
-    // Find the block
-    int block_idx = (point.y / BLOCK_SIZE) + (point.x % BLOCK_SIZE);
-    if (block_idx >= pSpace->n_blocks)
-        return;
-    struct _spacial_block* block = &pSpace->blocks[block_idx];
-    if (!block)
-        return;
-    if (block->n_voxels >= (block->v_len - 2)) {
-        block->v_len *= 2;
-        block->voxels = realloc(block->voxels, block->v_len);
+int spacial_addV(spacial_tree_t* pTree, struct xy point,
+                 struct spacial_branch* parent) {
+    if (!pTree)
+        return -1;
+    // Check/Get the world voxel
+    struct voxel* wv = worldV(pTree->pSpace, point);
+    if (!wv) {
+        return -1;
     }
-    struct voxel* v = spacial_getV(pSpace, point);
-    v->x = point.x;
-    v->y = point.y;
-    if (v->state == eStateEmpty)
-        v->state = eStateExplored;
-    block->voxels[block->n_voxels++] = v;
-    pSpace->n_added++;
-}
 
-struct voxel* spacial_getV(struct spacial* pSpace, struct xy point) {
-    if (!pSpace)
-        return NULL;
-    if (point.x >= pSpace->dim.x || point.y >= pSpace->dim.y)
-        return NULL;
-    if (point.x < 0 || point.y < 0)
-        return NULL;
-    int voxel_idx = (point.y * pSpace->dim.y) + point.x;
-    if (voxel_idx >= pSpace->n_voxels)
-        return NULL;
-    return &pSpace->voxels[voxel_idx];
-}
-
-struct voxel* spacial_nearest(struct spacial* pSpace, struct xy point) {
-    if (!pSpace)
-        return NULL;
-    struct voxel* closest = NULL;
-    float closest_dist = FLT_MAX;
-    for (int b_idx = 0; b_idx < pSpace->n_blocks; b_idx++) {
-        struct _spacial_block* block = &pSpace->blocks[b_idx];
-        for (int i = 0; i < block->n_voxels; i++) {
-            struct voxel* v = block->voxels[i];
-            float d_v = sqrt(pow((float) v->x - (float) point.x, 2) +
-                             pow((float) v->y - (float) point.y, 2));
-            // Add points closer than the radius
-            if (d_v < closest_dist) {
-                closest = v;
-                closest_dist = d_v;
-            }
+    struct spacial_branch** current = &pTree->pHead;
+    struct spacial_branch* prev = NULL;
+    while (*current) {
+        prev = *current;
+        int cd = (*current)->kd_split;
+        float p_eval = (cd == SPLIT_X) ? point.x : point.y;
+        float b_eval = (cd == SPLIT_X) ? (*current)->voxel.x : (*current)->voxel.y;
+        if (p_eval < b_eval) {
+            current = &(*current)->pLess;
+        } else {
+            current = &(*current)->pMore;
         }
     }
+
+    struct spacial_branch* new_branch = malloc(sizeof(struct spacial_branch));
+    if (!new_branch)
+        return -1;
+    new_branch->pParent = prev;
+    new_branch->pMore = NULL;
+    new_branch->pLess = NULL;
+    new_branch->pWorld = wv;
+    new_branch->kd_split = !prev->kd_split;
+    struct voxel* v = &new_branch->voxel;
+    v->state = eStateExplored;
+    v->parent = &parent->voxel;
+    wv->parent = parent->pWorld;
+    
+    *current = new_branch;
+    
+    pTree->n_voxels++;
+
+    return 0;
+}
+
+struct voxel* spacial_getV(spacial_t* pSpace, struct xy point) {
+    return worldV(pSpace, point);
+}
+
+struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point) {
+    if (!pTree)
+        return NULL;
+    if (!pTree->pSpace)
+        return NULL;
+    struct spacial_branch* closest = NULL;
+    float closest_dist = FLT_MAX;
+
+    // printf("Finding Nearest Voxel\n");
+
+    struct spacial_branch* current = pTree->pHead;
+    struct linked_queue* queue = NULL;
+    while (current) {
+        // Get distance of current to point
+        float d_v = sqrt(pow((float) current->voxel.x - (float) point.x, 2) +
+                         pow((float) current->voxel.y - (float) point.y, 2));
+        // Update best
+        if(d_v < closest_dist){
+            closest_dist = d_v;
+            closest = current;
+        }
+
+        // Add more to queue
+        int cd = current->kd_split;
+        float point_coord = (cd == SPLIT_X) ? point.x : point.y;
+        float node_coord = (cd == SPLIT_X) ? current->voxel.x : current->voxel.y;
+        float plane_dist = (point_coord - node_coord);
+        float plane_dist2 = plane_dist * plane_dist;
+
+        // Near and far children
+        struct spacial_branch* near = (point_coord < node_coord) ? current->pLess : current->pMore;
+        struct spacial_branch* far  = (point_coord < node_coord) ? current->pMore : current->pLess;
+
+        if (near)
+            queue_push(&queue, near, 0.0f); // explore near side first
+        // only explore far side if its plane might contain a closer point
+        if (far && plane_dist2 < closest_dist)
+            queue_push(&queue, far, plane_dist2);
+        current = queue_pop(&queue);
+    }
+
+
     return closest;
 }
 
-int spacial_pathLen(struct spacial* pSpace, xy_t goal) {
-    struct voxel* v = spacial_getV(pSpace, goal);
-    if (!v)
+int spacial_pathLen(struct spacial_branch * pGoal) {
+    if (!pGoal)
         return -1;
     size_t path_len = 0;
-    while (v->parent) {
-        if (v->state == eStateExplored)
-            v->state = eStatePath;
-        v = v->parent;
+    while (pGoal->pParent) {
+        if (pGoal->pWorld->state == eStateExplored)
+            pGoal->pWorld->state = eStatePath;
+        pGoal = pGoal->pParent;
         path_len++;
     }
     return path_len;

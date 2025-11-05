@@ -16,6 +16,7 @@
 
 typedef struct {
     struct spacial* pSpace;
+    spacial_tree_t *pTree;
     world_loader_fn world_loader;
     xy_t p_goal;
     unsigned int seed;

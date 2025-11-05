@@ -58,9 +58,10 @@ int benchmark(int runs) {
         // Collect Stats
         size_t n_iterations = planner->n_iterations;
         sum_iter += n_iterations;
-        size_t n_added = planner->pSpace->n_added;
+        size_t n_added = planner->pSpace->n_voxels;
         sum_added += n_added;
-        size_t n_solution = spacial_pathLen(planner->pSpace, planner->p_goal);
+        // TODO: Fix this
+        size_t n_solution = spacial_pathLen(NULL);
         sum_path += n_solution;
         fprintf(testf, "%d, %ld, %ld, %ld\n", run, n_iterations, n_added, n_solution);
         printf("%d, %3.2f, %3.2f, %3.2f\n", run,  sum_iter / run, sum_added / run,
@@ -80,7 +81,7 @@ int view(void) {
     disp_t* d = disp_init(100);
 
     rrt_t* planner =
-        rrt_init(gen_world2B, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
+        rrt_init(gen_world2C, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
     struct spacial* sp = planner->pSpace;
 
     // SDL loop until finished
@@ -109,8 +110,8 @@ wait_exit:
     // Print out the search results
     printf("Finished Search!\n");
     printf("%ld Iterations got Path Length = %d \n", planner->n_iterations,
-           spacial_pathLen(sp, planner->p_goal));
-    printf("%ld verticies were created\n", sp->n_added);
+           spacial_pathLen(NULL));
+    printf("%ld verticies were created\n", sp->n_voxels);
     while (1) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT)

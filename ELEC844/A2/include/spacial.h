@@ -18,27 +18,47 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define BLOCK_SIZE 5
+#define SPLIT_X 0
+#define SPLIT_Y 1
 
-struct _spacial_block {
-    struct xy dim;
-    struct xy loc;
-    struct voxel** voxels;
-    size_t n_voxels;
-    size_t v_len;
-    bool collision;
+struct world_info {
+    xy_t start, target, dim;
 };
 
-struct spacial {
-    struct xy dim;
-    struct _spacial_block* blocks;
+typedef struct spacial {
+    struct world_info info;
     struct voxel* voxels;
-    size_t n_blocks;
     size_t n_voxels;
-    size_t n_added;
+} spacial_t;
+
+struct spacial_branch {
+    int kd_split;
+    struct spacial_branch* pParent;
+    // Left Tree
+    struct spacial_branch* pLess;
+    // Right Tree
+    struct spacial_branch* pMore;
+    // Voxel Local to the tree
+    struct voxel voxel;
+    // World Voxel
+    struct voxel* pWorld;
 };
 
-extern struct spacial* spacial_init(xy_t dim);
+typedef struct spacial_tree {
+    // Head node of the tree
+    struct spacial_branch* pHead;
+    spacial_t* pSpace;
+    // Voxels stored in lower levels
+    size_t n_voxels;
+} spacial_tree_t;
+
+typedef struct world_info (*world_loader_fn)(struct spacial*);
+
+extern spacial_t* spacial_init(world_loader_fn world_loader);
+
+extern spacial_tree_t* spacial_tree_init(spacial_t* pSpacial, xy_t start);
+
+extern void spacial_tree_free(spacial_tree_t** ppTree);
 
 extern void spacial_free(struct spacial** ppSpacial);
 
@@ -48,12 +68,16 @@ extern int spacial_check(struct spacial* pSpace, struct xy point);
 
 extern int spacial_checkPth(struct spacial* pSpace, struct xy p1, struct xy p2);
 
-extern void spacial_addV(struct spacial* pSpace, struct xy point);
+extern int spacial_addV(spacial_tree_t* pTree, struct xy point,
+                        struct spacial_branch* parent);
 
-extern struct voxel* spacial_nearest(struct spacial* pSpace, struct xy point);
+extern struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point);
 
-extern struct voxel* spacial_getV(struct spacial* pSpace, struct xy point);
+extern struct spacial_branch* spacial_nearestN(spacial_tree_t* pTree,
+                                               struct xy point);
 
-extern int spacial_pathLen(struct spacial *pSpace, xy_t goal);
+extern struct voxel* spacial_getV(spacial_t* pSpace, struct xy point);
+
+extern int spacial_pathLen(struct spacial_branch *pGoal);
 
 #endif

@@ -113,13 +113,11 @@ void disp_drawPoints(disp_t* pDisplay, struct spacial* pSpace) {
         return;
     if (!pSpace)
         return;
-    if (!pSpace->blocks)
-        return;
-    size_t grid_size = pSpace->dim.x * pSpace->dim.y;
+    size_t grid_size = pSpace->info.dim.x * pSpace->info.dim.y;
     for (int i = 0; i < pSpace->n_voxels; i++) {
         struct voxel* v = &pSpace->voxels[i];
-        int x = i % pSpace->dim.x;
-        int y = i / pSpace->dim.y;
+        int x = i % pSpace->info.dim.x;
+        int y = i / pSpace->info.dim.y;
         if (v->state == eStateEmpty)
             continue;
         if (v->state == eStateBlocked)
