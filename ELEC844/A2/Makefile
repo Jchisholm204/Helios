@@ -31,6 +31,8 @@ clean:
 
 run: build
 	./${BUILD_DIR}/844A1
+test: build
+	./${BUILD_DIR}/844A1 500
 
 mpirun: build
 	mpirun ./${BUILD_DIR}/844A1

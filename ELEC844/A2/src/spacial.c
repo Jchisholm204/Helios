@@ -24,6 +24,7 @@ struct spacial* spacial_init(xy_t dim) {
     // Sub elements of top block
     s->n_blocks = BLOCK_SIZE * BLOCK_SIZE;
     s->n_voxels = dim.x * dim.y;
+    s->n_added = 0;
 
     // Create the collision grid (row major)
     s->voxels = malloc(s->n_voxels * sizeof(struct voxel));
@@ -110,6 +111,8 @@ void spacial_invalidate(struct spacial* pSpace, struct xy point) {
 // Return 1 if in collision
 int spacial_check(struct spacial* pSpace, struct xy point) {
     struct voxel* v = spacial_getV(pSpace, point);
+    if (!v)
+        return 1;
     // Check the voxel state
     if (v->state == eStateBlocked)
         return 1;
@@ -156,20 +159,22 @@ void spacial_addV(struct spacial* pSpace, struct xy point) {
     if (v->state == eStateEmpty)
         v->state = eStateExplored;
     block->voxels[block->n_voxels++] = v;
+    pSpace->n_added++;
 }
-
 
 struct voxel* spacial_getV(struct spacial* pSpace, struct xy point) {
     if (!pSpace)
         return NULL;
     int voxel_idx = (point.y * pSpace->dim.y) + point.x;
+    if (voxel_idx >= pSpace->n_voxels)
+        return NULL;
     return &pSpace->voxels[voxel_idx];
 }
 
 struct voxel* spacial_nearest(struct spacial* pSpace, struct xy point) {
     if (!pSpace)
         return NULL;
-    struct voxel *closest = NULL;
+    struct voxel* closest = NULL;
     float closest_dist = FLT_MAX;
     for (int b_idx = 0; b_idx < pSpace->n_blocks; b_idx++) {
         struct _spacial_block* block = &pSpace->blocks[b_idx];
@@ -184,4 +189,18 @@ struct voxel* spacial_nearest(struct spacial* pSpace, struct xy point) {
         }
     }
     return closest;
+}
+
+int spacial_pathLen(struct spacial* pSpace, xy_t goal) {
+    struct voxel* v = spacial_getV(pSpace, goal);
+    if (!v)
+        return -1;
+    size_t path_len = 0;
+    while (v->parent) {
+        if (v->state == eStateExplored)
+            v->state = eStatePath;
+        v = v->parent;
+        path_len++;
+    }
+    return path_len;
 }

@@ -27,7 +27,8 @@ typedef struct {
 
 extern rrt_t *rrt_init(world_loader_fn world, long seed, xy_t dim, float goal_prob, float edge_length);
 
-extern int rrt_main(rrt_t *pRRT);
+extern void rrt_free(rrt_t **ppRRT);
 
+extern int rrt_main(rrt_t *pRRT);
 
 #endif

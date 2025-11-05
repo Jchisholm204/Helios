@@ -35,6 +35,7 @@ struct spacial {
     struct voxel* voxels;
     size_t n_blocks;
     size_t n_voxels;
+    size_t n_added;
 };
 
 extern struct spacial* spacial_init(xy_t dim);
@@ -52,5 +53,7 @@ extern void spacial_addV(struct spacial* pSpace, struct xy point);
 extern struct voxel* spacial_nearest(struct spacial* pSpace, struct xy point);
 
 extern struct voxel* spacial_getV(struct spacial* pSpace, struct xy point);
+
+extern int spacial_pathLen(struct spacial *pSpace, xy_t goal);
 
 #endif

@@ -16,6 +16,9 @@
 typedef xy_t (*world_loader_fn)(struct spacial*, xy_t);
 
 static xy_t gen_world1A(struct spacial* s, xy_t wd) {
+    if (!s)
+        // Return goal point on null
+        return (xy_t) {wd.x - 25, 50};
     // Place main obstacle
     for (int x = 45; x < 55; x++) {
         for (int y = 25; y < wd.y - 25; y++) {
@@ -32,6 +35,9 @@ static xy_t gen_world1A(struct spacial* s, xy_t wd) {
 }
 
 static xy_t gen_world1B(struct spacial* s, xy_t wd) {
+    if (!s)
+        // Return goal point on null
+        return (xy_t) {wd.x - 25, 50};
     for (int x = 45; x < 55; x++) {
         for (int y = 4; y < wd.y - 4; y++) {
             spacial_invalidate(s, (struct xy) {x, y});

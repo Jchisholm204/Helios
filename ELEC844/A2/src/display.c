@@ -126,6 +126,8 @@ void disp_drawPoints(disp_t* pDisplay, struct spacial* pSpace) {
             SDL_SetRenderDrawColor(pDisplay->sdl_ren, 255, 0, 0, 255);
         else if (v->state == eStateSource || v->state == eStateGoal)
             SDL_SetRenderDrawColor(pDisplay->sdl_ren, 0, 200, 200, 255);
+        else if (v->state == eStatePath)
+            SDL_SetRenderDrawColor(pDisplay->sdl_ren, 200, 0, 200, 255);
         else
             SDL_SetRenderDrawColor(pDisplay->sdl_ren, 0, 0, 0, 255);
         SDL_Rect r = {IN_PIXELS(x) + PX_BORDER, IN_PIXELS(y) + PX_BORDER,
