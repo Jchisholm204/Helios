@@ -18,6 +18,7 @@
 #include "rrt.h"
 #include "spacial.h"
 #include "worlds.h"
+#include "kdtree.h"
 
 #include <SDL.h>
 #include <SDL2/SDL.h>
@@ -132,6 +133,12 @@ exit:
 }
 
 int main(int argc, char** argv) {
+    printf("Hello World\n");
+
+
+
+    return 0;
+
     if (argc == 1) {
         return view();
     } else if (argc == 2) {
