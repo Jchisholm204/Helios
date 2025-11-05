@@ -142,6 +142,8 @@ int spacial_checkPth(struct spacial* pSpace, struct xy p1, struct xy p2) {
 void spacial_addV(struct spacial* pSpace, struct xy point) {
     if (!pSpace)
         return;
+    if (point.x >= pSpace->dim.x || point.y >= pSpace->dim.y)
+        return;
     // Find the block
     int block_idx = (point.y / BLOCK_SIZE) + (point.x % BLOCK_SIZE);
     if (block_idx >= pSpace->n_blocks)
@@ -165,6 +167,10 @@ void spacial_addV(struct spacial* pSpace, struct xy point) {
 struct voxel* spacial_getV(struct spacial* pSpace, struct xy point) {
     if (!pSpace)
         return NULL;
+    if (point.x >= pSpace->dim.x || point.y >= pSpace->dim.y)
+        return NULL;
+    if (point.x < 0 || point.y < 0)
+        return NULL;
     int voxel_idx = (point.y * pSpace->dim.y) + point.x;
     if (voxel_idx >= pSpace->n_voxels)
         return NULL;
@@ -180,7 +186,8 @@ struct voxel* spacial_nearest(struct spacial* pSpace, struct xy point) {
         struct _spacial_block* block = &pSpace->blocks[b_idx];
         for (int i = 0; i < block->n_voxels; i++) {
             struct voxel* v = block->voxels[i];
-            float d_v = sqrt(pow(v->x - point.x, 2) + pow(v->y - point.y, 2));
+            float d_v = sqrt(pow((float) v->x - (float) point.x, 2) +
+                             pow((float) v->y - (float) point.y, 2));
             // Add points closer than the radius
             if (d_v < closest_dist) {
                 closest = v;
