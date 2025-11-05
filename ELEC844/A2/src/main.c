@@ -80,7 +80,7 @@ int view(void) {
     disp_t* d = disp_init(100);
 
     rrt_t* planner =
-        rrt_init(gen_world1A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
+        rrt_init(gen_world2B, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
     struct spacial* sp = planner->pSpace;
 
     // SDL loop until finished
