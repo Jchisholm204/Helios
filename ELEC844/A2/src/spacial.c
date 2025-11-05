@@ -188,7 +188,7 @@ int spacial_addV(spacial_tree_t* pTree, struct xy point,
     struct spacial_branch* new_branch = malloc(sizeof(struct spacial_branch));
     if (!new_branch)
         return -1;
-    new_branch->pParent = prev;
+    new_branch->pParent = parent;
     new_branch->pMore = NULL;
     new_branch->pLess = NULL;
     new_branch->pWorld = wv;
@@ -197,6 +197,10 @@ int spacial_addV(spacial_tree_t* pTree, struct xy point,
     v->state = eStateExplored;
     v->parent = &parent->voxel;
     wv->parent = parent->pWorld;
+    if(wv->state == eStateEmpty)
+        wv->state = eStateExplored;
+    v->x = point.x;
+    v->y = point.y;
     
     *current = new_branch;
     
@@ -230,6 +234,7 @@ struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point) {
             closest_dist = d_v;
             closest = current;
         }
+        // printf("Checking Node (%3.1f %3.1f) d=%3.2f\n", current->voxel.x, current->voxel.y, d_v);
 
         // Add more to queue
         int cd = current->kd_split;
@@ -261,6 +266,7 @@ int spacial_pathLen(struct spacial_branch * pGoal) {
     while (pGoal->pParent) {
         if (pGoal->pWorld->state == eStateExplored)
             pGoal->pWorld->state = eStatePath;
+        // printf("Path (%3.1f, %3.1f)\n", pGoal->voxel.x, pGoal->voxel.y);
         pGoal = pGoal->pParent;
         path_len++;
     }

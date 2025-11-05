@@ -14,11 +14,11 @@
  */
 
 #include "display.h"
+#include "kdtree.h"
 #include "prng.h"
 #include "rrt.h"
 #include "spacial.h"
 #include "worlds.h"
-#include "kdtree.h"
 
 #include <SDL.h>
 #include <SDL2/SDL.h>
@@ -34,7 +34,7 @@ int benchmark(int runs) {
         printf("Test File could not be opened\n");
         return 0;
     }
-    fprintf(testf, "#Running 100 Trials#World1A#RRT#\n");
+    fprintf(testf, "#Running 100 Trials#World1B#RRT#\n");
     fprintf(testf, "#run, #iterations, #verticies, #solution\n");
     float sum_iter = 0, sum_added = 0, sum_path = 0;
     pcg32_random_t rg;
@@ -59,14 +59,15 @@ int benchmark(int runs) {
         // Collect Stats
         size_t n_iterations = planner->n_iterations;
         sum_iter += n_iterations;
-        size_t n_added = planner->pSpace->n_voxels;
+        size_t n_added = planner->pTree->n_voxels;
         sum_added += n_added;
         // TODO: Fix this
-        size_t n_solution = spacial_pathLen(NULL);
+        size_t n_solution = spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal));
         sum_path += n_solution;
-        fprintf(testf, "%d, %ld, %ld, %ld\n", run, n_iterations, n_added, n_solution);
-        printf("%d, %3.2f, %3.2f, %3.2f\n", run,  sum_iter / run, sum_added / run,
-               sum_path / run);
+        fprintf(testf, "%d, %ld, %ld, %ld\n", run, n_iterations, n_added,
+                n_solution);
+        printf("%d, %3.2f, %3.2f, %3.2f\n", run, sum_iter / run,
+               sum_added / run, sum_path / run);
         // Free the planner
         rrt_free(&planner);
     }
@@ -82,7 +83,7 @@ int view(void) {
     disp_t* d = disp_init(100);
 
     rrt_t* planner =
-        rrt_init(gen_world2C, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
+        rrt_init(gen_world1A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
     struct spacial* sp = planner->pSpace;
 
     // SDL loop until finished
@@ -111,8 +112,8 @@ wait_exit:
     // Print out the search results
     printf("Finished Search!\n");
     printf("%ld Iterations got Path Length = %d \n", planner->n_iterations,
-           spacial_pathLen(NULL));
-    printf("%ld verticies were created\n", sp->n_voxels);
+           spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal)));
+    printf("%ld verticies were created\n", planner->pTree->n_voxels);
     while (1) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT)
@@ -133,11 +134,6 @@ exit:
 }
 
 int main(int argc, char** argv) {
-    printf("Hello World\n");
-
-
-
-    return 0;
 
     if (argc == 1) {
         return view();
