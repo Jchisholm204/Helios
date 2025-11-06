@@ -55,13 +55,26 @@ void rrtc_free(rrtc_t** ppRRTC) {
     return;
 }
 
-int rrtc_connect(rrtc_t* this, float t_x, float t_y) {
+int rrtc_merge_path(rrtc_t *this, struct spacial_branch *b_s, struct spacial_branch *b_t){
+    if(!this || !b_s || !b_t)
+        return -1;
+    size_t path_len = 0;
+    while (b_t) {
+        b_s = spacial_addV(this->pTree, (xy_t){b_t->voxel.x, b_t->voxel.y}, b_s);
+        b_t= b_t->pParent;
+        path_len++;
+    }
+    return path_len;
+}
+
+int rrtc_connect(rrtc_t* this, float t_x, float t_y, struct spacial_branch *steer) {
     // Begin Connect Logic
 
     // Find nearest node in goal tree
     struct spacial_branch* nearest =
         spacial_nearest(this->pTreeG, (xy_t) {t_x, t_y});
     while (nearest && !this->found_target) {
+        this->n_iterations++;
 
         // Normalize the vector and multiply it to get the new point
         float n_v_norm = sqrt(pow(t_x - nearest->voxel.x, 2) +
@@ -100,6 +113,7 @@ int rrtc_connect(rrtc_t* this, float t_x, float t_y) {
         if (d_goal < this->edge_length) {
             printf("Reached Goal!\n");
             this->found_target = true;
+            rrtc_merge_path(this, steer, added_g);
             return 1;
         }
         // Find nearest node in goal tree
@@ -166,6 +180,10 @@ int rrtc_main(rrtc_t* pRRTC) {
     // Setup the new point
     struct spacial_branch* added_v =
         spacial_addV(this->pTree, (xy_t) {p_x, p_y}, nearest);
+    if(!added_v)
+        return rrtc_main(this);
 
-    return rrtc_connect(this, p_x, p_y);
+    return rrtc_connect(this, p_x, p_y, added_v);
 }
+
+

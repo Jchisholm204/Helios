@@ -82,4 +82,5 @@ extern struct voxel* spacial_getV(spacial_t* pSpace, struct xy point);
 
 extern int spacial_pathLen(struct spacial_branch* pGoal);
 
+
 #endif
