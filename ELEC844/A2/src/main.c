@@ -87,12 +87,12 @@ int benchmark_rrtstar(int runs) {
 int benchmark_rrt(int runs) {
     printf("Running %d benchmarks\n", runs);
 
-    FILE* testf = fopen("./benchmark.csv", "w");
+    FILE* testf = fopen("./rrt_w2c.csv", "w");
     if (!testf) {
         printf("Test File could not be opened\n");
         return 0;
     }
-    fprintf(testf, "#Running 100 Trials#World1B#RRT#\n");
+    fprintf(testf, "#Running %d Trials#World2C#RRT#\n", runs);
     fprintf(testf, "#run, #iterations, #verticies, #solution\n");
     float sum_iter = 0, sum_added = 0, sum_path = 0;
     pcg32_random_t rg;
@@ -100,7 +100,7 @@ int benchmark_rrt(int runs) {
     // disp_t* d = disp_init(100);
     for (int run = 0; run < runs; run++) {
         // Create the planner and world
-        rrt_t* planner = rrt_init(gen_world1B, pcg32_random_r(&rg),
+        rrt_t* planner = rrt_init(gen_world2C, pcg32_random_r(&rg),
                                   (xy_t) {100, 100}, 0.01, 2.5);
 
         // Run the planner to find the path
@@ -312,7 +312,7 @@ int view_rrt(void) {
     disp_t* d = disp_init(100);
 
     rrt_t* planner =
-        rrt_init(gen_world1B, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
+        rrt_init(gen_world2C, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
 
     // SDL loop until finished
     SDL_Event e;
@@ -322,9 +322,9 @@ int view_rrt(void) {
                 goto exit;
         }
 
-        if (rrt_main(planner)) {
-            goto wait_exit;
-        }
+        // if (rrt_main(planner)) {
+        //     goto wait_exit;
+        // }
 
         disp_clr(d);
         // Draw grid and path
@@ -340,7 +340,7 @@ wait_exit:
     // Print out the search results
     printf("Finished Search!\n");
     printf("%ld Iterations got Path Length = %d \n", planner->n_iterations,
-           spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal)));
+           spacial_pathLen(planner->target));
     printf("%ld verticies were created\n", planner->pTree->n_voxels);
     while (1) {
         while (SDL_PollEvent(&e)) {
@@ -364,7 +364,7 @@ exit:
 int main(int argc, char** argv) {
 
     if (argc == 1) {
-        return view_rrtstar();
+        return view_rrt();
     } else if (argc == 2) {
         int runs = atoi(argv[1]);
         if (runs == 0) {
@@ -373,6 +373,6 @@ int main(int argc, char** argv) {
             printf("Use no arguments to run the visualization\n");
             return 0;
         }
-        return benchmark_rrtstar(runs);
+        return benchmark_rrt(runs);
     }
 }

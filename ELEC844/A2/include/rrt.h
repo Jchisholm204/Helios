@@ -24,6 +24,7 @@ typedef struct {
     long n_iterations;
     float edge_length;
     bool found_target;
+    struct spacial_branch *target;
 } rrt_t;
 
 extern rrt_t *rrt_init(world_loader_fn world, long seed, xy_t dim, float goal_prob, float edge_length);

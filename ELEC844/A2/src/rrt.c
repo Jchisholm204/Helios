@@ -127,10 +127,11 @@ int rrt_main(rrt_t* this) {
     if (d_goal < this->edge_length) {
         // printf("Reached Goal!\n");
 
-        spacial_addV(this->pTree, this->p_goal, added_v);
+        this->target = spacial_addV(this->pTree, this->p_goal, added_v);
         this->found_target = true;
         return 1;
     }
 
     return 0;
 }
+
