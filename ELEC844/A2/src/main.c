@@ -18,6 +18,7 @@
 #include "prng.h"
 #include "rrt.h"
 #include "rrtc.h"
+#include "rrtstar.h"
 #include "spacial.h"
 #include "worlds.h"
 
@@ -26,6 +27,62 @@
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
+
+int benchmark_rrtstar(int runs) {
+    printf("Running %d benchmarks\n", runs);
+
+    FILE* testf = fopen("./rrtstar_2500.csv", "w");
+    if (!testf) {
+        printf("Test File could not be opened\n");
+        return 0;
+    }
+    fprintf(testf, "#Running 500 Trials#World1A#RRTSTAR#2500#\n");
+    fprintf(testf, "#run, #iterations, #verticies, #solution, #goal\n");
+    float sum_iter = 0, sum_added = 0, sum_path = 0, sum_goal;
+    pcg32_random_t rg;
+    pcg32_srandom_r(&rg, time(NULL), getpid());
+    // disp_t* d = disp_init(100);
+    int n_unsolved = 0;
+    for (int run = 0; run < runs; run++) {
+        // Create the planner and world
+        rrtstar_t* planner = rrtstar_init(gen_world1A, pcg32_random_r(&rg),
+                                          (xy_t) {100, 100}, 0.01, 2.5);
+
+        for (int i = 0; i < 2500; i++)
+            rrtstar_main(planner);
+
+        // Collect Stats
+        size_t n_iterations = planner->n_iterations;
+        sum_iter += n_iterations;
+        size_t n_added = planner->pTree->n_voxels;
+        sum_added += n_added;
+        // TODO: Fix this
+        size_t n_solution = 0;
+        if(planner->target)
+            n_solution = spacial_pathLen(planner->target);
+        else
+         n_unsolved++;
+        sum_path += n_solution;
+        float trg_cost = 0;
+        if(planner->target)
+            trg_cost = planner->target->voxel.cost;
+        fprintf(testf, "%d, %ld, %ld, %ld, %3.2f\n", run, n_iterations, n_added,
+                n_solution, trg_cost);
+        sum_goal += trg_cost;
+        printf("%d, %3.2f, %3.2f, %3.2f, %3.2f\n", run, sum_iter / run,
+               sum_added / run, sum_path / run, sum_goal / run);
+        // Free the planner
+        rrtstar_free(&planner);
+    }
+    runs -= n_unsolved;
+    printf("ITER | VRTX | PATH | LEN\n");
+    printf("%3.2f, %3.2f, %3.2f, %3.2f\n", sum_iter / runs, sum_added / runs,
+           sum_path / runs, sum_goal / runs);
+    printf("%d Unsolved Runs\n", n_unsolved);
+    fprintf(testf, "%d Unsolved Runs\n", n_unsolved);
+    fclose(testf);
+    return 0;
+}
 
 int benchmark_rrt(int runs) {
     printf("Running %d benchmarks\n", runs);
@@ -63,7 +120,8 @@ int benchmark_rrt(int runs) {
         size_t n_added = planner->pTree->n_voxels;
         sum_added += n_added;
         // TODO: Fix this
-        size_t n_solution = spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal));
+        size_t n_solution =
+            spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal));
         sum_path += n_solution;
         fprintf(testf, "%d, %ld, %ld, %ld\n", run, n_iterations, n_added,
                 n_solution);
@@ -96,7 +154,7 @@ int benchmark_rrtc(int runs) {
     for (int run = 0; run < runs; run++) {
         // Create the planner and world
         rrtc_t* planner = rrtc_init(gen_world2C, pcg32_random_r(&rg),
-                                  (xy_t) {100, 100}, 0.01, 2.5);
+                                    (xy_t) {100, 100}, 0.01, 2.5);
 
         // Run the planner to find the path
         while (!planner->found_target) {
@@ -115,7 +173,8 @@ int benchmark_rrtc(int runs) {
         size_t n_added = planner->pTree->n_voxels;
         sum_added += n_added;
         // TODO: Fix this
-        size_t n_solution = spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal));
+        size_t n_solution =
+            spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal));
         sum_path += n_solution;
         fprintf(testf, "%d, %ld, %ld, %ld\n", run, n_iterations, n_added,
                 n_solution);
@@ -159,6 +218,69 @@ int view_rrtc(void) {
 
         // Run a delay for the animation
         SDL_Delay(10);
+    }
+wait_exit:
+    // Print out the search results
+    printf("Finished Search!\n");
+    printf("%ld Iterations got Path Length = %d \n", planner->n_iterations,
+           spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal)));
+    printf("%ld verticies were created\n", planner->pTree->n_voxels);
+    while (1) {
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT)
+                goto exit;
+        }
+        disp_clr(d);
+        // Draw grid and path
+        disp_drawGrid(d);
+        disp_drawPoints(d, planner->pSpace);
+        // Render the display
+        disp_render(d);
+    }
+
+exit:
+    printf("Shutting Down..\n");
+    disp_exit(&d);
+    return 0;
+}
+
+int view_rrtstar(void) {
+    // Initialize the display
+    disp_t* d = disp_init(100);
+
+    rrtstar_t* planner =
+        rrtstar_init(gen_world1A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
+
+    // SDL loop until finished
+    SDL_Event e;
+    int plen = FLT_MAX;
+    int plen_last = plen;
+    while (1) {
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT)
+                goto exit;
+        }
+
+        rrtstar_main(planner);
+        if (planner->found_target)
+            plen = spacial_pathLen(
+                spacial_nearest(planner->pTree, planner->p_goal));
+        if (planner->found_target && plen < plen_last) {
+            printf("%ld Iterations got Path Length = %d \n",
+                   planner->n_iterations, plen);
+            plen_last = plen;
+            // goto wait_exit;
+        }
+
+        disp_clr(d);
+        // Draw grid and path
+        disp_drawGrid(d);
+        disp_drawPoints(d, planner->pSpace);
+        // Render the display
+        disp_render(d);
+
+        // Run a delay for the animation
+        SDL_Delay(5);
     }
 wait_exit:
     // Print out the search results
@@ -242,7 +364,7 @@ exit:
 int main(int argc, char** argv) {
 
     if (argc == 1) {
-        return view_rrtc();
+        return view_rrtstar();
     } else if (argc == 2) {
         int runs = atoi(argv[1]);
         if (runs == 0) {
@@ -251,6 +373,6 @@ int main(int argc, char** argv) {
             printf("Use no arguments to run the visualization\n");
             return 0;
         }
-        return benchmark_rrtc(runs);
+        return benchmark_rrtstar(runs);
     }
 }

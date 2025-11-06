@@ -118,7 +118,7 @@ static inline size_t queue_length(struct linked_queue* head) {
  * @return 1 on removal, 0 if voxel is not in the queue
  */
 static inline int queue_find_remove(struct linked_queue** head,
-                                    struct voxel* v) {
+                                    void* v) {
     if (!head)
         return -1;
     if (!*head)

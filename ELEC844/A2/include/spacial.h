@@ -12,6 +12,7 @@
 #ifndef _SPACIAL_H_
 #define _SPACIAL_H_
 #include "types.h"
+#include "linked_queue.h"
 
 #include <float.h>
 #include <malloc.h>
@@ -42,6 +43,7 @@ struct spacial_branch {
     struct voxel voxel;
     // World Voxel
     struct voxel* pWorld;
+    struct linked_queue *children;
 };
 
 typedef struct spacial_tree {
@@ -75,12 +77,11 @@ extern struct spacial_branch* spacial_addV(spacial_tree_t* pTree,
 extern struct spacial_branch* spacial_nearest(spacial_tree_t* pTree,
                                               struct xy point);
 
-extern struct spacial_branch* spacial_nearestN(spacial_tree_t* pTree,
-                                               struct xy point);
+extern struct linked_queue* spacial_nearestN(spacial_tree_t* pTree,
+                                             struct xy point, float radius);
 
 extern struct voxel* spacial_getV(spacial_t* pSpace, struct xy point);
 
 extern int spacial_pathLen(struct spacial_branch* pGoal);
-
 
 #endif

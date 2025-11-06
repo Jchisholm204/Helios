@@ -88,6 +88,7 @@ spacial_tree_t* spacial_tree_init(spacial_t* pSpace, xy_t start) {
     h->pLess = NULL;
     h->pMore = NULL;
     h->pParent = NULL;
+    h->children = NULL;
     return t;
 }
 
@@ -98,6 +99,8 @@ void tree_free_branch(struct spacial_branch* b) {
     if (b->pMore) {
         tree_free_branch(b->pMore);
     }
+    while(queue_length(b->children) > 0)
+        (void)queue_pop(&b->children);
     free(b);
 }
 
@@ -194,6 +197,7 @@ struct spacial_branch* spacial_addV(spacial_tree_t* pTree, struct xy point,
     new_branch->pLess = NULL;
     new_branch->pWorld = wv;
     new_branch->kd_split = !prev->kd_split;
+    new_branch->children = NULL;
     struct voxel* v = &new_branch->voxel;
     v->state = eStateExplored;
     v->parent = &parent->voxel;
@@ -204,6 +208,7 @@ struct spacial_branch* spacial_addV(spacial_tree_t* pTree, struct xy point,
     v->y = point.y;
 
     *current = new_branch;
+    queue_push(&parent->children, new_branch, 0);
 
     pTree->n_voxels++;
 
@@ -228,7 +233,7 @@ struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point) {
     struct linked_queue* queue = NULL;
     while (current) {
         // Get distance of current to point
-        float d_v = sqrt(pow((float) current->voxel.x - (float) point.x, 2) +
+        float d_v = (pow((float) current->voxel.x - (float) point.x, 2) +
                          pow((float) current->voxel.y - (float) point.y, 2));
         // Update best
         if (d_v < closest_dist) {
@@ -255,7 +260,7 @@ struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point) {
         if (near)
             queue_push(&queue, near, 0.0f); // explore near side first
         // only explore far side if its plane might contain a closer point
-        if (far && plane_dist2 < closest_dist)
+        if (far && plane_dist2 < closest_dist*closest_dist)
             queue_push(&queue, far, plane_dist2);
         current = queue_pop(&queue);
     }
@@ -263,14 +268,62 @@ struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point) {
     return closest;
 }
 
+struct linked_queue* spacial_nearestN(spacial_tree_t* pTree, struct xy point,
+                                      float radius) {
+    if (!pTree)
+        return NULL;
+    if (!pTree->pSpace)
+        return NULL;
+
+    struct spacial_branch* current = pTree->pHead;
+    struct linked_queue* queue = NULL;
+    struct linked_queue* nearby = NULL;
+    while (current) {
+        // Get distance of current to point
+        float d_v = (pow((float) current->voxel.x - (float) point.x, 2) +
+                         pow((float) current->voxel.y - (float) point.y, 2));
+        // Update best
+        if (d_v < radius*radius) {
+            queue_push(&nearby, current, d_v);
+        }
+        // printf("Checking Node (%3.1f %3.1f) d=%3.2f\n", current->voxel.x,
+        // current->voxel.y, d_v);
+
+        // Add more to queue
+        int cd = current->kd_split;
+        float point_coord = (cd == SPLIT_X) ? point.x : point.y;
+        float node_coord =
+            (cd == SPLIT_X) ? current->voxel.x : current->voxel.y;
+        float plane_dist = (point_coord - node_coord);
+        float plane_dist2 = plane_dist * plane_dist;
+
+        // Near and far children
+        struct spacial_branch* near =
+            (point_coord < node_coord) ? current->pLess : current->pMore;
+        struct spacial_branch* far =
+            (point_coord < node_coord) ? current->pMore : current->pLess;
+
+        if (near)
+            queue_push(&queue, near, 0.0f); // explore near side first
+        // only explore far side if its plane might contain a closer point
+        if (far && plane_dist2 < radius*radius)
+            queue_push(&queue, far, plane_dist2);
+        current = queue_pop(&queue);
+    }
+
+    return nearby;
+}
+
 int spacial_pathLen(struct spacial_branch* pGoal) {
     if (!pGoal)
         return -1;
     size_t path_len = 0;
     while (pGoal->pParent) {
-        if (pGoal->pWorld->state == eStateExplored)
+        if (pGoal->pWorld->state != eStateGoal)
             pGoal->pWorld->state = eStatePath;
         // printf("Path (%3.1f, %3.1f)\n", pGoal->voxel.x, pGoal->voxel.y);
+        if(pGoal == pGoal->pParent)
+            return path_len;
         pGoal = pGoal->pParent;
         path_len++;
     }
