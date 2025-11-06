@@ -111,13 +111,13 @@ int rrtc_connect(rrtc_t* this, float t_x, float t_y, struct spacial_branch *stee
         // Check if the goal is within distance to the point
         float d_goal = sqrt(pow(p_x - t_x, 2) + pow(p_y - t_y, 2));
         if (d_goal < this->edge_length) {
-            printf("Reached Goal!\n");
+            // printf("Reached Goal!\n");
             this->found_target = true;
             rrtc_merge_path(this, steer, added_g);
             return 1;
         }
         // Find nearest node in goal tree
-        nearest = spacial_nearest(this->pTreeG, (xy_t) {t_x, t_y});
+        nearest = added_g;
     }
     return 0;
 }
