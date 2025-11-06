@@ -161,14 +161,14 @@ int spacial_checkPth(struct spacial* pSpace, struct xy p1, struct xy p2) {
     return 0;
 }
 
-int spacial_addV(spacial_tree_t* pTree, struct xy point,
-                 struct spacial_branch* parent) {
+struct spacial_branch* spacial_addV(spacial_tree_t* pTree, struct xy point,
+                                    struct spacial_branch* parent) {
     if (!pTree)
-        return -1;
+        return NULL;
     // Check/Get the world voxel
     struct voxel* wv = worldV(pTree->pSpace, point);
     if (!wv) {
-        return -1;
+        return NULL;
     }
 
     struct spacial_branch** current = &pTree->pHead;
@@ -177,7 +177,8 @@ int spacial_addV(spacial_tree_t* pTree, struct xy point,
         prev = *current;
         int cd = (*current)->kd_split;
         float p_eval = (cd == SPLIT_X) ? point.x : point.y;
-        float b_eval = (cd == SPLIT_X) ? (*current)->voxel.x : (*current)->voxel.y;
+        float b_eval =
+            (cd == SPLIT_X) ? (*current)->voxel.x : (*current)->voxel.y;
         if (p_eval < b_eval) {
             current = &(*current)->pLess;
         } else {
@@ -187,7 +188,7 @@ int spacial_addV(spacial_tree_t* pTree, struct xy point,
 
     struct spacial_branch* new_branch = malloc(sizeof(struct spacial_branch));
     if (!new_branch)
-        return -1;
+        return NULL;
     new_branch->pParent = parent;
     new_branch->pMore = NULL;
     new_branch->pLess = NULL;
@@ -197,16 +198,16 @@ int spacial_addV(spacial_tree_t* pTree, struct xy point,
     v->state = eStateExplored;
     v->parent = &parent->voxel;
     wv->parent = parent->pWorld;
-    if(wv->state == eStateEmpty)
+    if (wv->state == eStateEmpty)
         wv->state = eStateExplored;
     v->x = point.x;
     v->y = point.y;
-    
+
     *current = new_branch;
-    
+
     pTree->n_voxels++;
 
-    return 0;
+    return new_branch;
 }
 
 struct voxel* spacial_getV(spacial_t* pSpace, struct xy point) {
@@ -230,22 +231,26 @@ struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point) {
         float d_v = sqrt(pow((float) current->voxel.x - (float) point.x, 2) +
                          pow((float) current->voxel.y - (float) point.y, 2));
         // Update best
-        if(d_v < closest_dist){
+        if (d_v < closest_dist) {
             closest_dist = d_v;
             closest = current;
         }
-        // printf("Checking Node (%3.1f %3.1f) d=%3.2f\n", current->voxel.x, current->voxel.y, d_v);
+        // printf("Checking Node (%3.1f %3.1f) d=%3.2f\n", current->voxel.x,
+        // current->voxel.y, d_v);
 
         // Add more to queue
         int cd = current->kd_split;
         float point_coord = (cd == SPLIT_X) ? point.x : point.y;
-        float node_coord = (cd == SPLIT_X) ? current->voxel.x : current->voxel.y;
+        float node_coord =
+            (cd == SPLIT_X) ? current->voxel.x : current->voxel.y;
         float plane_dist = (point_coord - node_coord);
         float plane_dist2 = plane_dist * plane_dist;
 
         // Near and far children
-        struct spacial_branch* near = (point_coord < node_coord) ? current->pLess : current->pMore;
-        struct spacial_branch* far  = (point_coord < node_coord) ? current->pMore : current->pLess;
+        struct spacial_branch* near =
+            (point_coord < node_coord) ? current->pLess : current->pMore;
+        struct spacial_branch* far =
+            (point_coord < node_coord) ? current->pMore : current->pLess;
 
         if (near)
             queue_push(&queue, near, 0.0f); // explore near side first
@@ -255,11 +260,10 @@ struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point) {
         current = queue_pop(&queue);
     }
 
-
     return closest;
 }
 
-int spacial_pathLen(struct spacial_branch * pGoal) {
+int spacial_pathLen(struct spacial_branch* pGoal) {
     if (!pGoal)
         return -1;
     size_t path_len = 0;

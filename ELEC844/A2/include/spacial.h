@@ -68,16 +68,18 @@ extern int spacial_check(struct spacial* pSpace, struct xy point);
 
 extern int spacial_checkPth(struct spacial* pSpace, struct xy p1, struct xy p2);
 
-extern int spacial_addV(spacial_tree_t* pTree, struct xy point,
-                        struct spacial_branch* parent);
+extern struct spacial_branch* spacial_addV(spacial_tree_t* pTree,
+                                           struct xy point,
+                                           struct spacial_branch* parent);
 
-extern struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point);
+extern struct spacial_branch* spacial_nearest(spacial_tree_t* pTree,
+                                              struct xy point);
 
 extern struct spacial_branch* spacial_nearestN(spacial_tree_t* pTree,
                                                struct xy point);
 
 extern struct voxel* spacial_getV(spacial_t* pSpace, struct xy point);
 
-extern int spacial_pathLen(struct spacial_branch *pGoal);
+extern int spacial_pathLen(struct spacial_branch* pGoal);
 
 #endif

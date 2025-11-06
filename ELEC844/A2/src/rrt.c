@@ -102,7 +102,7 @@ int rrt_main(rrt_t* this) {
     // printf("Plotting New Point (%3.1f %3.1f)\n", p_x, p_y);
 
     // Check the point exists in the space
-    if (spacial_check(this->pSpace, (xy_t){p_x, p_y})) {
+    if (spacial_check(this->pSpace, (xy_t) {p_x, p_y})) {
         return rrt_main(this);
     }
 
@@ -115,9 +115,10 @@ int rrt_main(rrt_t* this) {
     }
 
     // Setup the new point
-    int addr = spacial_addV(this->pTree, (xy_t) {p_x, p_y}, nearest);
-    if (addr != 0) {
-        // printf("AddV returned %d\n", addr);
+    struct spacial_branch* added_v =
+        spacial_addV(this->pTree, (xy_t) {p_x, p_y}, nearest);
+    if(!added_v){
+        return rrt_main(this);
     }
 
     // Check if the goal is within distance to the point
@@ -126,8 +127,7 @@ int rrt_main(rrt_t* this) {
     if (d_goal < this->edge_length) {
         // printf("Reached Goal!\n");
 
-        spacial_addV(this->pTree, this->p_goal,
-                     spacial_nearest(this->pTree, (xy_t) {p_x, p_y}));
+        spacial_addV(this->pTree, this->p_goal, added_v);
         this->found_target = true;
         return 1;
     }

@@ -17,6 +17,7 @@
 #include "kdtree.h"
 #include "prng.h"
 #include "rrt.h"
+#include "rrtc.h"
 #include "spacial.h"
 #include "worlds.h"
 
@@ -78,13 +79,12 @@ int benchmark(int runs) {
     return 0;
 }
 
-int view(void) {
+int view_rrtc(void) {
     // Initialize the display
     disp_t* d = disp_init(100);
 
-    rrt_t* planner =
-        rrt_init(gen_world1A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
-    struct spacial* sp = planner->pSpace;
+    rrtc_t* planner =
+        rrtc_init(gen_world1A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
 
     // SDL loop until finished
     SDL_Event e;
@@ -94,14 +94,14 @@ int view(void) {
                 goto exit;
         }
 
-        if (rrt_main(planner)) {
+        if (rrtc_main(planner)) {
             goto wait_exit;
         }
 
         disp_clr(d);
         // Draw grid and path
         disp_drawGrid(d);
-        disp_drawPoints(d, sp);
+        disp_drawPoints(d, planner->pSpace);
         // Render the display
         disp_render(d);
 
@@ -122,7 +122,61 @@ wait_exit:
         disp_clr(d);
         // Draw grid and path
         disp_drawGrid(d);
-        disp_drawPoints(d, sp);
+        disp_drawPoints(d, planner->pSpace);
+        // Render the display
+        disp_render(d);
+    }
+
+exit:
+    printf("Shutting Down..\n");
+    disp_exit(&d);
+    return 0;
+}
+
+int view_rrt(void) {
+    // Initialize the display
+    disp_t* d = disp_init(100);
+
+    rrt_t* planner =
+        rrt_init(gen_world1A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
+
+    // SDL loop until finished
+    SDL_Event e;
+    while (1) {
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT)
+                goto exit;
+        }
+
+        if (rrt_main(planner)) {
+            goto wait_exit;
+        }
+
+        disp_clr(d);
+        // Draw grid and path
+        disp_drawGrid(d);
+        disp_drawPoints(d, planner->pSpace);
+        // Render the display
+        disp_render(d);
+
+        // Run a delay for the animation
+        SDL_Delay(10);
+    }
+wait_exit:
+    // Print out the search results
+    printf("Finished Search!\n");
+    printf("%ld Iterations got Path Length = %d \n", planner->n_iterations,
+           spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal)));
+    printf("%ld verticies were created\n", planner->pTree->n_voxels);
+    while (1) {
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT)
+                goto exit;
+        }
+        disp_clr(d);
+        // Draw grid and path
+        disp_drawGrid(d);
+        disp_drawPoints(d, planner->pSpace);
         // Render the display
         disp_render(d);
     }
@@ -136,7 +190,7 @@ exit:
 int main(int argc, char** argv) {
 
     if (argc == 1) {
-        return view();
+        return view_rrtc();
     } else if (argc == 2) {
         int runs = atoi(argv[1]);
         if (runs == 0) {

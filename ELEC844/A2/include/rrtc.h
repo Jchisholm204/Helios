@@ -15,8 +15,9 @@
 #include "worlds.h"
 
 typedef struct {
-    struct spacial* source_space;
-    struct spacial* target_space;
+    spacial_t* pSpace;
+    spacial_tree_t *pTree;
+    spacial_tree_t *pTreeG;
     world_loader_fn world_loader;
     xy_t p_goal;
     unsigned int seed;
