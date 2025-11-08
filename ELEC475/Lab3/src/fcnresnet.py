@@ -53,6 +53,7 @@ class FCNResNetWrapper(nn.Module):
 
         # 3. Augment the standard output dictionary with the required feature taps
         output['features'] = {
+            'out': output,
             'low': features_mid,
             'mid': features_high,
             'high': features_final,

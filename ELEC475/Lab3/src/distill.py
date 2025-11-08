@@ -7,6 +7,7 @@ from segmodel import MobileNetV3_SegNet
 from fcnresnet import FCNResNetWrapper
 # Response based learning
 import distill_response_loss as drl
+import distill_features as df
 from plotter import plot_history
 from datetime import datetime
 import os
@@ -14,8 +15,8 @@ import os
 EPOCHS = 20
 LEARNING_RATE = 0.003
 LEARNING_DECAY = 0.0003
-BATCH_SIZE = 16
-WORKERS = 8
+BATCH_SIZE = 4
+WORKERS = 4
 ALPHA = 0.1
 BETA = 0.05
 TEMP = 1
@@ -43,9 +44,9 @@ if __name__ == "__main__":
     print(f"Created {save_path}")
     model = load_model()
     teacher = FCNResNetWrapper().to('cuda')
-    history = drl.distill_model(model, teacher, train_loader, val_loader,
-                                ALPHA, BETA, TEMP,
-                                int(EPOCHS), LEARNING_RATE, LEARNING_DECAY,
-                                save_path=save_path)
+    history = df.distill_model(model, teacher, train_loader, val_loader,
+                               ALPHA, BETA, TEMP,
+                               int(EPOCHS), LEARNING_RATE, LEARNING_DECAY,
+                               save_path=save_path)
 
     plot_history(history, save_path=save_path)

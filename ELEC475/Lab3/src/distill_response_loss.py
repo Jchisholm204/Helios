@@ -47,6 +47,7 @@ def distill_model(model: nn.Module, teacher_model: nn.Module,
         param.requires_grad = False
 
     history = {
+        'train_type': 'response_based_learning',
         'train_loss': [],
         'train_miou': [],
         'val_loss': [],
