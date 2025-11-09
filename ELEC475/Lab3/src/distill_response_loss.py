@@ -48,6 +48,13 @@ def distill_model(model: nn.Module, teacher_model: nn.Module,
 
     history = {
         'train_type': 'response_based_learning',
+        'params': {
+            'alpha': alpha,
+            'beta': beta,
+            'temp': temp,
+            'lr': lr,
+            'decay': decay
+        },
         'train_loss': [],
         'train_miou': [],
         'val_loss': [],

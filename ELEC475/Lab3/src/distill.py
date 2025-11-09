@@ -12,14 +12,19 @@ from plotter import plot_history
 from datetime import datetime
 import os
 
-EPOCHS = 20
+EPOCHS = 200
 LEARNING_RATE = 0.003
 LEARNING_DECAY = 0.0003
-BATCH_SIZE = 4
+BATCH_SIZE = 2
 WORKERS = 4
-ALPHA = 0.1
-BETA = 0.05
+# Feature Based
 TEMP = 1
+ALPHA = 1
+BETA = 0
+# Response Based
+# TEMP = 0.9
+# ALPHA = 0.9
+# BETA = 0.2
 
 
 def load_model(checkpoint_path: str = None, device='cuda') -> torch.nn.Module:
@@ -42,7 +47,9 @@ if __name__ == "__main__":
     save_path = f"distill_{datetime.now().strftime("%Y%M%d_%H-%M-%S")}"
     os.mkdir(save_path)
     print(f"Created {save_path}")
+    # model = load_model('./distill_20252808_18-28-31/final.pth')
     model = load_model()
+    # model = load_model('./distill_20253708_20-37-14/final.pth')
     teacher = FCNResNetWrapper().to('cuda')
     history = df.distill_model(model, teacher, train_loader, val_loader,
                                ALPHA, BETA, TEMP,

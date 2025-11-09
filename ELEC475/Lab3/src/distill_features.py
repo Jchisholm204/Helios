@@ -12,36 +12,36 @@ class FeatureKDLoss(nn.Module):
     def __init__(self, feature_keys=['low', 'mid', 'high']):
         super().__init__()
         self.feature_keys = feature_keys
-        self.loss_fn = nn.CosineEmbeddingLoss(margin=0.0, reduction='mean')
-        # Dictionary to hold 1x1 convs for each feature tap
+        # 1x1 conv projections per feature tap
         self.projections = nn.ModuleDict()
 
     def forward(self, student_features: dict, teacher_features: dict):
-        total_feature_loss = 0.0
+        total_loss = 0.0
+        B = None  # batch size
 
         for key in self.feature_keys:
             s_feat = student_features[key]
             t_feat = teacher_features[key].detach()
 
-            # Create projection if it doesn't exist yet
+            if B is None:
+                B = s_feat.size(0)
+
+            # 1x1 projection to match teacher channels
             if key not in self.projections:
                 self.projections[key] = nn.Conv2d(s_feat.size(
                     1), t_feat.size(1), kernel_size=1).to(s_feat.device)
             s_feat = self.projections[key](s_feat)
-            if s_feat.shape[2:] != t_feat.shape[2:0]:
-                # Project student features to match teacher channels
-                s_feat = F.interpolate(
-                    s_feat, size=t_feat.shape[2:], mode='bilinear', align_corners=False)
 
-            # Flatten to (N, C) for cosine similarity
-            s_vec = s_feat.permute(0, 2, 3, 1).reshape(-1, t_feat.size(1))
-            t_vec = t_feat.permute(0, 2, 3, 1).reshape(-1, t_feat.size(1))
+            # Global average pooling to get one vector per sample
+            s_vec = F.adaptive_avg_pool2d(s_feat, (1, 1)).reshape(B, -1)
+            t_vec = F.adaptive_avg_pool2d(t_feat, (1, 1)).reshape(B, -1)
 
-            target = torch.ones(s_vec.size(0), device=s_feat.device)
-            loss = self.loss_fn(s_vec, t_vec, target)
-            total_feature_loss += loss
+            # Cosine similarity: 1 - similarity gives loss
+            cos_sim = F.cosine_similarity(s_vec, t_vec, dim=1)
+            loss = 1 - cos_sim.mean()
+            total_loss += loss
 
-        return total_feature_loss
+        return total_loss
 
 
 def distill_model(model: nn.Module, teacher_model: nn.Module,
@@ -54,11 +54,19 @@ def distill_model(model: nn.Module, teacher_model: nn.Module,
     loss_fn = nn.CrossEntropyLoss(ignore_index=255)
     teacher_model.eval()
     feature_fn = FeatureKDLoss()
+    scaler = torch.cuda.amp.GradScaler()
     for param in teacher_model.parameters():
         param.requires_grad = False
 
     history = {
         'train_type': 'feature_based_learning',
+        'params': {
+            'alpha': alpha,
+            'beta': beta,
+            'temp': temp,
+            'lr': lr,
+            'decay': decay
+        },
         'train_loss': [],
         'train_miou': [],
         'val_loss': [],
@@ -81,17 +89,23 @@ def distill_model(model: nn.Module, teacher_model: nn.Module,
             targets = targets.to(device)
 
             optimizer_fn.zero_grad()
-            student_outputs = model(images)
-            with torch.no_grad():
-                teacher_outputs = teacher_model(images)
-            # Standard loss
-            standard_loss = loss_fn(student_outputs['out'], targets)
-            # Feature based losses
-            feature_loss = feature_fn.forward(
-                student_outputs, teacher_outputs['features'])
-            batch_loss_tensor = (alpha * standard_loss) + (beta * feature_loss)
-            batch_loss_tensor.backward()
-            optimizer_fn.step()
+            with torch.cuda.amp.autocast():
+                student_outputs = model(images)
+                teacher_model.eval()
+                with torch.no_grad():
+                    teacher_outputs = teacher_model(images)
+                # Standard loss
+                standard_loss = loss_fn(student_outputs['out'], targets)
+                # Feature based losses
+                feature_loss = feature_fn.forward(
+                    student_outputs, teacher_outputs['features'])
+                batch_loss_tensor = (alpha * standard_loss) + \
+                    (beta * feature_loss)
+                batch_loss_tensor = batch_loss_tensor * temp
+
+            scaler.scale(batch_loss_tensor).backward()
+            scaler.step(optimizer_fn)
+            scaler.update()
 
             accum_loss += batch_loss_tensor.item()
             accum_miou += calculate_miou(
