@@ -1,0 +1,16 @@
+The speed.py program can be used to evaluated models:
+
+python src/speed.py
+
+Line 21 in speed.py can be changed to select the model evaluated.
+All trained models are stored under ./best/
+
+The test.py program can be used to view the output from the models.
+
+python src/test.py
+
+Line 29 in test.py controls what model to use.
+
+
+All trained models contain a history.json file that contains the training history.
+The mIoU calculations within these files are not accurate.

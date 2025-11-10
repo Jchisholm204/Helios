@@ -12,7 +12,7 @@ from plotter import plot_history
 from datetime import datetime
 import os
 
-EPOCHS = 20
+EPOCHS = 500
 LEARNING_RATE = 0.003
 LEARNING_DECAY = 0.0003
 BATCH_SIZE = 2
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     print(f"Created {save_path}")
     # model = load_model('./distill_20252808_18-28-31/final.pth')
     model = load_model()
-    model = load_model('./20253802_23-38-32/final.pth')
+    # model = load_model('./32/final.pth')
     # model = load_model('./distill_20253708_20-37-14/final.pth')
     teacher = FCNResNetWrapper().to('cuda')
     history = df.distill_model(model, teacher, train_loader, val_loader,

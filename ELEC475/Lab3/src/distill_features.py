@@ -103,11 +103,9 @@ def distill_model(model: nn.Module, teacher_model: nn.Module,
                     (beta * feature_loss)
                 batch_loss_tensor = batch_loss_tensor * temp
 
-            # scaler.scale(batch_loss_tensor).backward()
-            # scaler.step(optimizer_fn)
-            # scaler.update()
-            batch_loss_tensor.backward()
-            optimizer_fn.step()
+            scaler.scale(batch_loss_tensor).backward()
+            scaler.step(optimizer_fn)
+            scaler.update()
 
             accum_loss += batch_loss_tensor.item()
             accum_miou += calculate_miou(
@@ -134,7 +132,7 @@ def distill_model(model: nn.Module, teacher_model: nn.Module,
                 val_loss_fn = nn.CrossEntropyLoss(ignore_index=255)
                 loss = val_loss_fn(outputs, targets)
                 val_loss += loss.item()
-                val_miou += calculate_miou(outputs.detach(), targets)
+                val_miou += calculate_miou(outputs, targets)
 
         avg_val_loss = val_loss / len(val_loader)
         avg_val_miou = val_miou / len(val_loader)

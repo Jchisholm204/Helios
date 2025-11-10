@@ -26,7 +26,7 @@ if __name__ == "__main__":
     # model = load_model()
     # model = load_model('./distill_20255909_17-59-22/final.pth')
     # model = load_model('./20255909_20-59-29/final.pth')
-    model = load_model('./best/f/final.pth')
+    model = load_model('./best/feature/best_loss.pth')
     # model = FCNResNetWrapper()
     images, targets = next(iter(val_loader))
     model.to('cuda')

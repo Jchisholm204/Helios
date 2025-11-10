@@ -1,0 +1,9 @@
+To train the model, execute:
+
+python src/train_segmodel.py
+
+To train the model using knowledge distillation:
+
+python src/distill.py
+
+Line 55 in distill.py can be either df, to train via features, or drl to train based on the teacher model responses.
