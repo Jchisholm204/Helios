@@ -11,8 +11,6 @@
 
 #include "spacial.h"
 
-#include "linked_queue.h"
-
 #include <math.h>
 #include <memory.h>
 #include <stdio.h>
@@ -99,8 +97,8 @@ void tree_free_branch(struct spacial_branch* b) {
     if (b->pMore) {
         tree_free_branch(b->pMore);
     }
-    while(queue_length(b->children) > 0)
-        (void)queue_pop(&b->children);
+    while(ll_length(b->children) > 0)
+        (void)ll_pop(&b->children);
     free(b);
 }
 
@@ -208,7 +206,8 @@ struct spacial_branch* spacial_addV(spacial_tree_t* pTree, struct xy point,
     v->y = point.y;
 
     *current = new_branch;
-    queue_push(&parent->children, new_branch, 0);
+    if(ll_contains(parent->children, new_branch) == 0)
+        ll_push(&parent->children, new_branch);
 
     pTree->n_voxels++;
 
@@ -230,7 +229,7 @@ struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point) {
     // printf("Finding Nearest Voxel\n");
 
     struct spacial_branch* current = pTree->pHead;
-    struct linked_queue* queue = NULL;
+    ll_t* queue = NULL;
     while (current) {
         // Get distance of current to point
         float d_v = (pow((float) current->voxel.x - (float) point.x, 2) +
@@ -258,17 +257,17 @@ struct spacial_branch* spacial_nearest(spacial_tree_t* pTree, struct xy point) {
             (point_coord < node_coord) ? current->pMore : current->pLess;
 
         if (near)
-            queue_push(&queue, near, 0.0f); // explore near side first
+            ll_push(&queue, near); // explore near side first
         // only explore far side if its plane might contain a closer point
         if (far && plane_dist2 < closest_dist*closest_dist)
-            queue_push(&queue, far, plane_dist2);
-        current = queue_pop(&queue);
+            ll_push(&queue, far);
+        current = ll_pop(&queue);
     }
 
     return closest;
 }
 
-struct linked_queue* spacial_nearestN(spacial_tree_t* pTree, struct xy point,
+ll_t* spacial_nearestN(spacial_tree_t* pTree, struct xy point,
                                       float radius) {
     if (!pTree)
         return NULL;
@@ -276,15 +275,15 @@ struct linked_queue* spacial_nearestN(spacial_tree_t* pTree, struct xy point,
         return NULL;
 
     struct spacial_branch* current = pTree->pHead;
-    struct linked_queue* queue = NULL;
-    struct linked_queue* nearby = NULL;
+    ll_t* queue = NULL;
+    ll_t* nearby = NULL;
     while (current) {
         // Get distance of current to point
         float d_v = (pow((float) current->voxel.x - (float) point.x, 2) +
                          pow((float) current->voxel.y - (float) point.y, 2));
         // Update best
         if (d_v < radius*radius) {
-            queue_push(&nearby, current, d_v);
+            ll_push(&nearby, current);
         }
         // printf("Checking Node (%3.1f %3.1f) d=%3.2f\n", current->voxel.x,
         // current->voxel.y, d_v);
@@ -304,11 +303,11 @@ struct linked_queue* spacial_nearestN(spacial_tree_t* pTree, struct xy point,
             (point_coord < node_coord) ? current->pMore : current->pLess;
 
         if (near)
-            queue_push(&queue, near, 0.0f); // explore near side first
+            ll_push(&queue, near); // explore near side first
         // only explore far side if its plane might contain a closer point
         if (far && plane_dist2 < radius*radius)
-            queue_push(&queue, far, plane_dist2);
-        current = queue_pop(&queue);
+            ll_push(&queue, far);
+        current = ll_pop(&queue);
     }
 
     return nearby;

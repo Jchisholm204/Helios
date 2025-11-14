@@ -1,0 +1,73 @@
+make -C build --no-print-directory
+[ 12%] Building C object CMakeFiles/844A1.dir/src/rrtstar.c.o
+[ 25%] Linking C executable 844A1
+[100%] Built target 844A1
+./build/844A1
+Added Vertex (27, 51) p=(25, 50) pc=0.0 nc=2.5
+Added Vertex (29, 49) p=(27, 50) pc=2.5 nc=5.0
+Added Vertex (24, 48) p=(25, 50) pc=0.0 nc=2.5
+Added Vertex (27, 52) p=(27, 50) pc=2.5 nc=5.0
+Added Vertex (31, 48) p=(29, 48) pc=5.0 nc=7.5
+Added Vertex (26, 54) p=(27, 52) pc=5.0 nc=7.5
+Added Vertex (33, 50) p=(31, 48) pc=7.5 nc=10.0
+Added Vertex (23, 45) p=(23, 47) pc=2.5 nc=5.0
+Added Vertex (21, 48) p=(23, 47) pc=2.5 nc=5.0
+Added Vertex (34, 48) p=(32, 49) pc=10.0 nc=12.5
+Added Vertex (25, 56) p=(26, 54) pc=7.5 nc=10.0
+Added Vertex (27, 58) p=(25, 56) pc=10.0 nc=12.5
+Added Vertex (25, 59) p=(26, 57) pc=12.5 nc=15.0
+Added Vertex (35, 45) p=(34, 47) pc=12.5 nc=15.0
+Added Vertex (18, 47) p=(20, 47) pc=5.0 nc=7.5
+Added Vertex (23, 42) p=(23, 44) pc=5.0 nc=7.5
+Added Vertex (35, 42) p=(34, 44) pc=15.0 nc=17.5
+Added Vertex (20, 41) p=(22, 41) pc=7.5 nc=10.0
+Added Vertex (34, 51) p=(32, 49) pc=10.0 nc=12.5
+Added Vertex (35, 52) p=(33, 50) pc=12.5 nc=15.0
+Added Vertex (25, 44) p=(23, 44) pc=5.0 nc=7.5
+Added Vertex (23, 56) p=(25, 56) pc=10.0 nc=12.5
+Added Vertex (20, 56) p=(22, 55) pc=12.5 nc=15.0
+Added Vertex (18, 58) p=(19, 56) pc=15.0 nc=17.5
+Added Vertex (19, 49) p=(20, 47) pc=5.0 nc=7.5
+Added Vertex (15, 49) p=(17, 47) pc=7.5 nc=10.0
+Added Vertex (15, 60) p=(17, 58) pc=17.5 nc=20.0
+Added Vertex (26, 46) p=(25, 44) pc=7.5 nc=10.0
+Added Vertex (34, 53) p=(34, 51) pc=15.0 nc=17.5
+Added Vertex (34, 55) p=(33, 53) pc=17.5 nc=20.0
+Added Vertex (26, 54) p=(27, 52) pc=5.0 nc=7.0
+Found New Child: (26, 54) 7.0 -> (26, 54) 7.4
+Updating Children of (26, 54)
+    Child: (26, 54) 10.0 -> 9.6
+Updating Children of (25, 56)
+    Child: (25, 56) 12.5 -> 11.1
+Updating Children of (26, 57)
+    Child: (26, 57) 15.0 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3
+Updating Children of (25, 59)
+    Child: (26, 57) 13.3 -> 13.3

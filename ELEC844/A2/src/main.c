@@ -178,11 +178,11 @@ int benchmark_rrtc(int runs) {
         size_t n_added = planner->pTree->n_voxels + planner->pTreeG->n_voxels;
         sum_added += n_added;
         size_t n_solution = 0;
-        if(planner->target)
+        if (planner->target)
             n_solution = spacial_pathLen(planner->target);
         sum_path += n_solution;
         float p_goal = 0;
-        if(planner->target)
+        if (planner->target)
             p_goal = planner->target->voxel.cost;
         sum_goal += p_goal;
         fprintf(testf, "%d, %ld, %ld, %ld, %3.2f\n", run, n_iterations, n_added,
@@ -258,25 +258,25 @@ int view_rrtstar(void) {
     disp_t* d = disp_init(100);
 
     rrtstar_t* planner =
-        rrtstar_init(gen_world2A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
+        rrtstar_init(gen_world1A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
 
     // SDL loop until finished
     SDL_Event e;
     int plen = FLT_MAX;
     int plen_last = plen;
-    while (1) {
+    for (int r = 0; r < 5000; r++) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT)
                 goto exit;
         }
 
+        spacial_clearPath(planner->pSpace);
         rrtstar_main(planner);
         if (planner->found_target)
-            plen = spacial_pathLen(
-                spacial_nearest(planner->pTree, planner->p_goal));
+            plen = spacial_pathLen(planner->target);
         if (planner->found_target && plen < plen_last) {
-            printf("%ld Iterations got Path Length = %d \n",
-                   planner->n_iterations, plen);
+            printf("%ld Iterations got Path Length = %3.2f (%d) \n",
+                   planner->n_iterations, planner->target->voxel.cost, plen);
             plen_last = plen;
             // goto wait_exit;
         }
@@ -294,8 +294,9 @@ int view_rrtstar(void) {
 wait_exit:
     // Print out the search results
     printf("Finished Search!\n");
-    printf("%ld Iterations got Path Length = %d \n", planner->n_iterations,
-           spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal)));
+    printf("%ld Iterations got Path Length = %3.2f (%d) \n",
+           planner->n_iterations, planner->target->voxel.cost,
+           spacial_pathLen(planner->target));
     printf("%ld verticies were created\n", planner->pTree->n_voxels);
     while (1) {
         while (SDL_PollEvent(&e)) {

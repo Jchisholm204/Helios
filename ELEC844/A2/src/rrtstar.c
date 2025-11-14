@@ -56,78 +56,6 @@ void rrtstar_free(rrtstar_t** ppRRT) {
     *ppRRT = NULL;
 }
 
-bool is_descendant(struct spacial_branch* node,
-                   struct spacial_branch* potential_child) {
-    if (!node || !node->children)
-        return false;
-
-    struct linked_queue* child = node->children;
-    while (child) {
-        struct spacial_branch* b = child->data;
-        if (b == potential_child)
-            return true;
-        if (is_descendant(b, potential_child))
-            return true;
-        child = child->next;
-    }
-    return false;
-}
-
-// Walk up parent pointers to see if 'possible_ancestor' is an ancestor of
-// 'node'. This is safer than walking children. Guarded to avoid infinite loops
-// on an already-cyclic tree.
-static bool is_ancestor_safe(struct spacial_branch* node,
-                             struct spacial_branch* possible_ancestor) {
-    if (!node || !possible_ancestor)
-        return false;
-    struct spacial_branch* cur = node->pParent;
-    int steps = 0;
-    const int MAX_STEPS = 100000; // large guard
-    while (cur && steps++ < MAX_STEPS) {
-        if (cur == possible_ancestor)
-            return true;
-        cur = cur->pParent;
-    }
-    return false;
-}
-
-// Attempt to detach 'node' from its current parent children list and attach to
-// new_parent. Returns true only on full success. Does not change voxel.cost
-// (caller will update it).
-static bool reparent_node_safe(struct spacial_branch* node,
-                               struct spacial_branch* new_parent) {
-    if (!node)
-        return false;
-
-    // Prevent trivial cycle
-    if (is_ancestor_safe(new_parent, node))
-        return false;
-
-    struct spacial_branch* old_parent = node->pParent;
-
-    // Detach from old parent first
-    if (old_parent) {
-        if (!queue_find_remove(&old_parent->children, node)) {
-            return false; // detach failed, leave structure unchanged
-        }
-    }
-
-    // Attach to new parent
-    node->pParent = new_parent;
-    if (new_parent) {
-        // prevent duplicate children
-        if (!queue_find_remove(&new_parent->children, node)) {
-            // not present, safe to push
-            queue_push(&new_parent->children, node, 0);
-        } else {
-            // we removed an accidental duplicate; re-add a single instance for
-            // cleanliness
-            queue_push(&new_parent->children, node, 0);
-        }
-    }
-    return true;
-}
-
 // Quick Euclidean helper
 static float dist_xy(float x1, float y1, float x2, float y2) {
     float dx = x1 - x2;
@@ -135,39 +63,18 @@ static float dist_xy(float x1, float y1, float x2, float y2) {
     return sqrtf(dx * dx + dy * dy);
 }
 
-// Floyd's cycle detection on parent pointers from a starting node.
-// Returns true if a cycle exists, false otherwise.
-static bool detect_cycle_from(struct spacial_branch* start) {
-    if (!start)
-        return false;
-    struct spacial_branch *t = start, *h = start;
-    while (true) {
-        // move tortoise by 1
-        if (t->pParent)
-            t = t->pParent;
-        else
-            return false;
-        // move hare by 2
-        if (h->pParent && h->pParent->pParent) {
-            h = h->pParent->pParent;
-        } else {
-            return false;
-        }
-        if (t == h)
-            return true;
-    }
-}
-
-void update_children(rrtstar_t* this, struct linked_queue* children,
-                     float cost) {
+void update_children_cost(struct spacial_branch* branch) {
+    ll_t* children = branch->children;
+    // printf("Updating Children of (%2.0f, %2.0f)\n", branch->voxel.x,
+    // branch->voxel.y);
     while (children) {
-        struct spacial_branch* b = children->data;
-        float b_cost = sqrt(pow(b->pParent->voxel.x - b->voxel.x, 2) +
-                            pow(b->pParent->voxel.y - b->voxel.y, 2));
-        if (b->voxel.cost > cost + b_cost) {
-            b->voxel.cost = cost + b_cost;
-            update_children(this, b->children, b->voxel.cost);
-        }
+        struct spacial_branch* child = children->data;
+        float dd = dist_xy(branch->voxel.x, branch->voxel.y, child->voxel.x,
+                           child->voxel.y);
+        // printf("    Child: (%2.0f, %2.0f) %2.1f -> %2.1f\n", branch->voxel.x,
+        //        branch->voxel.y, child->voxel.cost, dd + branch->voxel.cost);
+        child->voxel.cost = dd + branch->voxel.cost;
+        update_children_cost(child);
         children = children->next;
     }
 }
@@ -188,10 +95,6 @@ int rrtstar_main(rrtstar_t* this) {
         s_y = (float) 100.0 * rand() / RAND_MAX;
     }
 
-    // printf("Sampled Point (%3.1f %3.1f)\n", s_x, s_y);
-    // this->pSpace->voxels[(int)s_y * this->pSpace->info.dim.y +
-    // (int)s_x].state = eStatePath;
-
     // If the sampled point is blocked, rerun this function to sample a new
     // point
     if (spacial_check(this->pSpace, (xy_t) {s_x, s_y})) {
@@ -201,33 +104,27 @@ int rrtstar_main(rrtstar_t* this) {
     // Find the closest point to the sampled point
     struct spacial_branch* nearest =
         spacial_nearest(this->pTree, (xy_t) {s_x, s_y});
+    // Nearest will be null if its in collision or does not exist
     if (!nearest) {
-        // printf("Nearest NULL\n");
-        rrtstar_main(this);
+        return rrtstar_main(this);
     }
-
-    // printf("Found Nearest Point (%3.1f %3.1f)\n", nearest->voxel.x,
-    // nearest->voxel.y);
 
     // Normalize the vector and multiply it to get the new point
     float n_v_norm =
         sqrt(pow(s_x - nearest->voxel.x, 2) + pow(s_y - nearest->voxel.y, 2));
-    // printf("Vec Norm = %3.2f\n", n_v_norm);
     float p_x = this->edge_length * (s_x - nearest->voxel.x) / n_v_norm +
                 nearest->voxel.x;
     float p_y = this->edge_length * (s_y - nearest->voxel.y) / n_v_norm +
                 nearest->voxel.y;
 
     // Find lowest cost parent for the new point
-    struct linked_queue* nearby =
+    ll_t* nearby =
         spacial_nearestN(this->pTree, (xy_t) {p_x, p_y}, this->edge_length);
-    while (queue_length(nearby) > 0) {
-        struct spacial_branch* b = queue_pop(&nearby);
+    while (ll_length(nearby) > 0) {
+        struct spacial_branch* b = ll_pop(&nearby);
         if (b->voxel.cost < nearest->voxel.cost)
             nearest = b;
     }
-
-    // printf("Plotting New Point (%3.1f %3.1f)\n", p_x, p_y);
 
     // Check the point exists in the space
     if (spacial_check(this->pSpace, (xy_t) {p_x, p_y})) {
@@ -248,16 +145,21 @@ int rrtstar_main(rrtstar_t* this) {
     if (!added_v) {
         return rrtstar_main(this);
     }
-    float new_cost = added_v->voxel.cost =
-        nearest->voxel.cost +
-        sqrt(pow(p_x - nearest->voxel.x, 2) + pow(p_y - nearest->voxel.y, 2));
+    float new_cost = nearest->voxel.cost +
+                     dist_xy(nearest->voxel.x, nearest->voxel.y, p_x, p_y);
+    added_v->voxel.cost = new_cost;
 
-    struct linked_queue* nearestN =
+    // printf("Added Vertex (%2.0f, %2.0f) p=(%2.0f, %2.0f) pc=%2.1f
+    // nc=%2.1f\n",
+    //        p_x, p_y, nearest->voxel.x, nearest->voxel.y, nearest->voxel.cost,
+    //        new_cost);
+
+    ll_t* nearestN =
         spacial_nearestN(this->pTree, (xy_t) {p_x, p_y}, this->edge_length);
 
     // Check if any nearby nodes can be rewired to this node
-    while (queue_length(nearestN) > 0) {
-        struct spacial_branch* b = queue_pop(&nearestN);
+    while (ll_length(nearestN) > 0) {
+        struct spacial_branch* b = ll_pop(&nearestN);
         if (b == added_v)
             continue;
 
@@ -266,43 +168,104 @@ int rrtstar_main(rrtstar_t* this) {
         if (b->voxel.cost <= candidate_cost)
             continue;
 
-        // If b is already parented to added_v, we still may need to update
-        // children costs.
-        if (b->pParent == added_v) {
-            b->voxel.cost = candidate_cost; // keep in sync
-            update_children(this, b->children, b->voxel.cost);
+        // Ensure the path n_v->p_v is free
+        if (spacial_checkPth(this->pSpace, (xy_t) {b->voxel.x, b->voxel.y},
+                             (xy_t) {p_x, p_y}))
             continue;
-        }
 
-        // Prevent cycles: ensure added_v is NOT inside b's ancestor chain
-        if (is_ancestor_safe(added_v, b)) {
-            // would create a loop, skip
-            continue;
-        }
-
-        // Attempt atomic reparent: detach from old parent and attach under
-        // added_v. Only if this succeeds do we update cost and propagate.
-        if (!reparent_node_safe(b, added_v)) {
-            // detach/attach failed -> skip
-            continue;
-        }
-
+        // printf(
+        //     "Found New Child: (%2.0f, %2.0f) %2.1f -> (%2.0f, %2.0f)
+        //     %2.1f\n", p_x, p_y, new_cost, b->voxel.x, b->voxel.y,
+        //     candidate_cost);
         // Now safe: update cost and propagate to descendants
         b->voxel.cost = candidate_cost;
-        update_children(this, b->children, b->voxel.cost);
+        // Remove b as a child from its current parent
+        ll_find_remove(&b->pParent->children, b);
+        while (ll_contains(b->pParent->children, b) == 1) {
+            ll_find_remove(&b->pParent->children, b);
+            // printf("Excess Removals\n");
+        }
+        // Set its new parent to the new node
+        b->pParent = added_v;
+        if (ll_contains(added_v->children, b) == 0)
+            ll_push(&added_v->children, b);
+        update_children_cost(b);
+    }
+
+    // After the rewiring while loop ends (after line 171)
+
+    // Check if any nearby nodes (including rewired ones) can reach the goal
+    ll_t* nodes_near_goal =
+        spacial_nearestN(this->pTree, this->p_goal, this->edge_length);
+    while (ll_length(nodes_near_goal) > 0) {
+        struct spacial_branch* candidate = ll_pop(&nodes_near_goal);
+
+        float dist_to_goal = dist_xy(candidate->voxel.x, candidate->voxel.y,
+                                     this->p_goal.x, this->p_goal.y);
+
+        if (dist_to_goal < this->edge_length) {
+            float candidate_goal_cost = candidate->voxel.cost + dist_to_goal;
+
+            if (!this->target ||
+                candidate_goal_cost < this->target->voxel.cost) {
+                // Either create target or rewire it to this better parent
+                if (!this->target) {
+                    this->target =
+                        spacial_addV(this->pTree, this->p_goal, candidate);
+                } else {
+                    ll_find_remove(&this->target->pParent->children,
+                                   this->target);
+                    this->target->pParent = candidate;
+                    ll_push(&candidate->children, this->target);
+                }
+                this->target->voxel.cost = candidate_goal_cost;
+                this->found_target = true;
+                printf("TRG COST=%3.2f\n", this->target->voxel.cost);
+            }
+        }
     }
 
     // Check if the goal is within distance to the point
-    float d_goal =
-        sqrt(pow(p_x - this->p_goal.x, 2) + pow(p_y - this->p_goal.y, 2));
-    if (d_goal < this->edge_length) {
-        // printf("Reached Goal!\n");
+    // float d_goal =
+    //     sqrt(pow(p_x - this->p_goal.x, 2) + pow(p_y - this->p_goal.y, 2));
+    // if (d_goal < this->edge_length) {
+    //     // printf("Reached Goal!\n");
+    //
+    //     if (this->target) {
+    //         if (added_v->voxel.cost + d_goal < this->target->voxel.cost) {
+    //             // Remove the targets previous parent
+    //             ll_find_remove(&this->target->pParent->children,
+    //             this->target); while
+    //             (ll_contains(this->target->pParent->children,
+    //                                this->target) == 1) {
+    //                 ll_find_remove(&this->target->pParent->children,
+    //                                this->target);
+    //             }
+    //             // Set the new parent
+    //             this->target->voxel.cost = added_v->voxel.cost + d_goal;
+    //             this->target->pParent = added_v;
+    //             if (ll_contains(added_v->children, this->target) == 0)
+    //                 ll_push(&added_v->children, this->target);
+    //         }
+    //     } else {
+    //         this->target = spacial_addV(this->pTree, this->p_goal, added_v);
+    //         this->target->voxel.cost = added_v->voxel.cost + d_goal;
+    //     }
+    //     this->found_target = true;
+    //
+    //     return 1;
+    // }
 
-        this->target = spacial_addV(this->pTree, this->p_goal, added_v);
-        this->target->voxel.cost = added_v->voxel.cost + this->edge_length;
-        this->found_target = true;
-        return 1;
+    return 0;
+}
+
+int spacial_clearPath(spacial_t* pSpace) {
+    if (!pSpace)
+        return -1;
+    for (int i = 0; i < pSpace->n_voxels; i++) {
+        if (pSpace->voxels[i].state == eStatePath) {
+            pSpace->voxels[i].state = eStateExplored;
+        }
     }
-
     return 0;
 }
