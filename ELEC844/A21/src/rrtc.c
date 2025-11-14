@@ -38,7 +38,6 @@ rrtc_t* rrtc_init(world_loader_fn world, long seed, xy_t dim, float goal_prob,
     this->n_iterations = 0;
     this->edge_length = edge_length;
     this->found_target = false;
-    this->target = NULL;
 
     return this;
 }
@@ -56,26 +55,19 @@ void rrtc_free(rrtc_t** ppRRTC) {
     return;
 }
 
-int rrtc_merge_path(rrtc_t* this, struct spacial_branch* b_s,
-                    struct spacial_branch* b_t) {
-    if (!this || !b_s || !b_t)
+int rrtc_merge_path(rrtc_t *this, struct spacial_branch *b_s, struct spacial_branch *b_t){
+    if(!this || !b_s || !b_t)
         return -1;
     size_t path_len = 0;
     while (b_t) {
-        
-       struct spacial_branch *n = spacial_addV(this->pTree, (xy_t) {b_t->voxel.x, b_t->voxel.y}, b_s);
-        if(n)
-            n->voxel.cost = b_s->voxel.cost + b_t->voxel.lookahead;
-        b_s = n;
-        b_t = b_t->pParent;
+        b_s = spacial_addV(this->pTree, (xy_t){b_t->voxel.x, b_t->voxel.y}, b_s);
+        b_t= b_t->pParent;
         path_len++;
     }
-    this->target = b_s;
     return path_len;
 }
 
-int rrtc_connect(rrtc_t* this, float t_x, float t_y,
-                 struct spacial_branch* steer) {
+int rrtc_connect(rrtc_t* this, float t_x, float t_y, struct spacial_branch *steer) {
     // Begin Connect Logic
 
     // Find nearest node in goal tree
@@ -92,8 +84,6 @@ int rrtc_connect(rrtc_t* this, float t_x, float t_y,
                     nearest->voxel.x;
         float p_y = this->edge_length * (t_y - nearest->voxel.y) / n_v_norm +
                     nearest->voxel.y;
-        float p_d = sqrt(pow(p_x - nearest->voxel.x, 2) +
-                         pow(p_y - nearest->voxel.y, 2));
 
         // Add the new point to the goal tree
         // Check the point exists in the space
@@ -117,8 +107,6 @@ int rrtc_connect(rrtc_t* this, float t_x, float t_y,
         if (!added_g) {
             return 0;
         }
-        added_g->voxel.cost = p_d + nearest->voxel.cost;
-        added_g->voxel.lookahead = p_d;
 
         // Check if the goal is within distance to the point
         float d_goal = sqrt(pow(p_x - t_x, 2) + pow(p_y - t_y, 2));
@@ -176,9 +164,6 @@ int rrtc_main(rrtc_t* pRRTC) {
     float p_y = this->edge_length * (t_y - nearest->voxel.y) / n_v_norm +
                 nearest->voxel.y;
 
-    float p_d =
-        sqrt(pow(p_x - nearest->voxel.x, 2) + pow(p_y - nearest->voxel.y, 2));
-
     // Check the point exists in the space
     if (spacial_check(this->pSpace, (xy_t) {p_x, p_y})) {
         return rrtc_main(this);
@@ -195,9 +180,10 @@ int rrtc_main(rrtc_t* pRRTC) {
     // Setup the new point
     struct spacial_branch* added_v =
         spacial_addV(this->pTree, (xy_t) {p_x, p_y}, nearest);
-    if (!added_v)
+    if(!added_v)
         return rrtc_main(this);
-    added_v->voxel.cost = p_d + nearest->voxel.cost;
 
     return rrtc_connect(this, p_x, p_y, added_v);
 }
+
+

@@ -98,8 +98,6 @@ int rrt_main(rrt_t* this) {
                 nearest->voxel.x;
     float p_y = this->edge_length * (t_y - nearest->voxel.y) / n_v_norm +
                 nearest->voxel.y;
-    float p_d =
-        sqrt(pow(p_x - nearest->voxel.x, 2) + pow(p_y - nearest->voxel.y, 2));
 
     // printf("Plotting New Point (%3.1f %3.1f)\n", p_x, p_y);
 
@@ -119,10 +117,9 @@ int rrt_main(rrt_t* this) {
     // Setup the new point
     struct spacial_branch* added_v =
         spacial_addV(this->pTree, (xy_t) {p_x, p_y}, nearest);
-    if (!added_v) {
+    if(!added_v){
         return rrt_main(this);
     }
-    added_v->voxel.cost = nearest->voxel.cost + p_d;
 
     // Check if the goal is within distance to the point
     float d_goal =
@@ -131,10 +128,10 @@ int rrt_main(rrt_t* this) {
         // printf("Reached Goal!\n");
 
         this->target = spacial_addV(this->pTree, this->p_goal, added_v);
-        this->target->voxel.cost = added_v->voxel.cost + d_goal;
         this->found_target = true;
         return 1;
     }
 
     return 0;
 }
+
