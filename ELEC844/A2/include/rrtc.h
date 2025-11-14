@@ -24,6 +24,7 @@ typedef struct {
     float goal_prob;
     long n_iterations;
     float edge_length;
+    struct spacial_branch *target;
     bool found_target;
 } rrtc_t;
 

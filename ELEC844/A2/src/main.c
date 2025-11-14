@@ -58,13 +58,13 @@ int benchmark_rrtstar(int runs) {
         sum_added += n_added;
         // TODO: Fix this
         size_t n_solution = 0;
-        if(planner->target)
+        if (planner->target)
             n_solution = spacial_pathLen(planner->target);
         else
-         n_unsolved++;
+            n_unsolved++;
         sum_path += n_solution;
         float trg_cost = 0;
-        if(planner->target)
+        if (planner->target)
             trg_cost = planner->target->voxel.cost;
         fprintf(testf, "%d, %ld, %ld, %ld, %3.2f\n", run, n_iterations, n_added,
                 n_solution, trg_cost);
@@ -87,20 +87,20 @@ int benchmark_rrtstar(int runs) {
 int benchmark_rrt(int runs) {
     printf("Running %d benchmarks\n", runs);
 
-    FILE* testf = fopen("./rrt_w2c.csv", "w");
+    FILE* testf = fopen("./rrt_w2a.csv", "w");
     if (!testf) {
         printf("Test File could not be opened\n");
         return 0;
     }
-    fprintf(testf, "#Running %d Trials#World2C#RRT#\n", runs);
-    fprintf(testf, "#run, #iterations, #verticies, #solution\n");
-    float sum_iter = 0, sum_added = 0, sum_path = 0;
+    fprintf(testf, "#Running %d Trials#World2A#RRT#\n", runs);
+    fprintf(testf, "#run, #iterations, #verticies, #solution, #goal\n");
+    float sum_iter = 0, sum_added = 0, sum_path = 0, sum_goal = 0;
     pcg32_random_t rg;
     pcg32_srandom_r(&rg, time(NULL), getpid());
     // disp_t* d = disp_init(100);
     for (int run = 0; run < runs; run++) {
         // Create the planner and world
-        rrt_t* planner = rrt_init(gen_world2C, pcg32_random_r(&rg),
+        rrt_t* planner = rrt_init(gen_world2A, pcg32_random_r(&rg),
                                   (xy_t) {100, 100}, 0.01, 2.5);
 
         // Run the planner to find the path
@@ -120,19 +120,24 @@ int benchmark_rrt(int runs) {
         size_t n_added = planner->pTree->n_voxels;
         sum_added += n_added;
         // TODO: Fix this
-        size_t n_solution =
-            spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal));
+        size_t n_solution = 0;
+        if (planner->target)
+            n_solution = spacial_pathLen(planner->target);
         sum_path += n_solution;
-        fprintf(testf, "%d, %ld, %ld, %ld\n", run, n_iterations, n_added,
-                n_solution);
-        printf("%d, %3.2f, %3.2f, %3.2f\n", run, sum_iter / run,
-               sum_added / run, sum_path / run);
+        float trg_cost = 0;
+        if (planner->target)
+            trg_cost = planner->target->voxel.cost;
+        sum_goal += trg_cost;
+        fprintf(testf, "%d, %ld, %ld, %ld, %3.2f\n", run, n_iterations, n_added,
+                n_solution, trg_cost);
+        printf("%d, %3.2f, %3.2f, %3.2f, %3.2f\n", run, sum_iter / run,
+               sum_added / run, sum_path / run, sum_goal / run);
         // Free the planner
         rrt_free(&planner);
     }
-    printf("ITER | VRTX | PATH\n");
-    printf("%3.2f, %3.2f, %3.2f\n", sum_iter / runs, sum_added / runs,
-           sum_path / runs);
+    printf("ITER | VRTX | PATH | LEN\n");
+    printf("%3.2f, %3.2f, %3.2f, %3.2f\n", sum_iter / runs, sum_added / runs,
+           sum_path / runs, sum_goal / runs);
     fclose(testf);
     return 0;
 }
@@ -140,20 +145,20 @@ int benchmark_rrt(int runs) {
 int benchmark_rrtc(int runs) {
     printf("Running %d benchmarks\n", runs);
 
-    FILE* testf = fopen("./benchmark_rrtc_w2c.csv", "w");
+    FILE* testf = fopen("./rrtc_w2a.csv", "w");
     if (!testf) {
         printf("Test File could not be opened\n");
         return 0;
     }
-    fprintf(testf, "#Running 100 Trials#World2C#RRTC#\n");
-    fprintf(testf, "#run, #iterations, #verticies, #solution\n");
-    float sum_iter = 0, sum_added = 0, sum_path = 0;
+    fprintf(testf, "#Running 100 Trials#World2A#RRTC#\n");
+    fprintf(testf, "#run, #iterations, #verticies, #solution, #goal\n");
+    float sum_iter = 0, sum_added = 0, sum_path = 0, sum_goal = 0;
     pcg32_random_t rg;
     pcg32_srandom_r(&rg, time(NULL), getpid());
     disp_t* d = disp_init(100);
     for (int run = 0; run < runs; run++) {
         // Create the planner and world
-        rrtc_t* planner = rrtc_init(gen_world2C, pcg32_random_r(&rg),
+        rrtc_t* planner = rrtc_init(gen_world2A, pcg32_random_r(&rg),
                                     (xy_t) {100, 100}, 0.01, 2.5);
 
         // Run the planner to find the path
@@ -170,22 +175,26 @@ int benchmark_rrtc(int runs) {
         // Collect Stats
         size_t n_iterations = planner->n_iterations;
         sum_iter += n_iterations;
-        size_t n_added = planner->pTree->n_voxels;
+        size_t n_added = planner->pTree->n_voxels + planner->pTreeG->n_voxels;
         sum_added += n_added;
-        // TODO: Fix this
-        size_t n_solution =
-            spacial_pathLen(spacial_nearest(planner->pTree, planner->p_goal));
+        size_t n_solution = 0;
+        if(planner->target)
+            n_solution = spacial_pathLen(planner->target);
         sum_path += n_solution;
-        fprintf(testf, "%d, %ld, %ld, %ld\n", run, n_iterations, n_added,
-                n_solution);
-        printf("%d, %3.2f, %3.2f, %3.2f\n", run, sum_iter / run,
-               sum_added / run, sum_path / run);
+        float p_goal = 0;
+        if(planner->target)
+            p_goal = planner->target->voxel.cost;
+        sum_goal += p_goal;
+        fprintf(testf, "%d, %ld, %ld, %ld, %3.2f\n", run, n_iterations, n_added,
+                n_solution, p_goal);
+        printf("%d, %3.2f, %3.2f, %3.2f, %3.2f\n", run, sum_iter / run,
+               sum_added / run, sum_path / run, sum_goal / run);
         // Free the planner
         rrtc_free(&planner);
     }
-    printf("ITER | VRTX | PATH\n");
-    printf("%3.2f, %3.2f, %3.2f\n", sum_iter / runs, sum_added / runs,
-           sum_path / runs);
+    printf("ITER | VRTX | PATH | GOAL\n");
+    printf("%3.2f, %3.2f, %3.2f, %3.2f\n", sum_iter / runs, sum_added / runs,
+           sum_path / runs, sum_goal / runs);
     fclose(testf);
     return 0;
 }
@@ -195,7 +204,7 @@ int view_rrtc(void) {
     disp_t* d = disp_init(100);
 
     rrtc_t* planner =
-        rrtc_init(gen_world2C, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
+        rrtc_init(gen_world2A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
 
     // SDL loop until finished
     SDL_Event e;
@@ -249,7 +258,7 @@ int view_rrtstar(void) {
     disp_t* d = disp_init(100);
 
     rrtstar_t* planner =
-        rrtstar_init(gen_world1A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
+        rrtstar_init(gen_world2A, time(NULL), (xy_t) {100, 100}, 0.01, 2.5);
 
     // SDL loop until finished
     SDL_Event e;
@@ -322,9 +331,9 @@ int view_rrt(void) {
                 goto exit;
         }
 
-        // if (rrt_main(planner)) {
-        //     goto wait_exit;
-        // }
+        if (rrt_main(planner)) {
+            goto wait_exit;
+        }
 
         disp_clr(d);
         // Draw grid and path
@@ -364,7 +373,7 @@ exit:
 int main(int argc, char** argv) {
 
     if (argc == 1) {
-        return view_rrt();
+        return view_rrtstar();
     } else if (argc == 2) {
         int runs = atoi(argv[1]);
         if (runs == 0) {
@@ -373,6 +382,6 @@ int main(int argc, char** argv) {
             printf("Use no arguments to run the visualization\n");
             return 0;
         }
-        return benchmark_rrt(runs);
+        return benchmark_rrtstar(runs);
     }
 }
