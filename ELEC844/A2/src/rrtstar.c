@@ -2,16 +2,14 @@
  * @file rrtstar.c
  * @author Jacob Chisholm (https://Jchisholm204.github.io)
  * @brief
- * @version 0.2
+ * @version 0.3
  * @date Created: 2025-11-04
- * @modified Last Modified: 2025-11-06
+ * @modified Last Modified: 2025-11-14
  *
  * @copyright Copyright (c) 2025
  */
 
 #include "rrtstar.h"
-
-#include "linked_queue.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -203,7 +201,10 @@ int rrtstar_main(rrtstar_t* this) {
         float dist_to_goal = dist_xy(candidate->voxel.x, candidate->voxel.y,
                                      this->p_goal.x, this->p_goal.y);
 
-        if (dist_to_goal < this->edge_length) {
+        if (dist_to_goal < this->edge_length &&
+            spacial_checkPth(this->pSpace, this->p_goal,
+                             (xy_t) {candidate->voxel.x, candidate->voxel.y}) ==
+                0) {
             float candidate_goal_cost = candidate->voxel.cost + dist_to_goal;
 
             if (!this->target ||
@@ -224,37 +225,6 @@ int rrtstar_main(rrtstar_t* this) {
             }
         }
     }
-
-    // Check if the goal is within distance to the point
-    // float d_goal =
-    //     sqrt(pow(p_x - this->p_goal.x, 2) + pow(p_y - this->p_goal.y, 2));
-    // if (d_goal < this->edge_length) {
-    //     // printf("Reached Goal!\n");
-    //
-    //     if (this->target) {
-    //         if (added_v->voxel.cost + d_goal < this->target->voxel.cost) {
-    //             // Remove the targets previous parent
-    //             ll_find_remove(&this->target->pParent->children,
-    //             this->target); while
-    //             (ll_contains(this->target->pParent->children,
-    //                                this->target) == 1) {
-    //                 ll_find_remove(&this->target->pParent->children,
-    //                                this->target);
-    //             }
-    //             // Set the new parent
-    //             this->target->voxel.cost = added_v->voxel.cost + d_goal;
-    //             this->target->pParent = added_v;
-    //             if (ll_contains(added_v->children, this->target) == 0)
-    //                 ll_push(&added_v->children, this->target);
-    //         }
-    //     } else {
-    //         this->target = spacial_addV(this->pTree, this->p_goal, added_v);
-    //         this->target->voxel.cost = added_v->voxel.cost + d_goal;
-    //     }
-    //     this->found_target = true;
-    //
-    //     return 1;
-    // }
 
     return 0;
 }

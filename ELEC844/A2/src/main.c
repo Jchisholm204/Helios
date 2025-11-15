@@ -31,12 +31,12 @@
 int benchmark_rrtstar(int runs) {
     printf("Running %d benchmarks\n", runs);
 
-    FILE* testf = fopen("./rrtstar_2500.csv", "w");
+    FILE* testf = fopen("./rrtstar_w1b_500.csv", "w");
     if (!testf) {
         printf("Test File could not be opened\n");
         return 0;
     }
-    fprintf(testf, "#Running 500 Trials#World1A#RRTSTAR#2500#\n");
+    fprintf(testf, "#Running 500 Trials#World1A#RRTSTAR#500#\n");
     fprintf(testf, "#run, #iterations, #verticies, #solution, #goal\n");
     float sum_iter = 0, sum_added = 0, sum_path = 0, sum_goal;
     pcg32_random_t rg;
@@ -45,10 +45,10 @@ int benchmark_rrtstar(int runs) {
     int n_unsolved = 0;
     for (int run = 0; run < runs; run++) {
         // Create the planner and world
-        rrtstar_t* planner = rrtstar_init(gen_world1A, pcg32_random_r(&rg),
+        rrtstar_t* planner = rrtstar_init(gen_world1B, pcg32_random_r(&rg),
                                           (xy_t) {100, 100}, 0.01, 2.5);
 
-        for (int i = 0; i < 2500; i++)
+        for (int i = 0; i < 500; i++)
             rrtstar_main(planner);
 
         // Collect Stats
@@ -57,13 +57,13 @@ int benchmark_rrtstar(int runs) {
         size_t n_added = planner->pTree->n_voxels;
         sum_added += n_added;
         // TODO: Fix this
-        size_t n_solution = 0;
+        size_t n_solution = -1;
         if (planner->target)
             n_solution = spacial_pathLen(planner->target);
         else
             n_unsolved++;
         sum_path += n_solution;
-        float trg_cost = 0;
+        float trg_cost = -1;
         if (planner->target)
             trg_cost = planner->target->voxel.cost;
         fprintf(testf, "%d, %ld, %ld, %ld, %3.2f\n", run, n_iterations, n_added,
@@ -264,7 +264,7 @@ int view_rrtstar(void) {
     SDL_Event e;
     int plen = FLT_MAX;
     int plen_last = plen;
-    for (int r = 0; r < 5000; r++) {
+    for (int r = 0; r < 2000; r++) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT)
                 goto exit;

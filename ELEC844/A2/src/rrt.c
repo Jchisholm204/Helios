@@ -87,9 +87,6 @@ int rrt_main(rrt_t* this) {
         rrt_main(this);
     }
 
-    // printf("Found Nearest Point (%3.1f %3.1f)\n", nearest->voxel.x,
-    // nearest->voxel.y);
-
     // Normalize the vector and multiply it to get the new point
     float n_v_norm =
         sqrt(pow(t_x - nearest->voxel.x, 2) + pow(t_y - nearest->voxel.y, 2));
@@ -128,7 +125,6 @@ int rrt_main(rrt_t* this) {
     float d_goal =
         sqrt(pow(p_x - this->p_goal.x, 2) + pow(p_y - this->p_goal.y, 2));
     if (d_goal < this->edge_length) {
-        // printf("Reached Goal!\n");
 
         this->target = spacial_addV(this->pTree, this->p_goal, added_v);
         this->target->voxel.cost = added_v->voxel.cost + d_goal;
