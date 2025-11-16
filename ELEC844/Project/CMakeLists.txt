@@ -13,6 +13,7 @@ set(CMAKE_C_EXTENSIONS ON)
 
 find_package(OpenMP REQUIRED)
 find_package(SDL2 REQUIRED)
+find_package(ompl REQUIRED)
 
 # Add additional include directories for standard libraries
 include_directories(SYSTEM ${CMAKE_C_COMPILER_INCLUDE_DIRS})
@@ -49,6 +50,7 @@ include_directories(
     /usr/include/openmpi-x86_64
     ${SDL2_INCLUDE_DIRS}
     ${SDL_TTF_INCLUDE_DIRS}
+    ${OMPL_INCLUDE_DIRS}
 )
 
 # Append to this list
@@ -109,5 +111,5 @@ target_link_libraries(${EXECUTABLE}
     ${SDL2_LIBRARIES}
     ${SDL_TTF_LIBRARIES}
     SDL2_ttf
-    ompl
+    ${OMPL_LIBRARIES}
 )
