@@ -24,8 +24,10 @@
 // considered "in collision".
 class ValidityChecker : public ompl::base::StateValidityChecker {
   public:
-    ValidityChecker(const ompl::base::SpaceInformationPtr& si)
-        : ompl::base::StateValidityChecker(si) {}
+    ValidityChecker(const ompl::base::SpaceInformationPtr& si, int seed)
+        : ompl::base::StateValidityChecker(si) {
+            std::cout << "Seed: " << seed << std::endl;
+        }
 
     // Returns whether the given state's position overlaps the
     // circular obstacle
@@ -65,7 +67,7 @@ int ompl_test(int argc, char* argv[]) {
 
     // Set the object used to check which states in the space are valid
     si->setStateValidityChecker(
-        ompl::base::StateValidityCheckerPtr(new ValidityChecker(si)));
+        ompl::base::StateValidityCheckerPtr(new ValidityChecker(si, 123)));
 
     si->setup();
 
