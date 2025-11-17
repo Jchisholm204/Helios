@@ -116,6 +116,17 @@ bool Display::poll_quit(void) {
 }
 
 void Display::draw_grid(int rows, int cols) {
+    SDL_SetRenderDrawColor(this->sdl_ren, 0, 0, 0, 255);
+    int col_size = IN_PIXELS(this->size_x) / cols;
+    for (int i = col_size; i < cols * col_size; i += col_size) {
+        SDL_RenderDrawLine(this->sdl_ren, i + PX_BORDER, PX_BORDER,
+                           i + PX_BORDER, IN_PIXELS(this->size_y) + PX_BORDER);
+    }
+    int row_size = IN_PIXELS(this->size_x) / rows;
+    for (int i = row_size; i < rows * row_size; i += row_size) {
+        SDL_RenderDrawLine(this->sdl_ren, PX_BORDER, PX_BORDER + i,
+                           IN_PIXELS(this->size_x) + PX_BORDER, i + PX_BORDER);
+    }
 }
 
 void Display::draw_path(std::vector<std::pair<float, float>> path,
@@ -124,4 +135,23 @@ void Display::draw_path(std::vector<std::pair<float, float>> path,
 
 void Display::draw_points(std::vector<std::pair<float, float>> points,
                           std::vector<int> color) {
+    if (color.size() == 3) {
+        SDL_SetRenderDrawColor(this->sdl_ren, color[0], color[1], color[2], 1);
+    } else if (color.size() == 4) {
+        SDL_SetRenderDrawColor(this->sdl_ren, color[0], color[1], color[2],
+                               color[3]);
+    } else {
+        fprintf(stderr, "Display Color: %ld != (3, 4)\n", color.size());
+        fprintf(stderr, "Display Color: (r, g, b) or (r, g, b, a)\n");
+        throw std::invalid_argument("Display Color Invalid Size\n");
+    }
+
+    for (int i = 0; i < points.size(); i++) {
+        int x = (int)IN_PIXELS(points[i].first);
+        int y = (int)IN_PIXELS(points[i].second);
+        SDL_Rect r = {(x) + PX_BORDER - PIXEL_PER_GRID/2, (y) + PX_BORDER - PIXEL_PER_GRID/2,
+                      PIXEL_PER_GRID, PIXEL_PER_GRID};
+        SDL_RenderFillRect(this->sdl_ren, &r);
+        
+    }
 }

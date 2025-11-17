@@ -22,9 +22,13 @@ int main(int argc, char** argv) {
         printf(" %d) %s\n", i, argv[i]);
     }
     Display d(100, 100);
+    std::vector<std::pair<float, float>> points = {{5, 5}, {10, 10}, {20, 20}, {0, 0}};
     while(!d.poll_quit()){
         d.clear();
         d.label("ELEC 844 Project - FMT* - Jacob Chisholm");
+        d.draw_grid(10, 10);
+        d.draw_points(points, {255, 0, 255});
+        d.draw_points({{44, 66}, {22, 33}}, {0, 0, 255});
         d.render();
     }
 
