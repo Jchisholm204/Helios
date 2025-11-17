@@ -11,6 +11,7 @@
 
 
 #include "main.h"
+#include "display/display.hpp"
 
 #include <stdio.h>
 #include <iostream>
@@ -20,6 +21,14 @@ int main(int argc, char** argv) {
     for(int i = 0; i < argc; i++){
         printf(" %d) %s\n", i, argv[i]);
     }
-    std::cout << "Running OMPL Test" << std::endl;
-    return ompl_test(argc, argv);
+    Display d(100, 100);
+    while(!d.poll_quit()){
+        d.clear();
+        d.label("ELEC 844 Project - FMT* - Jacob Chisholm");
+        d.render();
+    }
+
+    return 0;
+    // std::cout << "Running OMPL Test" << std::endl;
+    // return ompl_test(argc, argv);
 }
