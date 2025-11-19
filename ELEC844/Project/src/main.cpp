@@ -13,7 +13,7 @@
 
 #include "display/display.hpp"
 #include "rog.hpp"
-#include "benchmark.hpp"
+#include "util/benchmark.hpp"
 
 #include <iostream>
 #include <ompl/base/ProblemDefinition.h>

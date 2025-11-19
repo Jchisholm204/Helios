@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2025
  */
 
-#include "benchmark.hpp"
+#include "util/benchmark.hpp"
 
 #include <iostream>
 #include <sstream>
