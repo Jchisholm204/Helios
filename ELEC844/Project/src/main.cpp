@@ -12,7 +12,7 @@
 #include "main.h"
 
 #include "display/display.hpp"
-#include "rog.hpp"
+#include "statespace/hypercube.hpp"
 #include "util/benchmark.hpp"
 
 #include <iostream>
@@ -28,8 +28,8 @@ extern int common_benchmark(int argc, char* argv[]);
 int test(int argc, char** argv);
 
 int main(int argc, char** argv) {
-    // return test(argc, argv);
-    return common_benchmark(argc, argv);
+    return test(argc, argv);
+    // return common_benchmark(argc, argv);
 }
 
 int test(int argc, char** argv) {
@@ -58,7 +58,7 @@ int test(int argc, char** argv) {
     t_obs->start();
 
 
-    ROG rog(si, 1234, 0.3, 0.5);
+    ROGHypercube rog(si, 1234, 0.3, 0.5);
 
     t_obs->stop();
     t_setup->stop();

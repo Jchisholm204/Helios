@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2025
  */
 
-#include "rog.hpp"
+#include "statespace/hypercube.hpp"
 #include "util/benchmark.hpp"
 
 #include <iostream>
@@ -25,9 +25,9 @@ int common_benchmark(int argc, char* argv[]) {
 
     // Setup parameters
     size_t seed = 1234;
-    double scale = 0.8;
+    double scale = 1.8;
     double coverage = 0.5;
-    size_t dimensions = 5;
+    size_t dimensions = 10;
     size_t n_tests = 1;
     size_t n_samples = 1000;
 
@@ -68,7 +68,7 @@ int common_benchmark(int argc, char* argv[]) {
         printf("Starting Generation\n");
 
         t_gen->start();
-        ROG rog(si, seed, scale, coverage);
+        ROGHypercube rog(si, seed, scale, coverage);
         t_gen->stop();
 
         printf("Finished Generation\n");

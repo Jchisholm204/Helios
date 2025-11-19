@@ -1,5 +1,5 @@
 /**
- * @file rog.c
+ * @file hypercube.c
  * @author Jacob Chisholm (https://Jchisholm204.github.io)
  * @brief
  * @version 0.1
@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2025
  */
 
-#include "rog.hpp"
+#include "statespace/hypercube.hpp"
 
 #include "util/softmax.hpp"
 
@@ -18,7 +18,7 @@
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <random>
 
-ROG::ROG(const ompl::base::SpaceInformationPtr& si, size_t seed, double scale,
+ROGHypercube::ROGHypercube(const ompl::base::SpaceInformationPtr& si, size_t seed, double scale,
          double coverage)
     : ompl::base::StateValidityChecker(si), mt19937(seed), rng(0, 1) {
     this->n_dims = si->getStateSpace()->getDimension();
@@ -30,7 +30,7 @@ ROG::ROG(const ompl::base::SpaceInformationPtr& si, size_t seed, double scale,
     this->gen_obstacles(scale, coverage);
 }
 
-bool ROG::isValid(const ompl::base::State* state) const {
+bool ROGHypercube::isValid(const ompl::base::State* state) const {
     const auto* s = state->as<ompl::base::RealVectorStateSpace::StateType>();
 
     for (const auto& ob : this->obstacles) {
@@ -48,7 +48,7 @@ bool ROG::isValid(const ompl::base::State* state) const {
 }
 
 
-void ROG::gen_obstacles(double scale, double coverage) {
+void ROGHypercube::gen_obstacles(double scale, double coverage) {
     double ccover = 0.0;
     std::uniform_real_distribution<double> dist(0.0, 1.0);
 
@@ -75,6 +75,7 @@ void ROG::gen_obstacles(double scale, double coverage) {
         ccover += volume;
         // printf("Achieved %2.4f / %2.4f Coverage\n", ccover, coverage);
     }
-    printf("Generated %ld Obstacles\n", obstacles.size());
+    // printf("Generated %ld Obstacles\n", obstacles.size());
 }
+
 
