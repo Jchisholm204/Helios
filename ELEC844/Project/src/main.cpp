@@ -23,7 +23,16 @@
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <stdio.h>
 
+
+extern int common_benchmark(int argc, char* argv[]);
+int test(int argc, char** argv);
+
 int main(int argc, char** argv) {
+    // return test(argc, argv);
+    return common_benchmark(argc, argv);
+}
+
+int test(int argc, char** argv) {
     printf("ELEC 844 Final Project\nargs:\n");
     for (int i = 0; i < argc; i++) {
         printf(" %d) %s\n", i, argv[i]);
@@ -49,7 +58,7 @@ int main(int argc, char** argv) {
     t_obs->start();
 
 
-    ROG rog(si, 1234, 0.2, 0.5);
+    ROG rog(si, 1234, 0.3, 0.5);
 
     t_obs->stop();
     t_setup->stop();

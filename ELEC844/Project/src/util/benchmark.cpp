@@ -65,7 +65,6 @@ void Benchmark::start_benchmark() {
 void Benchmark::stop_benchmark() {
     for (auto timer : timers) {
         timer->stop();
-        timer->reset();
     }
     iteration_count++;
 }
@@ -115,3 +114,16 @@ std::ostringstream Benchmark::export_csv() const {
     }
     return out;
 }
+
+std::vector<std::pair<std::string, double>> Benchmark::export_mean(void){
+    std::vector<std::pair<std::string, double>> avg;
+    for (const auto& timer : timers) {
+        double sum = 0;
+        for (const auto& record : timer->history) {
+            sum += record.second;
+        }
+        avg.push_back({timer->name, sum/timer->history.size()});
+    }
+    return avg;
+}
+

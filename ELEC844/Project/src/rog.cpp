@@ -31,19 +31,22 @@ ROG::ROG(const ompl::base::SpaceInformationPtr& si, size_t seed, double scale,
 }
 
 bool ROG::isValid(const ompl::base::State* state) const {
-    const ompl::base::RealVectorStateSpace::StateType* s =
-        state->as<ompl::base::RealVectorStateSpace::StateType>();
-    for (struct bounds ob : this->obstacles) {
-        size_t dimcol = 0;
+    const auto* s = state->as<ompl::base::RealVectorStateSpace::StateType>();
+
+    for (const auto& ob : this->obstacles) {
+        bool inside = true;
         for (size_t d = 0; d < n_dims; d++) {
-            if (s->values[d] <= ob.high[d] && s->values[d] >= ob.low[d])
-                dimcol++;
+            if (s->values[d] < ob.low[d] || s->values[d] > ob.high[d]) {
+                inside = false;
+                break;  // early exit: point is outside this obstacle
+            }
         }
-        if (dimcol >= n_dims)
-            return false;
+        if (inside) return false;  // point is inside the obstacle
     }
-    return true;
+
+    return true;  // point is valid (not inside any obstacle)
 }
+
 
 void ROG::gen_obstacles(double scale, double coverage) {
     double ccover = 0.0;
@@ -70,6 +73,8 @@ void ROG::gen_obstacles(double scale, double coverage) {
 
         obstacles.push_back(obs);
         ccover += volume;
+        // printf("Achieved %2.4f / %2.4f Coverage\n", ccover, coverage);
     }
+    printf("Generated %ld Obstacles\n", obstacles.size());
 }
 

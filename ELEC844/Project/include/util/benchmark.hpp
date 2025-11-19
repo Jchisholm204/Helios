@@ -61,6 +61,8 @@ class Benchmark {
     void export_json(void) const;
     std::ostringstream export_csv() const;
 
+    std::vector<std::pair<std::string, double>> export_mean(void);
+
   private:
     std::vector<std::pair<std::string, std::string>> params;
     std::vector<std::shared_ptr<WallTimer>> timers;
