@@ -13,6 +13,7 @@
 
 #include "display/display.hpp"
 #include "rog.hpp"
+#include "benchmark.hpp"
 
 #include <iostream>
 #include <ompl/base/ProblemDefinition.h>
@@ -28,9 +29,31 @@ int main(int argc, char** argv) {
         printf(" %d) %s\n", i, argv[i]);
     }
     Display d(100, 100);
+
+    Benchmark b("Test");
+    
+    auto t_setup = b.new_timer("setup");
+    auto t_all = b.new_timer("all");
+    auto t_obs = b.new_timer("obs");
+    auto t_run = b.new_timer("run");
+    b.start_benchmark();
+
+    t_setup->start();
+    t_all->start();
+
     ompl::base::StateSpacePtr space(new ompl::base::RealVectorStateSpace(2));
+    // Set the bounds of space to be in [0,1].
+    space->as<ompl::base::RealVectorStateSpace>()->setBounds(0.0, 1.0);
     ompl::base::SpaceInformationPtr si(new ompl::base::SpaceInformation(space));
-    ROG rog(si);
+
+    t_obs->start();
+
+
+    ROG rog(si, 1234, 0.2, 0.5);
+
+    t_obs->stop();
+    t_setup->stop();
+
     std::vector<std::pair<float, float>> points = {
         {5, 5},
         {10, 10},
@@ -38,6 +61,7 @@ int main(int argc, char** argv) {
         {0, 0}
     };
     std::vector<std::pair<float, float>> invalid = {};
+    t_run->start();
     for(int x = 0; x < 100; x++)
         for(int y = 0; y < 100; y++){
             ompl::base::State *s = si->allocState();
@@ -47,7 +71,14 @@ int main(int argc, char** argv) {
                 invalid.push_back({x, y});
             }
         }
+
+    t_run->stop();
+    t_all->stop();
+    b.stop_benchmark();
+    printf("Took %3.2f ms to search\n", t_run->get_elapsed());
     printf("Got %ld invalid states\n", invalid.size());
+    b.export_json();
+    std::cout << b.export_csv().str() << std::endl;
     while (!d.poll_quit()) {
         d.clear();
         d.label("ELEC 844 Project - FMT* - Jacob Chisholm");

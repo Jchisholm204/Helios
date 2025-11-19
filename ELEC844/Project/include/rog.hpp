@@ -11,25 +11,29 @@
 
 #ifndef _ROG_HPP_
 #define _ROG_HPP_
-#include "ompl/base/StateValidityChecker.h"
 
+#include <ompl/base/StateValidityChecker.h>
+#include <random>
 #include <vector>
 
 class ROG : public ompl::base::StateValidityChecker {
   public:
-    ROG(const ompl::base::SpaceInformationPtr& si);
     ROG(const ompl::base::SpaceInformationPtr& si, size_t seed,
         double scale = 0.1, double coverage = 0.5);
 
     bool isValid(const ompl::base::State* state) const;
 
   private:
+    std::mt19937 mt19937;
+    std::uniform_real_distribution<double> rng;
+    void gen_obstacles(double scale, double coverage);
     struct bounds {
-        std::vector<float> high;
-        std::vector<float> low;
+        std::vector<double> high;
+        std::vector<double> low;
     };
-    std::vector<struct bounds> obs;
-    size_t dim;
+    std::vector<struct bounds> obstacles;
+    std::vector<double> limits;
+    size_t n_dims;
 };
 
 #endif

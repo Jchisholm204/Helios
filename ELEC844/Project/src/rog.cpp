@@ -11,48 +11,65 @@
 
 #include "rog.hpp"
 
-#include "ompl/base/spaces/RealVectorStateSpace.h"
 #include "util/softmax.hpp"
 
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/State.h>
+#include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <random>
-
-ROG::ROG(const ompl::base::SpaceInformationPtr& si)
-    : ompl::base::StateValidityChecker(si) {
-    this->dim = si->getStateSpace()->getDimension();
-    float coverage = 0;
-    while (coverage < 0.5) {
-        struct bounds ob;
-        float size = 1;
-        for (size_t d = 0; d < dim; d++) {
-            ob.low.push_back((float) rand() / RAND_MAX);
-            ob.high.push_back(((float) rand() / (RAND_MAX)) / 2 + ob.low[d]);
-            size *= (ob.high[d] - ob.low[d]);
-        }
-        obs.push_back(ob);
-        coverage += size;
-    }
-    std::cout << "Coverage: " << coverage << std::endl;
-    std::cout << "Obstacles: " << obs.size() << std::endl;
-}
 
 ROG::ROG(const ompl::base::SpaceInformationPtr& si, size_t seed, double scale,
          double coverage)
-    : ompl::base::StateValidityChecker(si) {
+    : ompl::base::StateValidityChecker(si), mt19937(seed), rng(0, 1) {
+    this->n_dims = si->getStateSpace()->getDimension();
+    for (size_t i = 0; i < n_dims; i++)
+        limits.push_back(si->getStateSpace()
+                             ->as<ompl::base::RealVectorStateSpace>()
+                             ->getBounds()
+                             .high[i]);
+    this->gen_obstacles(scale, coverage);
 }
 
 bool ROG::isValid(const ompl::base::State* state) const {
     const ompl::base::RealVectorStateSpace::StateType* s =
         state->as<ompl::base::RealVectorStateSpace::StateType>();
-    for (struct bounds ob : obs) {
+    for (struct bounds ob : this->obstacles) {
         size_t dimcol = 0;
-        for (size_t d = 0; d < dim; d++) {
-            if (s->values[d] < ob.high[d] && s->values[d] > ob.low[d])
+        for (size_t d = 0; d < n_dims; d++) {
+            if (s->values[d] <= ob.high[d] && s->values[d] >= ob.low[d])
                 dimcol++;
         }
-        if (dim == dimcol)
+        if (dimcol >= n_dims)
             return false;
     }
     return true;
 }
+
+void ROG::gen_obstacles(double scale, double coverage) {
+    double ccover = 0.0;
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+    while (ccover < coverage) {
+        struct bounds obs;
+        std::vector<double> obs_dim(n_dims);
+
+        for (size_t i = 0; i < n_dims; i++) {
+            double rn = dist(mt19937); // mt19937 is your RNG engine
+            obs_dim[i] = rn;
+            obs.low.push_back(rn);
+        }
+
+        // scale softmax dimensions
+        obs_dim = softmax(obs_dim);
+        double volume = 1.0;
+
+        for (size_t i = 0; i < n_dims; i++) {
+            obs.high.push_back(obs.low[i] + obs_dim[i] * scale);
+            volume *= obs.high[i] - obs.low[i];
+        }
+
+        obstacles.push_back(obs);
+        ccover += volume;
+    }
+}
+
