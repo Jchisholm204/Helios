@@ -41,7 +41,7 @@ void WallTimer::reset(void) {
 }
 
 double WallTimer::get_elapsed(void) const {
-    return std::chrono::duration<double>(t_end - t_start).count();
+    return std::chrono::duration<double>(t_end - t_start).count()*1000;
 }
 
 //

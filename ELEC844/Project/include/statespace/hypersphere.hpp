@@ -1,7 +1,7 @@
 /**
- * @file hypercube.hpp
+ * @file hypersphere.hpp
  * @author Jacob Chisholm (https://Jchisholm204.github.io)
- * @brief 
+ * @brief
  * @version 0.1
  * @date Created: 2025-11-19
  * @modified Last Modified: 2025-11-19
@@ -9,30 +9,32 @@
  * @copyright Copyright (c) 2025
  */
 
-#ifndef _HYPERCUBE_HPP_
-#define _HYPERCUBE_HPP_
+#ifndef _HYPERSPHERE_HPP_
+#define _HYPERSPHERE_HPP_
 
 #include <ompl/base/StateValidityChecker.h>
 #include <random>
 #include <vector>
 
-class ROGHypercube : public ompl::base::StateValidityChecker {
+class ROGHypersphere : public ompl::base::StateValidityChecker {
   public:
-    ROGHypercube(const ompl::base::SpaceInformationPtr& si, size_t seed,
-        size_t n_obstacles = 100, double coverage = 0.5);
+    ROGHypersphere(const ompl::base::SpaceInformationPtr& si, size_t seed,
+                   size_t n_obstacles = 100, double coverage = 0.5);
 
     bool isValid(const ompl::base::State* state) const;
+
+    double clearance(const ompl::base::State* state) const;
 
   private:
     std::mt19937 mt19937;
     std::uniform_real_distribution<double> rng;
     void gen_obstacles(size_t n_obstacles, double coverage);
-    struct bounds {
-        std::vector<double> high;
-        std::vector<double> low;
+    struct sphere {
+        std::vector<double> center;
+        double radius;
+        double rad2;
     };
-    std::vector<struct bounds> obstacles;
-    std::vector<double> limits;
+    std::vector<struct sphere> obstacles;
     size_t n_dims;
 };
 

@@ -10,6 +10,7 @@
  */
 
 #include "statespace/hypercube.hpp"
+#include "statespace/hypersphere.hpp"
 #include "util/benchmark.hpp"
 
 #include <iostream>
@@ -24,15 +25,15 @@
 int common_benchmark(int argc, char* argv[]) {
 
     // Setup parameters
-    size_t seed = 1234;
-    double scale = 1.8;
+    size_t seed = 230984;
+    size_t n_obstacles = 100;
     double coverage = 0.5;
-    size_t dimensions = 10;
-    size_t n_tests = 1;
-    size_t n_samples = 1000;
+    size_t dimensions = 2;
+    size_t n_tests = 10;
+    size_t n_samples = 1000000;
 
     Benchmark bm("common_util", {{"seed", std::to_string(seed)},
-                                 {"scale", std::to_string(scale)},
+                                 {"n_obstacles", std::to_string(n_obstacles)},
                                  {"coverage", std::to_string(coverage)},
                                  {"tests", std::to_string(n_tests)},
                                  {"test_samples", std::to_string(n_samples)},
@@ -68,7 +69,7 @@ int common_benchmark(int argc, char* argv[]) {
         printf("Starting Generation\n");
 
         t_gen->start();
-        ROGHypercube rog(si, seed, scale, coverage);
+        ROGHypercube rog(si, seed, n_obstacles, coverage);
         t_gen->stop();
 
         printf("Finished Generation\n");
@@ -85,16 +86,17 @@ int common_benchmark(int argc, char* argv[]) {
             }
         }
         bm.stop_benchmark();
-        printf("Benchmark %ld had %ld invalid samples, took %3.4f ms\n", ti,
-               n_invalid, t_all->get_elapsed());
+        printf("Benchmark %ld had %ld / %ld (%1.2f) invalid samples, took "
+               "%3.4f ms\n",
+               ti, n_invalid, n_samples, ((double)n_invalid/n_samples), t_all->get_elapsed());
     }
-    
+
     // std::cout << bm.export_csv().str() << std::endl;
 
     auto results = bm.export_mean();
     for (const auto& res : results) {
         std::cout << res.first << ": " << res.second << std::endl;
     }
-    
+
     return 0;
 }

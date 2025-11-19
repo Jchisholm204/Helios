@@ -13,6 +13,7 @@
 
 #include "display/display.hpp"
 #include "statespace/hypercube.hpp"
+#include "statespace/hypersphere.hpp"
 #include "util/benchmark.hpp"
 
 #include <iostream>
@@ -28,8 +29,8 @@ extern int common_benchmark(int argc, char* argv[]);
 int test(int argc, char** argv);
 
 int main(int argc, char** argv) {
-    return test(argc, argv);
-    // return common_benchmark(argc, argv);
+    // return test(argc, argv);
+    return common_benchmark(argc, argv);
 }
 
 int test(int argc, char** argv) {
@@ -58,7 +59,7 @@ int test(int argc, char** argv) {
     t_obs->start();
 
 
-    ROGHypercube rog(si, 1234, 0.3, 0.5);
+    ROGHypersphere rog(si, 928347, 500, 0.5);
 
     t_obs->stop();
     t_setup->stop();
@@ -84,7 +85,7 @@ int test(int argc, char** argv) {
     t_run->stop();
     t_all->stop();
     b.stop_benchmark();
-    printf("Took %3.2f ms to search\n", t_run->get_elapsed());
+    printf("Took %3.2f ms to search\n", t_run->get_elapsed()*1000);
     printf("Got %ld invalid states\n", invalid.size());
     b.export_json();
     std::cout << b.export_csv().str() << std::endl;

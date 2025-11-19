@@ -18,7 +18,7 @@
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <random>
 
-ROGHypercube::ROGHypercube(const ompl::base::SpaceInformationPtr& si, size_t seed, double scale,
+ROGHypercube::ROGHypercube(const ompl::base::SpaceInformationPtr& si, size_t seed, size_t n_obstacles,
          double coverage)
     : ompl::base::StateValidityChecker(si), mt19937(seed), rng(0, 1) {
     this->n_dims = si->getStateSpace()->getDimension();
@@ -27,7 +27,7 @@ ROGHypercube::ROGHypercube(const ompl::base::SpaceInformationPtr& si, size_t see
                              ->as<ompl::base::RealVectorStateSpace>()
                              ->getBounds()
                              .high[i]);
-    this->gen_obstacles(scale, coverage);
+    this->gen_obstacles(n_obstacles, coverage);
 }
 
 bool ROGHypercube::isValid(const ompl::base::State* state) const {
@@ -48,27 +48,22 @@ bool ROGHypercube::isValid(const ompl::base::State* state) const {
 }
 
 
-void ROGHypercube::gen_obstacles(double scale, double coverage) {
+void ROGHypercube::gen_obstacles(size_t n_obstacles, double coverage) {
     double ccover = 0.0;
     std::uniform_real_distribution<double> dist(0.0, 1.0);
 
+    double avg_size = coverage/n_obstacles;
+    double w_avg = pow(avg_size, 1/(double)n_dims);
+
     while (ccover < coverage) {
         struct bounds obs;
-        std::vector<double> obs_dim(n_dims);
-
-        for (size_t i = 0; i < n_dims; i++) {
-            double rn = dist(mt19937); // mt19937 is your RNG engine
-            obs_dim[i] = rn;
-            obs.low.push_back(rn);
-        }
-
-        // scale softmax dimensions
-        obs_dim = softmax(obs_dim);
         double volume = 1.0;
-
         for (size_t i = 0; i < n_dims; i++) {
-            obs.high.push_back(obs.low[i] + obs_dim[i] * scale);
-            volume *= obs.high[i] - obs.low[i];
+            double center = dist(mt19937);
+            double width = dist(mt19937)*w_avg;
+            obs.low.push_back(center - width/2);
+            obs.high.push_back(center+ width/2);
+            volume *= width;
         }
 
         obstacles.push_back(obs);
