@@ -48,7 +48,10 @@ double WallTimer::get_elapsed(void) const {
 // ---------------- Benchmark ----------------
 //
 
-Benchmark::Benchmark(std::string fname) {
+Benchmark::Benchmark(std::string fname,
+                     std::vector<std::pair<std::string, std::string>> params) {
+    this->params = params;
+    this->params.push_back({"name", fname});
     this->fname = fname;
 }
 
@@ -76,7 +79,9 @@ std::shared_ptr<WallTimer> Benchmark::new_timer(std::string name) {
 void Benchmark::export_json(void) const {
     json root;
 
-    root["name"] = this->fname;
+    for (const auto & param : params){
+        root[param.first] = param.second;
+    }
 
     for (const auto& timer : timers) {
         json& branch = root[timer->name];
@@ -92,13 +97,20 @@ void Benchmark::export_json(void) const {
 std::ostringstream Benchmark::export_csv() const {
     std::ostringstream out;
 
+    for (const auto& param : params) {
+        out << "#" << param.first << ": " << param.second << std::endl;
+    }
+
+    out << "#" << std::endl;
+
     // optional: CSV header
     out << "timer_name,key,value\n";
 
     for (const auto& timer : timers) {
         for (const auto& record : timer->history) {
             // write CSV row
-            out << timer->name << "," << record.first << "," << record.second << "\n";
+            out << timer->name << "," << record.first << "," << record.second
+                << "\n";
         }
     }
     return out;

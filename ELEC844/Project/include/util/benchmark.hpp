@@ -51,7 +51,7 @@ class WallTimer {
 
 class Benchmark {
   public:
-    Benchmark(std::string fname);
+    Benchmark(std::string fname, std::vector<std::pair<std::string, std::string>> params = {});
 
     void start_benchmark();
     void stop_benchmark();
@@ -62,6 +62,7 @@ class Benchmark {
     std::ostringstream export_csv() const;
 
   private:
+    std::vector<std::pair<std::string, std::string>> params;
     std::vector<std::shared_ptr<WallTimer>> timers;
     size_t iteration_count = 0;
     std::string fname;
