@@ -15,6 +15,7 @@
 #include "statespace/hypercube.hpp"
 #include "statespace/hypersphere.hpp"
 #include "util/benchmark.hpp"
+#include "statespace/rog.hpp"
 
 #include <iostream>
 #include <ompl/base/ProblemDefinition.h>
@@ -23,7 +24,6 @@
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <stdio.h>
-
 
 extern int common_benchmark(int argc, char* argv[]);
 int test(int argc, char** argv);
@@ -41,7 +41,7 @@ int test(int argc, char** argv) {
     Display d(100, 100);
 
     Benchmark b("Test");
-    
+
     auto t_setup = b.new_timer("setup");
     auto t_all = b.new_timer("all");
     auto t_obs = b.new_timer("obs");
@@ -58,34 +58,34 @@ int test(int argc, char** argv) {
 
     t_obs->start();
 
+    // ROGHypersphere rog(si, 928347, 500, 0.5);
 
-    ROGHypersphere rog(si, 928347, 500, 0.5);
+    ROG_t* rog = rog_init(100, .005, .08);
 
     t_obs->stop();
     t_setup->stop();
 
     std::vector<std::pair<float, float>> points = {
-        {5, 5},
-        {10, 10},
-        {20, 20},
-        {0, 0}
-    };
+        {5, 5}, {10, 10}, {20, 20}, {0, 0}};
     std::vector<std::pair<float, float>> invalid = {};
     t_run->start();
-    for(int x = 0; x < 100; x++)
-        for(int y = 0; y < 100; y++){
-            ompl::base::State *s = si->allocState();
-            s->as<ompl::base::RealVectorStateSpace::StateType>()->values[0] = (float)x/100.0;
-            s->as<ompl::base::RealVectorStateSpace::StateType>()->values[1] = (float)y/100.0;
-            if(!rog.isValid(s)){
+    for (int x = 0; x < 100; x++)
+        for (int y = 0; y < 100; y++) {
+            state_t s = {(flt) x / 100, (flt) y / 100};
+            // ompl::base::State *s = si->allocState();
+            // s->as<ompl::base::RealVectorStateSpace::StateType>()->values[0] =
+            // (float)x/100.0;
+            // s->as<ompl::base::RealVectorStateSpace::StateType>()->values[1] =
+            // (float)y/100.0;
+            if (!rog_check(rog, s)) {
                 invalid.push_back({x, y});
             }
         }
-
+    rog_free(&rog);
     t_run->stop();
     t_all->stop();
     b.stop_benchmark();
-    printf("Took %3.2f ms to search\n", t_run->get_elapsed()*1000);
+    printf("Took %3.2f ms to search\n", t_run->get_elapsed());
     printf("Got %ld invalid states\n", invalid.size());
     b.export_json();
     std::cout << b.export_csv().str() << std::endl;

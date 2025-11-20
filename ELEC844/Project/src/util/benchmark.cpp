@@ -89,8 +89,9 @@ void Benchmark::export_json(void) const {
         }
     }
 
-    std::ofstream f(fname);
-    std::cout << root.dump(4);
+    std::ofstream f(fname + ".json");
+    f << root.dump(4);
+    f.close();
 }
 
 std::ostringstream Benchmark::export_csv() const {

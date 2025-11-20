@@ -11,8 +11,6 @@
 
 #include "statespace/hypercube.hpp"
 
-#include "util/softmax.hpp"
-
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/State.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
@@ -34,17 +32,16 @@ bool ROGHypercube::isValid(const ompl::base::State* state) const {
     const auto* s = state->as<ompl::base::RealVectorStateSpace::StateType>();
 
     for (const auto& ob : this->obstacles) {
-        bool inside = true;
+        int dc = 0;
         for (size_t d = 0; d < n_dims; d++) {
-            if (s->values[d] < ob.low[d] || s->values[d] > ob.high[d]) {
-                inside = false;
-                break;  // early exit: point is outside this obstacle
+            if (s->values[d] > ob.low[d] && s->values[d] < ob.high[d]) {
+                dc++;
             }
         }
-        if (inside) return false;  // point is inside the obstacle
+        if (dc == n_dims) return false;
     }
 
-    return true;  // point is valid (not inside any obstacle)
+    return true;
 }
 
 
@@ -60,7 +57,7 @@ void ROGHypercube::gen_obstacles(size_t n_obstacles, double coverage) {
         double volume = 1.0;
         for (size_t i = 0; i < n_dims; i++) {
             double center = dist(mt19937);
-            double width = dist(mt19937)*w_avg;
+            double width = w_avg;
             obs.low.push_back(center - width/2);
             obs.high.push_back(center+ width/2);
             volume *= width;
@@ -70,7 +67,7 @@ void ROGHypercube::gen_obstacles(size_t n_obstacles, double coverage) {
         ccover += volume;
         // printf("Achieved %2.4f / %2.4f Coverage\n", ccover, coverage);
     }
-    // printf("Generated %ld Obstacles\n", obstacles.size());
+    printf("Generated %ld Obstacles\n", obstacles.size());
 }
 
 
