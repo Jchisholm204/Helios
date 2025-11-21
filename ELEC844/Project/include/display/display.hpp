@@ -37,6 +37,8 @@ class Display {
     void draw_points(std::vector<std::pair<float, float>> points,
                      std::vector<int> color = {0, 0, 0});
 
+    void draw_dims(std::vector<std::vector<std::pair<float, float>>> &invalds);
+
   private:
     SDL_Window* sdl_win;
     SDL_Renderer* sdl_ren;

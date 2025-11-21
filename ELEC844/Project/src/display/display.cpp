@@ -147,11 +147,61 @@ void Display::draw_points(std::vector<std::pair<float, float>> points,
     }
 
     for (int i = 0; i < points.size(); i++) {
-        int x = (int)IN_PIXELS(points[i].first);
-        int y = (int)IN_PIXELS(points[i].second);
-        SDL_Rect r = {(x) + PX_BORDER - PIXEL_PER_GRID/2, (y) + PX_BORDER - PIXEL_PER_GRID/2,
-                      PIXEL_PER_GRID, PIXEL_PER_GRID};
+        int x = (int) IN_PIXELS(points[i].first);
+        int y = (int) IN_PIXELS(points[i].second);
+        SDL_Rect r = {(x) + PX_BORDER - PIXEL_PER_GRID / 2,
+                      (y) + PX_BORDER - PIXEL_PER_GRID / 2, PIXEL_PER_GRID,
+                      PIXEL_PER_GRID};
         SDL_RenderFillRect(this->sdl_ren, &r);
-        
+    }
+}
+
+void Display::draw_dims(
+    std::vector<std::vector<std::pair<float, float>>>& invalids) {
+    // Draw the boxes to contain the spaces
+    size_t n = invalids.size();
+    if (n == 0)
+        return;
+
+    int W = IN_PIXELS(size_x);
+    int H = IN_PIXELS(size_y);
+
+    int box_w = 40; // example, use your actual box width
+    int box_h = IN_PIXELS(size_y) -
+                2 * PX_BORDER; // example, use your actual box height
+
+    int s = (W - n * box_w) / (n + 1); // spacing
+    SDL_SetRenderDrawColor(sdl_ren, 0, 0, 0, 255);
+
+    for (size_t i = 0; i < n; i++) {
+        int x = s + i * (box_w + s) + PX_BORDER;
+        int y = PX_BORDER * 2;
+
+        SDL_Rect r;
+        r.x = x;
+        r.y = y;
+        r.w = box_w;
+        r.h = box_h;
+
+        SDL_RenderDrawRect(sdl_ren, &r);
+    }
+
+    SDL_SetRenderDrawColor(sdl_ren, 255, 0, 0, 255);
+
+    // Draw the invalid regions
+    for (int i = 0; i < n; i++) {
+        std::vector<std::pair<float, float>>& regions = invalids[i];
+        for (int j = 0; j < regions.size(); j++) {
+            int x = s + i * (box_w + s) + PX_BORDER;
+            int y = PX_BORDER * 2;
+
+            SDL_Rect r;
+            r.x = x;
+            r.y = y + box_h * regions[j].first;
+            r.w = box_w;
+            r.h = box_h * (regions[j].second - regions[j].first);
+
+            SDL_RenderFillRect(sdl_ren, &r);
+        }
     }
 }

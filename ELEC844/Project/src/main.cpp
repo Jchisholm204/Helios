@@ -25,12 +25,12 @@
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <stdio.h>
 
-extern int common_benchmark(int argc, char* argv[]);
 int test(int argc, char** argv);
 
 int main(int argc, char** argv) {
     // return test(argc, argv);
-    return common_benchmark(argc, argv);
+    // return common_benchmark(argc, argv);
+    return hdvisualize(argc, argv);
 }
 
 int test(int argc, char** argv) {
