@@ -199,7 +199,8 @@ void Display::draw_dims(
             r.x = x;
             r.y = y + box_h * regions[j].first;
             r.w = box_w;
-            r.h = box_h * (regions[j].second - regions[j].first);
+            // r.h = box_h * (regions[j].second - regions[j].first);
+            r.h = 1;
 
             SDL_RenderFillRect(sdl_ren, &r);
         }

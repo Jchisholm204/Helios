@@ -15,5 +15,6 @@
 extern int ompl_test(int argc, char *argv[]);
 extern int common_benchmark(int argc, char* argv[]);
 extern int hdvisualize(int argc, char *argv[]);
+extern int noisetest(int argc, char*argv[]);
 
 #endif

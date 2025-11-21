@@ -84,7 +84,7 @@ int common_benchmark(int argc, char* argv[]) {
 
         t_gen->start();
         // ROGHypercube rog(si, seed + ti, n_obstacles, coverage);
-        srand(seed + ti);
+        srand(seed);
         ROG_t* rog = rog_init(n_obstacles, coverage, variation);
         t_gen->stop();
 

@@ -12,7 +12,7 @@
 #ifndef _STATESPACE_H_
 #define _STATESPACE_H_
 
-#define N_DIMENSIONS 10
+#define N_DIMENSIONS 2
 #define DIM_MIN 0.0
 #define DIM_MAX 1.0
 

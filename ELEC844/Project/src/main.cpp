@@ -28,9 +28,10 @@
 int test(int argc, char** argv);
 
 int main(int argc, char** argv) {
+    return noisetest(argc, argv);
     // return test(argc, argv);
     // return common_benchmark(argc, argv);
-    return hdvisualize(argc, argv);
+    // return hdvisualize(argc, argv);
 }
 
 int test(int argc, char** argv) {
@@ -60,7 +61,8 @@ int test(int argc, char** argv) {
 
     // ROGHypersphere rog(si, 928347, 500, 0.5);
 
-    ROG_t* rog = rog_init(100, .005, .08);
+    srand(230984);
+    ROG_t* rog = rog_init(100, 0.5, .005);
 
     t_obs->stop();
     t_setup->stop();
