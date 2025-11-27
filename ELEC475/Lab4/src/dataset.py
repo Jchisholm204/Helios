@@ -37,7 +37,7 @@ class Coco2014(Dataset):
         # Load the encoded labels if they exist
         if self.encodings_path is not None:
             print("Using Embedded Labels")
-            self.encodings = self._load_encodings(self.is_train)
+            self.encodings = self._load_encodings(self.encodings_path)
         else:
             self.enclabels = None
 
@@ -58,11 +58,7 @@ class Coco2014(Dataset):
                 self.transform.transforms + post_transform.transforms)
         self.is_init = True
 
-    def _load_encodings(self, is_train: bool):
-        if is_train:
-            fname = f"{self.root}/encodings/train.pt"
-        else:
-            fname = f"{self.root}/encodings/val.pt"
+    def _load_encodings(self, fname: str):
         return torch.load(f'{fname}')
 
     def _load_coco_annotations(self, is_train: str):
