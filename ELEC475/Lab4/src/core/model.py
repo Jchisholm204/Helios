@@ -31,7 +31,7 @@ class CLIPModel(nn.Module):
         super(CLIPModel, self).__init__()
         self.image_encoder = image_encoder(freeze_backbone=freeze_backbone)
 
-        self.image_projection = nn.Sequential(  # two linear layers with GELU activation
+        self.projection_head = nn.Sequential(  # two linear layers with GELU activation
             nn.Linear(self.image_encoder.output_dim, projection_dim),
             nn.GELU(),
             nn.Linear(projection_dim, projection_dim)
@@ -40,7 +40,7 @@ class CLIPModel(nn.Module):
 
     def forward(self, images):
         image_features = self.image_encoder(images)
-        image_embeddings = self.image_projection(image_features)
+        image_embeddings = self.projection_head(image_features)
         image_embeddings = F.normalize(image_embeddings, p=2, dim=-1)
         return image_embeddings
 

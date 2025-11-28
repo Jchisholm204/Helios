@@ -1,6 +1,0 @@
-{
-    "model": "clip-vit-base-patch32",
-    "learning_rate": 1e-05,
-    "batch_size": 32,
-    "optimizer": "AdamW"
-}

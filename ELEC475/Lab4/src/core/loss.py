@@ -4,49 +4,23 @@ import torch.nn.functional as F
 
 
 class InfoNCELoss(nn.Module):
-    """
-    Symmetric InfoNCE Loss (Contrastive Loss) for CLIP-style training.
-
-    This loss encourages the similarity between matched (image, text) pairs 
-    to be high, and the similarity between unmatched pairs to be low.
-    """
 
     def __init__(self, temperature: float = 0.07):
-        """
-        Initializes the loss module.
-
-        Args:
-            temperature (float): Controls the contrastive force. Lower temperature 
-                                 makes the distribution sharper, requiring higher 
-                                 similarity for positive pairs.
-        """
         super().__init__()
-        # Use nn.Parameter but set requires_grad=False.
-        # This is the correct way to include non-trainable, device-aware parameters in PyTorch.
         self.temperature = nn.Parameter(
             torch.tensor(temperature), requires_grad=False)
 
-        # Logits_per_image is the similarity matrix S (N x N)
-        # The ground truth (correct pairs) are always on the diagonal.
-        self.criterion = nn.CrossEntropyLoss()
-
-    def forward(self, image_features: torch.Tensor, text_features: torch.Tensor) -> torch.Tensor:
-        """
-        Computes the symmetric InfoNCE loss.
-
-        Args:
-            image_features (torch.Tensor): Image embeddings (N, D), already L2-normalized.
-            text_features (torch.Tensor): Text embeddings (N, D), already L2-normalized.
-
-        Returns:
-            torch.Tensor: The mean loss of the batch.
-        """
+    def forward(self, image_features: torch.Tensor,
+                text_features: torch.Tensor) -> torch.Tensor:
         batch_size = image_features.size(0)
+
+        image_features = F.normalize(image_features, dim=-1)
+        text_features = F.normalize(text_features, dim=-1)
 
         # 1. Compute Similarity Matrix (logits)
         # (N, D) @ (D, N) -> (N, N) matrix
         # S_ij = CosineSimilarity(Image_i, Text_j)
-        logits = image_features @ text_features.T
+        logits = image_features @ text_features.t()
 
         # 2. Scale Logits by Temperature
         # NOTE: self.temperature must be a small fractional value like 0.07
@@ -59,11 +33,11 @@ class InfoNCELoss(nn.Module):
 
         # 4. Compute Loss
         # a) Image-to-Text Loss (I2T)
-        loss_i2t = self.criterion(logits, labels)
+        loss_i2t = F.cross_entropy(logits, labels)
 
         # b) Text-to-Image Loss (T2I)
         # This is equivalent to using the transpose of the logits matrix.
-        loss_t2i = self.criterion(logits.T, labels)
+        loss_t2i = F.cross_entropy(logits.t(), labels)
 
         # 5. Return Symmetric Mean Loss
         total_loss = (loss_i2t + loss_t2i) / 2
