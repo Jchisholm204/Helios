@@ -4,12 +4,13 @@ from typing import Dict, List
 from transformers import CLIPTokenizer, CLIPTextModel
 from torch.nn.functional import cosine_similarity
 import time
+import json
 
 # --- Configuration Constants ---
 OUTPUT_DIR = './coco2014/'
 OUTPUT_FILENAME = 'label_encodings.pt'
 # File containing categories, one per line
-CATEGORY_FILE = 'coco2014/coco.names'
+CATEGORY_FILE = 'coco2014/annotations/instances_train2014.json'
 ENCODER_MODEL_NAME = "openai/clip-vit-base-patch32"
 EMBEDDING_DIM = 512
 
@@ -20,16 +21,67 @@ class LabelEncoder:
         self.tokenizer = None
         self.model = None
 
+    # def load_categories(self, filepath: str) -> List[str]:
+    #     print(f"Loading categories from: {filepath}")
+    #     if not os.path.exists(filepath):
+    #         raise FileNotFoundError(f"Category file not found at: {filepath}")
+    #
+    #     with open(filepath, 'r') as f:
+    #         # Read lines, strip whitespace, and filter out empty strings
+    #         categories = [line.strip() for line in f if line.strip()]
+    #
+    #     if "no object" not in categories:
+    #         categories.append("no object")
+    #
+    #     print(f"Successfully loaded {len(categories)} categories.")
+    #     return categories
+
     def load_categories(self, filepath: str) -> List[str]:
-        print(f"Loading categories from: {filepath}")
+        print(f"Loading categories from official COCO JSON: {filepath}")
         if not os.path.exists(filepath):
-            raise FileNotFoundError(f"Category file not found at: {filepath}")
+            raise FileNotFoundError(
+                f"Annotation file not found at: {
+                    filepath}. Please ensure CATEGORY_FILE points to the official COCO JSON (e.g., 'instances_train2014.json')."
+            )
 
-        with open(filepath, 'r') as f:
-            # Read lines, strip whitespace, and filter out empty strings
-            categories = [line.strip() for line in f if line.strip()]
+        try:
+            with open(filepath, 'r') as f:
+                coco_data = json.load(f)
+        except json.JSONDecodeError:
+            raise ValueError(f"Error decoding JSON from file: {
+                             filepath}. Check file integrity.")
+        except Exception as e:
+            raise IOError(f"Failed to read or process file: {e}")
 
-        print(f"Successfully loaded {len(categories)} categories.")
+        # Extract the names from the 'categories' list in the COCO JSON structure
+        categories = []
+
+        # Check if the 'categories' key exists
+        category_list_from_json = coco_data.get('categories')
+        if not category_list_from_json:
+            raise KeyError(
+                "JSON file is missing the required 'categories' array.")
+
+        for cat_info in category_list_from_json:
+            # COCO names are stored under the 'name' key; converting to lowercase for consistent dictionary keys
+            if 'name' in cat_info:
+                category_name = cat_info['name'].lower()
+                categories.append(category_name)
+
+        # 1. CRITICAL FIX: Add the required fallback label for unannotated images
+        if "no object" not in categories:
+            categories.append("no object")
+            print(
+                "INFO: Added 'no object' to the category list for encoding compatibility.")
+
+        # Basic verification
+        expected_size = 81
+        if len(categories) != expected_size:
+            print(f"WARNING: Category list size is {len(categories)}. Expected {
+                  expected_size} (80 COCO + 'no object').")
+
+        print(f"Successfully loaded {
+              len(categories)} unique categories for encoding.")
         return categories
 
     def load_encoder(self):

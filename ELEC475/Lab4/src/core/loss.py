@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class InfoNCELoss(nn.Module):
@@ -20,7 +21,11 @@ class InfoNCELoss(nn.Module):
                                  similarity for positive pairs.
         """
         super().__init__()
-        self.temperature = temperature
+        # Use nn.Parameter but set requires_grad=False.
+        # This is the correct way to include non-trainable, device-aware parameters in PyTorch.
+        self.temperature = nn.Parameter(
+            torch.tensor(temperature), requires_grad=False)
+
         # Logits_per_image is the similarity matrix S (N x N)
         # The ground truth (correct pairs) are always on the diagonal.
         self.criterion = nn.CrossEntropyLoss()
@@ -44,6 +49,7 @@ class InfoNCELoss(nn.Module):
         logits = image_features @ text_features.T
 
         # 2. Scale Logits by Temperature
+        # NOTE: self.temperature must be a small fractional value like 0.07
         logits = logits / self.temperature
 
         # 3. Create Ground Truth Labels
@@ -53,13 +59,9 @@ class InfoNCELoss(nn.Module):
 
         # 4. Compute Loss
         # a) Image-to-Text Loss (I2T)
-        # Treat the N rows as N classification problems, where the goal is to classify
-        # the true text (labels[i]) given the image logits (logits[i, :]).
         loss_i2t = self.criterion(logits, labels)
 
         # b) Text-to-Image Loss (T2I)
-        # Treat the N columns as N classification problems, where the goal is to classify
-        # the true image (labels[j]) given the text logits (logits[:, j]).
         # This is equivalent to using the transpose of the logits matrix.
         loss_t2i = self.criterion(logits.T, labels)
 
@@ -73,38 +75,47 @@ class InfoNCELoss(nn.Module):
 if __name__ == '__main__':
     # Test initialization and forward pass
     test_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    N, D = 256, 512  # Increase N for a more stable test average
 
-    # Dummy features (4 items, 512 dimensions, L2 normalized)
-    # We create two sets of features: F_I and F_T.
-    N, D = 4, 512
-    # Perfect alignment (Diagonal matrix is 1s, off-diagonal is 0s)
-    image_features_perfect = torch.eye(N, D).to(test_device)
-    text_features_perfect = torch.eye(N, D).to(test_device)
+    # Random, unaligned features (Used to represent the start of training)
+    # The true starting loss should be -log(1/N). For N=256, -log(1/256) ≈ 5.54
+    # To represent UNALIGNED features, we must generate I_emb and T_emb independently.
 
-    # Random, unaligned features
+    # Generate image features from N(0, 1) and normalize
     image_features_random = torch.randn(N, D).to(test_device)
-    text_features_random = torch.randn(N, D).to(test_device)
-    # L2 normalize the random features
     image_features_random = image_features_random / \
         image_features_random.norm(dim=-1, keepdim=True)
+
+    # Generate text features from a *different* random initialization and normalize
+    text_features_random = torch.randn(N, D).to(test_device)
     text_features_random = text_features_random / \
         text_features_random.norm(dim=-1, keepdim=True)
 
-    loss_fn = InfoNCELoss(temperature=1.0).to(test_device)
+    print(f"\n--- InfoNCE Loss Temperature Test (N={N}) ---")
 
-    print("\n--- InfoNCE Loss Test ---")
+    # Scenario 1: Tau = 1.0
+    loss_fn_10 = InfoNCELoss(temperature=1.0).to(test_device)
+    loss_10 = loss_fn_10(image_features_random, text_features_random)
+    # The loss is around ln(N), which is 5.54. This is too large for training at tau=1.0.
+    print(f"1. Loss with Tau=1.0: {loss_10.item()          :.4f} (UNSCALED, expected 5.5 - 5.8)")
 
-    # Test 1: Perfect Alignment (Loss should be low, close to 0)
-    loss_perfect = loss_fn(image_features_perfect, text_features_perfect)
-    print(f"Loss with PERFECT alignment: {
-          loss_perfect.item():.4f} (Expected: Low)")
+    # Scenario 2: Tau = 0.07 (Recommended standard value)
+    loss_fn_007 = InfoNCELoss(temperature=0.07).to(test_device)
+    loss_007 = loss_fn_007(image_features_random, text_features_random)
+    # Expected: The correct starting loss for N=256 is -log(1/256) ≈ 5.54
+    print(f"2. Loss with Tau=0.07: {
+          loss_007.item():.4f} (CORRECT START, expected 5.5 - 5.8)")
 
-    # Test 2: Random Alignment (Loss should be high, relative to perfect)
-    loss_random = loss_fn(image_features_random, text_features_random)
-    print(f"Loss with RANDOM alignment: {
-          loss_random.item():.4f} (Expected: High)")
+    # Scenario 3: Tau = 0.007 (Your attempted aggressive value)
+    loss_fn_0007 = InfoNCELoss(temperature=0.007).to(test_device)
+    loss_0007 = loss_fn_0007(image_features_random, text_features_random)
+    # Expected: This scales the standard loss up considerably, making it too aggressive.
+    print(f"3. Loss with Tau=0.007: {
+          loss_0007.item():.4f} (TOO AGGRESSIVE, expected > 18.0)")
 
-    if loss_perfect.item() < loss_random.item():
-        print("PASS: Loss function correctly penalizes misalignment.")
+    # Assert that the loss with the recommended tau (0.07) is within the expected range
+    if 4.0 < loss_007.item() < 6.5:
+        print("\nPASS: Loss function produces correct starting loss for random features (Tau=0.07).")
     else:
-        print("FAIL: Loss function alignment check failed.")
+        print(
+            "\nFAIL: Starting loss is outside the expected range of [4.0, 6.5] at Tau=0.07.")

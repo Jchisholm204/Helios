@@ -1,4 +1,4 @@
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from torchvision import transforms
 from typing import Optional
 from dataset import Coco2014
@@ -14,8 +14,8 @@ class Coco2014Dataset():
                  # Separate transforms for augmentation during training
                  train_transform: Optional[transforms.Compose] = None,
                  val_transform: Optional[transforms.Compose] = None,
-                 n_workers: int = 8,
-                 batch_size: int = 8,
+                 n_workers: int = 16,
+                 batch_size: int = 128,
                  pin: bool = True):
 
         # Store configuration parameters
@@ -79,10 +79,13 @@ class Coco2014Dataset():
         """Returns the DataLoader for the validation split."""
         if self.val_ds is None:
             self.setup()  # Ensure datasets are initialized if not already
+        
+        ind = range(1000)
+        limited = Subset(self.val_ds, ind)
 
         # The DataLoader wraps the EXISTING dataset object
         return DataLoader(
-            self.val_ds,
+            limited,
             batch_size=self.batch_size,
             shuffle=False,  # Crucial for validation: do not shuffle the data order
             num_workers=self.n_workers,
