@@ -7,7 +7,7 @@ import time
 
 # --- Configuration Constants ---
 OUTPUT_DIR = './coco2014/'
-OUTPUT_FILENAME = 'encodings.pt'
+OUTPUT_FILENAME = 'label_encodings.pt'
 # File containing categories, one per line
 CATEGORY_FILE = 'coco2014/coco.names'
 ENCODER_MODEL_NAME = "openai/clip-vit-base-patch32"
