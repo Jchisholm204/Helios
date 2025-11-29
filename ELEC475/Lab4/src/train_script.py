@@ -75,9 +75,10 @@ def train_and_validate(hparams: Dict[str, Any]):
             images, embeddings = images.to(device), embeddings.to(device)
 
             optimizer.zero_grad()
-            image_features = model(images)
+            with torch.cuda.amp.autocast(device_type=device):
+                image_features = model(images)
 
-            loss = loss_fn(image_features, embeddings)
+                loss = loss_fn(image_features, embeddings)
             loss.backward()
             optimizer.step()
 
