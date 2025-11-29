@@ -61,32 +61,24 @@ class Coco2014(Dataset):
     def _load_encodings(self, fname: str):
         return torch.load(f'{fname}')
 
-    def _load_coco_annotations(self, is_train: str):
-        if is_train:
-            fname = "instances_train2014.json"
-        else:
-            fname = "instances_val2014.json"
-
+    def _load_coco_annotations(self, is_train: bool):
+        fname = "captions_train2014.json" if is_train else "captions_val2014.json"
         with open(f"{self.root}/annotations/{fname}") as f:
             coco_data = json.load(f)
-            image_id_to_meta = {
-                img['id']: img for img in coco_data['images']
-            }
-            image_id_to_annotations = {}
-            for ann in coco_data['annotations']:
-                img_id = ann['image_id']
-                if img_id not in image_id_to_annotations:
-                    image_id_to_annotations[img_id] = []
-                image_id_to_annotations[img_id].append(ann)
 
-            category_id_to_name = {
-                cat['id']: cat['name'] for cat in coco_data['categories']
-            }
-            return {
-                'images': image_id_to_meta,
-                'annotations': image_id_to_annotations,
-                'categories': category_id_to_name
-            }
+        image_id_to_meta = {img['id']: img for img in coco_data['images']}
+        image_id_to_captions = {}
+        for ann in coco_data['annotations']:
+            img_id = ann['image_id']
+            caption = ann['caption'].strip()
+            if img_id not in image_id_to_captions:
+                image_id_to_captions[img_id] = []
+            image_id_to_captions[img_id].append(caption)
+
+        return {
+            'images': image_id_to_meta,
+            'annotations': image_id_to_captions
+        }
 
     def __len__(self):
         self._init_self()
@@ -94,34 +86,31 @@ class Coco2014(Dataset):
 
     def __getitem__(self, idx):
         self._init_self()
-        # Get image id and metadata
         img_id = self.image_ids[idx]
         img_meta = self.annotations['images'][img_id]
 
-        # Determine text label
-        anns = self.annotations['annotations'].get(img_id, [])
-        label_text = "no object"
-        if anns:
-            first_cat_id = anns[0]['category_id']
-            label_text = self.annotations['categories'][first_cat_id]
+        # Pick a caption
+        # captions = self.annotations['annotations'].get(img_id, ["no caption"])
+        # caption = random.choice(captions)
 
-        if self.encodings is not None:
-            label_output = self.encodings.get(label_text, None)
-            if label_output is None:
-                raise KeyError(f"Missing pre-encoded label for: {label_text}")
-        else:
-            label_output = label_text
+        # Use precomputed embedding if available
+        # if self.encodings is not None:
+        #     if img_id not in self.encodings:
+        #         raise KeyError(f"No embedding found for image_id {img_id}")
+        #     label_output = random.choice(self.encodings[img_id])
+        # else:
+        #     label_output = caption
 
+        # Load image
         img_filename = img_meta['file_name']
-        if self.is_train:
-            img_path = f"{self.root}/images/train2014/{img_filename}"
-        else:
-            img_path = f"{self.root}/images/val2014/{img_filename}"
+        img_path = f"{self.root}/images/train2014/{
+            img_filename}" if self.is_train else f"{self.root}/images/val2014/{img_filename}"
         try:
             image = Image.open(img_path).convert('RGB')
             image = self.transform(image)
         except Exception as e:
-            print(f"Error loading image {img_path}: {e}. Retrying..")
+            print(f"Error loading {img_path}: {
+                  e}. Retrying with random image.")
             return self.__getitem__(random.randint(0, len(self)-1))
 
-        return image, label_output
+        return image, img_id

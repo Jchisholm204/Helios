@@ -5,6 +5,7 @@ import time
 import os
 from typing import Dict, Any
 from tqdm import tqdm
+import random
 
 # Assuming all these imports are available in the 'src' environment
 from experiment_logger import ExperimentLogger
@@ -27,8 +28,8 @@ def train_and_validate(hparams: Dict[str, Any]):
 
     print("Setting up Datasets")
     dataset = Coco2014Dataset(
-        train_encodings_path="coco2014/label_encodings.pt",
-        val_encodings_path="coco2014/label_encodings.pt",
+        train_encodings_path="coco2014/train_caption_encodings.pt",
+        val_encodings_path="coco2014/val_caption_encodings.pt",
         batch_size=hparams['batch_size'],
         n_workers=hparams['num_workers'],
         pin=True
@@ -37,7 +38,7 @@ def train_and_validate(hparams: Dict[str, Any]):
     train_loader = dataset.train_dataloader()
     val_loader = dataset.val_dataloader()
 
-    model = CLIPModel(
+    model: CLIPModel = CLIPModel(
         projection_dim=hparams['projection_dim'],
         freeze_backbone=hparams['freeze_backbone']
     ).to(device)
@@ -71,11 +72,22 @@ def train_and_validate(hparams: Dict[str, Any]):
 
         train_loop = tqdm(train_loader, desc=f"Epoch {
             epoch}/{hparams['epochs']} [TRAIN]", leave=False)
-        for images, embeddings in train_loop:
-            images, embeddings = images.to(device), embeddings.to(device)
+
+        # Load embeddings
+        train_dataset = dataset.train_ds
+        train_dataset._init_self()
+        train_encodings = train_dataset.encodings
+        for images, img_ids in train_loop:
+            captions = []
+            for img_id in img_ids:
+                captions.append(random.choice(train_encodings[int(img_id)]))
+            embeddings = torch.stack(captions).to(device)
+            images = images.to(device)
+
+            # images, embeddings = images.to(device), embeddings.to(device)
 
             optimizer.zero_grad()
-            with torch.cuda.amp.autocast(device_type=device):
+            with torch.cuda.amp.autocast():
                 image_features = model(images)
 
                 loss = loss_fn(image_features, embeddings)
@@ -93,42 +105,57 @@ def train_and_validate(hparams: Dict[str, Any]):
 
         val_dataset = dataset.val_ds
         val_dataset._init_self()
-        val_text_features_all = val_dataset.encodings
-        # Convert to a tensor of shape (N_text, D)
-        texts = list(val_text_features_all.keys())
-        text_features_all = torch.stack(
-            [val_text_features_all[t] for t in texts]).to(device)
+        val_encodings = val_dataset.encodings
+
+        val_img_ids = list(val_dataset.image_ids)
+
+        text_features_list = []
+        for iid in val_img_ids:
+            variants = val_encodings[iid]
+            stacked = torch.stack(variants)
+            mean_emb = stacked.mean(dim=0)
+            text_features_list.append(mean_emb)
+
+        text_features_all = torch.stack(text_features_list).to(device)
+        val_imgid_index = {int(img_id): idx for idx,
+                           img_id in enumerate(val_img_ids)}
 
         total_val_loss = 0.0
         hits = {1: 0, 5: 0, 10: 0}
         N = len(val_loader.dataset)
-        start_idx = 0
 
         with torch.no_grad():
             val_loop = tqdm(val_loader, desc=f"Epoch {
                 epoch}/{hparams['epochs']} [VAL]", leave=False)
-            for images, embeddings in val_loop:
-                images, embeddings = images.to(device), embeddings.to(device)
+            for images, img_ids in val_loop:
+                images = images.to(device)
+                captions = []
+                indices = []
+                for img_id in img_ids:
+                    indices.append(val_imgid_index[int(img_id)])
+                    captions.append(
+                        text_features_all[val_imgid_index[int(img_id)]].cpu())
+
+                embeddings = torch.stack(captions).to(device)
 
                 # Forwards Pass
-                image_features = model(images)
-                val_loss = loss_fn(image_features, embeddings)
+                with torch.cuda.amp.autocast():
+                    image_features = model(images)
+                    val_loss = loss_fn(image_features, embeddings)
                 total_val_loss += val_loss.item()
 
-                print("Image features mean / std:",
-                      image_features.mean().item(), image_features.std().item())
-                print("Text features mean / std:",
-                      embeddings.mean().item(), embeddings.std().item())
+                img_norm = torch.nn.functional.normalize(image_features, dim=1)
+                text_norm = torch.nn.functional.normalize(
+                    text_features_all, dim=1)
 
                 # Nearest K
-                sim = image_features @ text_features_all.T
-                batch_indices = torch.arange(
-                    start_idx, start_idx + sim.size(0), device=device)
-                start_idx += sim.size(0)
+                sim = img_norm @ text_norm.T
+                true_idx_tensor = torch.tensor(
+                    indices, device=device, dtype=torch.long)   # [B]
 
                 for k in hits.keys():
                     topk = sim.topk(k, dim=1).indices
-                    hits[k] += (topk == batch_indices.unsqueeze(1)
+                    hits[k] += (topk == true_idx_tensor.unsqueeze(1)
                                 ).any(dim=1).sum().item()
 
         # FIX: Use len(val_loader)
@@ -161,20 +188,23 @@ def train_and_validate(hparams: Dict[str, Any]):
 
     # --- 6. Finalization ---
     print("Training finished.")
-    logger.plot_loss_curves(show_plot=False, save_plot=True)
+    logger.plot_loss_curves(show_plot=True, save_plot=True)
     print(f"Loss curves saved to {logger.get_log_path()}")
+    model_save_path = os.path.join(logger.get_log_path(), "final_model.pth")
+    torch.save(model.state_dict(), model_save_path)
+    print(f"Final Model saved to {model_save_path}")
 
 
 if __name__ == '__main__':
     hparams = {
         'epochs': 80,
         'backbone_lr': 0.0005,
-        'head_lr': 0.003,
+        'head_lr': 0.005,
         'weight_decay': 0.0003,
         'batch_size': 128,
-        'exp_name': "ShitCrap",
+        'exp_name': "no_augmentation",
         'projection_dim': 512,
-        'temperature': 0.07,  # CORRECTED: Changed from 0.007 to 0.07
+        'temperature': 0.04,
         'freeze_backbone': False,
         'num_workers': 16
     }
