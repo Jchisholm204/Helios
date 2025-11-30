@@ -92,15 +92,13 @@ def main():
         pin=True
     )
 
+    # Initialize the underlying Coco2014 dataset objects so encodings are loaded
+    dataset.setup()
     val_dataset = dataset.val_ds
     val_dataset._init_self()
 
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=BATCH_SIZE,
-        shuffle=False,
-        num_workers=8
-    )
+    # Use the dataloader accessor which wraps the (possibly subset) validation dataset
+    val_loader = dataset.val_dataloader()
 
     print("Loading model…")
     model = CLIPModel(
@@ -108,7 +106,7 @@ def main():
         freeze_backbone=False
     ).to(DEVICE)
 
-    model.load_state_dict(torch.load("best_model.pth", map_location=DEVICE))
+    model.load_state_dict(torch.load("logs/initial_training/best_model.pth", map_location=DEVICE))
     model.eval()
 
     print("Building text embedding matrix…")
