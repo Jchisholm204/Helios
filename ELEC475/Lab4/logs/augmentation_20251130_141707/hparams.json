@@ -1,0 +1,12 @@
+{
+    "epochs": 80,
+    "backbone_lr": 0.0005,
+    "head_lr": 0.01,
+    "weight_decay": 0.0003,
+    "batch_size": 150,
+    "exp_name": "augmentation",
+    "projection_dim": 512,
+    "temperature": 0.04,
+    "freeze_backbone": false,
+    "num_workers": 16
+}

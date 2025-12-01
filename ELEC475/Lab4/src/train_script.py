@@ -27,21 +27,22 @@ def train_and_validate(hparams: Dict[str, Any]):
     model_save_path = os.path.join(logger.get_log_path(), "best_model.pth")
     best_val_metric = -float('inf')  # Track the best Recall@1_I2T
 
-    img_transform = transforms.Compose([
-        transforms.RandomResizedCrop(
-            size=224,
-            scale=(0.8, 1.0),
-            ratio=(0.9, 1.1)
-        ),
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.ColorJitter(
-            brightness=0.1,
-            contrast=0.1,
-            saturation=0.1,
-            hue=0.02
-        ),
-        transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0))
-    ])
+    img_transform = None
+    # img_transform = transforms.Compose([
+    #     transforms.RandomResizedCrop(
+    #         size=224,
+    #         scale=(0.8, 1.0),
+    #         ratio=(0.9, 1.1)
+    #     ),
+    #     transforms.RandomHorizontalFlip(p=0.5),
+    #     transforms.ColorJitter(
+    #         brightness=0.1,
+    #         contrast=0.1,
+    #         saturation=0.1,
+    #         hue=0.02
+    #     ),
+    #     transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0))
+    # ])
 
     print("Setting up Datasets")
     dataset = Coco2014Dataset(
@@ -220,7 +221,7 @@ if __name__ == '__main__':
         'head_lr': 0.008,
         'weight_decay': 0.0003,
         'batch_size': 150,
-        'exp_name': "augmentation",
+        'exp_name': "basemodel",
         'projection_dim': 512,
         'temperature': 0.04,
         'freeze_backbone': False,
