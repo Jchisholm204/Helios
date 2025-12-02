@@ -80,7 +80,7 @@ class Coco2014Dataset():
         if self.val_ds is None:
             self.setup()  # Ensure datasets are initialized if not already
         
-        ind = range(20000)
+        ind = range(40000)
         limited = Subset(self.val_ds, ind)
 
         # The DataLoader wraps the EXISTING dataset object

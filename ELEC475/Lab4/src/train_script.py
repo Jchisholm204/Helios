@@ -6,6 +6,7 @@ import os
 from typing import Dict, Any
 from tqdm import tqdm
 import random
+from torchvision import transforms
 
 # Assuming all these imports are available in the 'src' environment
 from experiment_logger import ExperimentLogger
@@ -26,9 +27,27 @@ def train_and_validate(hparams: Dict[str, Any]):
     model_save_path = os.path.join(logger.get_log_path(), "best_model.pth")
     best_val_metric = -float('inf')  # Track the best Recall@1_I2T
 
+    img_transform = None
+    # img_transform = transforms.Compose([
+    #     transforms.RandomResizedCrop(
+    #         size=224,
+    #         scale=(0.8, 1.0),
+    #         ratio=(0.9, 1.1)
+    #     ),
+    #     transforms.RandomHorizontalFlip(p=0.5),
+    #     transforms.ColorJitter(
+    #         brightness=0.1,
+    #         contrast=0.1,
+    #         saturation=0.1,
+    #         hue=0.02
+    #     ),
+    #     transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0))
+    # ])
+
     print("Setting up Datasets")
     dataset = Coco2014Dataset(
         train_encodings_path="coco2014/train_caption_encodings.pt",
+        train_transform=img_transform,
         val_encodings_path="coco2014/val_caption_encodings.pt",
         batch_size=hparams['batch_size'],
         n_workers=hparams['num_workers'],
@@ -198,11 +217,11 @@ def train_and_validate(hparams: Dict[str, Any]):
 if __name__ == '__main__':
     hparams = {
         'epochs': 80,
-        'backbone_lr': 0.0005,
-        'head_lr': 0.005,
+        'backbone_lr': 0.0007,
+        'head_lr': 0.008,
         'weight_decay': 0.0003,
-        'batch_size': 128,
-        'exp_name': "no_augmentation",
+        'batch_size': 150,
+        'exp_name': "basemodel",
         'projection_dim': 512,
         'temperature': 0.04,
         'freeze_backbone': False,
