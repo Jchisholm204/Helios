@@ -63,7 +63,8 @@ def train_and_validate(hparams: Dict[str, Any]):
     ).to(device)
 
     # Correct initialization using the hyperparameter
-    loss_fn = InfoNCELoss(temperature=hparams['temperature'])
+    loss_fn: InfoNCELoss = InfoNCELoss(
+        temperature=hparams['temperature'], decay=hparams['temp_decay'])
 
     param_groups = [
         {'params': model.image_encoder.parameters(),
@@ -109,7 +110,7 @@ def train_and_validate(hparams: Dict[str, Any]):
             with torch.cuda.amp.autocast():
                 image_features = model(images)
 
-                loss = loss_fn(image_features, embeddings)
+                loss = loss_fn(image_features, embeddings, epoch)
             loss.backward()
             optimizer.step()
 
@@ -160,7 +161,7 @@ def train_and_validate(hparams: Dict[str, Any]):
                 # Forwards Pass
                 with torch.cuda.amp.autocast():
                     image_features = model(images)
-                    val_loss = loss_fn(image_features, embeddings)
+                    val_loss = loss_fn(image_features, embeddings, epoch)
                 total_val_loss += val_loss.item()
 
                 img_norm = torch.nn.functional.normalize(image_features, dim=1)
@@ -217,13 +218,14 @@ def train_and_validate(hparams: Dict[str, Any]):
 if __name__ == '__main__':
     hparams = {
         'epochs': 80,
-        'backbone_lr': 0.0007,
-        'head_lr': 0.008,
+        'backbone_lr': 0.0006,
+        'head_lr': 0.006,
         'weight_decay': 0.0003,
         'batch_size': 150,
-        'exp_name': "basemodel",
+        'exp_name': "tempsch",
         'projection_dim': 512,
-        'temperature': 0.04,
+        'temperature': 0.07,
+        'temp_decay': 0.985,
         'freeze_backbone': False,
         'num_workers': 16
     }

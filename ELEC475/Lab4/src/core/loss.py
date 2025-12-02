@@ -5,13 +5,13 @@ import torch.nn.functional as F
 
 class InfoNCELoss(nn.Module):
 
-    def __init__(self, temperature: float = 0.07):
+    def __init__(self, temperature: float = 0.07, decay: float = 1.0):
         super().__init__()
-        self.temperature = nn.Parameter(
-            torch.tensor(temperature), requires_grad=False)
+        self.temperature: float = temperature
+        self.t_decay: float = decay
 
     def forward(self, image_features: torch.Tensor,
-                text_features: torch.Tensor) -> torch.Tensor:
+                text_features: torch.Tensor, epoch: int = 0) -> torch.Tensor:
         batch_size = image_features.size(0)
 
         image_features = F.normalize(image_features, dim=-1)
@@ -22,9 +22,11 @@ class InfoNCELoss(nn.Module):
         # S_ij = CosineSimilarity(Image_i, Text_j)
         logits = image_features @ text_features.t()
 
+        temperature: float = self.temperature * (self.t_decay ** epoch)
+
         # 2. Scale Logits by Temperature
         # NOTE: self.temperature must be a small fractional value like 0.07
-        logits = logits / self.temperature
+        logits = logits / temperature
 
         # 3. Create Ground Truth Labels
         # The correct match for Image_i is Text_i (i.e., the diagonal index i).
