@@ -48,6 +48,7 @@ def compute_text_matrix(val_dataset):
                 try:
                     ik = int(k.item())
                 except Exception:
+                    print("Warning: could not coerce encoding key to int:", k)
                     # skip keys not coerced
                     continue
         encs[ik] = v
@@ -247,17 +248,21 @@ def recall_text_to_image(image_emb, text_emb, caption_ids, caption_to_image, ima
         img_id = caption_to_image.get(int(cid))
         if img_id is None:
             # if no mapping, mark as -1 (miss)
+            print("Warning: no image mapping for caption id", cid)
             gt_img_indices.append(-1)
         else:
             # try to map to index
             try:
                 gt_idx = image_id_to_index.get(int(img_id), -1)
+                print("Debug: mapped caption id", cid, "to image id", img_id, "index", gt_idx)
             except Exception:
                 # try str then int
                 try:
                     gt_idx = image_id_to_index.get(int(str(img_id)), -1)
+                    print("Debug: mapped caption id", cid, "to image id", img_id, "index", gt_idx)
                 except Exception:
                     gt_idx = -1
+                    print("Debug: failed to map caption id", cid, "to image id", img_id)
             gt_img_indices.append(gt_idx)
     gt_img_indices = torch.tensor(gt_img_indices, device=sims_T.device)
 
