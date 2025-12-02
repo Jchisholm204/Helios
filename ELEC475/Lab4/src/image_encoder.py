@@ -6,6 +6,8 @@ from typing import Dict, List
 import torch
 from PIL import Image
 from torchvision import transforms as T
+from torch.utils.data import DataLoader
+from dataset import Coco2014
 
 # Use your local model implementation
 from core.model import CLIPModel
@@ -15,12 +17,13 @@ OUTPUT_DIR = './coco2014/'
 OUTPUT_FILENAME = 'val_image_encodings.pt'
 COCO_ANNOTATIONS_FILE = 'coco2014/annotations/captions_val2014.json'
 COCO_IMAGES_DIR = 'coco2014/images/val2014'
-MODEL_WEIGHTS = os.path.join(os.path.dirname(__file__), "..", "logs", "augmentation_20251130_105023", "best_model.pth")
+MODEL_WEIGHTS = os.path.join(os.path.dirname(__file__), "..", "logs", "augmentation", "best_model.pth")
 BATCH_SIZE = 64
 IMAGE_SIZE = 224
 
 # --- Device ---
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "mps" if torch.mps.is_available() else "cpu"
+device = "cuda" if torch.cuda.is_available() else device
 print(f"Using device: {device}")
 
 
@@ -115,6 +118,23 @@ class ImageEncoder:
         print(f"Encoded {len(all_embeddings)} images in {end - start:.2f}s")
         return all_embeddings
 
+    def encode_images_with_dataloader(self, batch_size=64, num_workers=8):
+        ds = Coco2014(root=os.path.dirname(self.COCO_ANNOTATIONS_FILE) if hasattr(self, 'COCO_ANNOTATIONS_FILE') else './coco2014',
+                      image_size=(IMAGE_SIZE, IMAGE_SIZE), is_train=False)
+        ds._init_self()
+        loader = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
+        all_embeddings = {}
+        self.load_encoder()
+        self.model.eval()
+        with torch.no_grad():
+            for batch_imgs, batch_ids in loader:
+                batch_imgs = batch_imgs.to(device)
+                vecs = self.model(batch_imgs)  # projected, normalized (B, D)
+                vecs = vecs.cpu()
+                for i, iid in enumerate(batch_ids):
+                    all_embeddings[int(iid)] = [vecs[i]]
+        return all_embeddings
+
 
 if __name__ == "__main__":
     enc = ImageEncoder(MODEL_WEIGHTS)
@@ -125,7 +145,7 @@ if __name__ == "__main__":
         raise SystemExit(1)
 
     enc.load_encoder()
-    embeddings = enc.encode_images(image_ids)
+    embeddings = enc.encode_images_with_dataloader(batch_size=BATCH_SIZE, num_workers=1)
 
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR, exist_ok=True)
