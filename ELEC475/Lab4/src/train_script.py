@@ -27,22 +27,22 @@ def train_and_validate(hparams: Dict[str, Any]):
     model_save_path = os.path.join(logger.get_log_path(), "best_model.pth")
     best_val_metric = -float('inf')  # Track the best Recall@1_I2T
 
-    img_transform = None
-    # img_transform = transforms.Compose([
-    #     transforms.RandomResizedCrop(
-    #         size=224,
-    #         scale=(0.8, 1.0),
-    #         ratio=(0.9, 1.1)
-    #     ),
-    #     transforms.RandomHorizontalFlip(p=0.5),
-    #     transforms.ColorJitter(
-    #         brightness=0.1,
-    #         contrast=0.1,
-    #         saturation=0.1,
-    #         hue=0.02
-    #     ),
-    #     transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0))
-    # ])
+    # img_transform = None
+    img_transform = transforms.Compose([
+        transforms.RandomResizedCrop(
+            size=224,
+            scale=(0.8, 1.0),
+            ratio=(0.9, 1.1)
+        ),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.ColorJitter(
+            brightness=0.1,
+            contrast=0.1,
+            saturation=0.1,
+            hue=0.02
+        ),
+        transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0))
+    ])
 
     print("Setting up Datasets")
     dataset = Coco2014Dataset(
@@ -218,11 +218,11 @@ def train_and_validate(hparams: Dict[str, Any]):
 if __name__ == '__main__':
     hparams = {
         'epochs': 80,
-        'backbone_lr': 0.0006,
-        'head_lr': 0.006,
+        'backbone_lr': 0.0005,
+        'head_lr': 0.005,
         'weight_decay': 0.0003,
         'batch_size': 150,
-        'exp_name': "tempsch",
+        'exp_name': "allmod",
         'projection_dim': 512,
         'temperature': 0.07,
         'temp_decay': 0.985,
