@@ -1,43 +1,30 @@
+"""
+Evaluate image<->text retrieval using the saved caption/image encodings.
+
+Produces I2T and T2I Recall@{1,5,10}.
+"""
 import os
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-from PIL import Image
-from torchvision.utils import make_grid
-import torchvision.transforms as T
+from typing import Dict, List
 
-from core.model import CLIPModel
-from dataloader import Coco2014Dataset
+from dataset import Coco2014
+from core.model import CLIPModel  # use your model for optional projection
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-BATCH_SIZE = 150
-OUT_DIR = "logs/retrievals"
-os.makedirs(OUT_DIR, exist_ok=True)
+ROOT = os.path.join(os.path.dirname(__file__), "..", "coco2014")
+CAPTION_ENCODINGS = os.path.join(ROOT, "val_caption_encodings.pt")
+IMAGE_ENCODINGS = os.path.join(ROOT, "val_image_encodings.pt")
+MODEL_WEIGHTS = os.path.join(os.path.dirname(__file__), "..", "logs", "augmentation_20251130_105023", "best_model.pth")
+DEVICE = "cpu"
 
 
-@torch.no_grad()
-def compute_text_matrix(val_dataset):
-    """
-    Build:
-      caption_ids: list[int]  -- annotation/caption ids (ints)
-      text_embs:  tensor (M, D)
-      caption_to_image: dict[int -> int] map caption id -> image id
-
-    Robustly handles a few different annotation layouts:
-      - image_to_ann_ids: {image_id: [ann_id, ...]}
-      - annotations: list[dict] with 'id' and 'image_id'
-      - annotations: list[int] (annotation ids) + anns / ann dict elsewhere
-      - direct ann_id -> image_id maps under various names
-    Also normalizes encoding keys to int and tolerates single-tensor / list-of-tensors variants.
-    """
-    val_dataset._init_self()
-    encs_raw = getattr(val_dataset, "encodings", None)
-    if encs_raw is None:
-        raise RuntimeError("val_dataset has no encodings loaded (encodings_path?).")
-
-    encs = {}
-    for k, v in encs_raw.items():
+def load_encodings(path: str) -> Dict[int, List[torch.Tensor]]:
+    if not os.path.exists(path):
+        raise FileNotFoundError(path)
+    enc = torch.load(path)
+    # Keys may be strings / tensors; normalize to int -> list[tensor]
+    norm = {}
+    for k, v in enc.items():
         try:
             ik = int(k)
         except Exception:
@@ -48,361 +35,270 @@ def compute_text_matrix(val_dataset):
                 try:
                     ik = int(k.item())
                 except Exception:
-                    print("Warning: could not coerce encoding key to int:", k)
-                    # skip keys not coerced
                     continue
-        encs[ik] = v
+        # ensure list of tensors
+        if isinstance(v, torch.Tensor):
+            norm[ik] = [v.detach().cpu()]
+        elif isinstance(v, (list, tuple)):
+            norm[ik] = [x.detach().cpu() if isinstance(x, torch.Tensor) else torch.as_tensor(x) for x in v]
+        else:
+            # fallback single item
+            norm[ik] = [torch.as_tensor(v)]
+    return norm
 
-    caption_to_image = {}
 
-    anns = val_dataset.annotations
-    ann_map = anns.get("image_to_ann_ids") or anns.get("image_id_to_ann_ids") or anns.get("img_to_ann_ids")
-    if ann_map:
-        for img_id, ann_ids in ann_map.items():
-            for aid in ann_ids:
-                try:
-                    caption_to_image[int(aid)] = int(img_id)
-                except Exception:
-                    try:
-                        caption_to_image[int(str(aid))] = int(str(img_id))
-                    except Exception:
-                        pass
-    else:
-        annotations_entry = anns.get("annotations")
-        if annotations_entry:
-            if isinstance(annotations_entry, list) and len(annotations_entry) > 0:
-                first = annotations_entry[0]
-                if isinstance(first, dict):
-                    for ann in annotations_entry:
-                        aid = ann.get("id")
-                        img = ann.get("image_id")
-                        if aid is not None and img is not None:
-                            try:
-                                caption_to_image[int(aid)] = int(img)
-                            except Exception:
-                                try:
-                                    caption_to_image[int(str(aid))] = int(str(img))
-                                except Exception:
-                                    pass
-                else:
-                    # list of ints (annotation ids), try to find ann dict mapping elsewhere
-                    ann_dict_candidates = (
-                        anns.get("anns")
-                        or anns.get("annotations_by_id")
-                        or anns.get("ann_id_to_ann")
-                        or anns.get("ann_map")
-                    )
-                    if isinstance(ann_dict_candidates, dict):
-                        for aid in annotations_entry:
-                            try:
-                                annobj = ann_dict_candidates.get(aid) if aid in ann_dict_candidates else ann_dict_candidates.get(str(aid))
-                            except Exception:
-                                annobj = None
-                            if isinstance(annobj, dict):
-                                img = annobj.get("image_id")
-                                if img is not None:
-                                    try:
-                                        caption_to_image[int(aid)] = int(img)
-                                    except Exception:
-                                        try:
-                                            caption_to_image[int(str(aid))] = int(str(img))
-                                        except Exception:
-                                            pass
-            elif isinstance(annotations_entry, dict):
-                # maybe mapping id relates to ann dict
-                for aid, ann in annotations_entry.items():
-                    if isinstance(ann, dict):
-                        img = ann.get("image_id")
-                        if img is not None:
-                            try:
-                                caption_to_image[int(aid)] = int(img)
-                            except Exception:
-                                try:
-                                    caption_to_image[int(str(aid))] = int(str(img))
-                                except Exception:
-                                    pass
-
-        if not caption_to_image:
-            direct_maps = (
-                anns.get("ann_id_to_image")
-                or anns.get("ann_id_to_image_id")
-                or anns.get("ann_to_image")
-                or anns.get("ann_id_to_img")
-                or {}
-            )
-            if isinstance(direct_maps, dict):
-                for k, v in direct_maps.items():
-                    try:
-                        caption_to_image[int(k)] = int(v)
-                    except Exception:
-                        try:
-                            caption_to_image[int(str(k))] = int(str(v))
-                        except Exception:
-                            pass
-
-    caption_ids = sorted(encs.keys())
+def build_matrices(caps: Dict[int, List[torch.Tensor]], imgs: Dict[int, List[torch.Tensor]]):
+    # Build text embeddings (one entry per caption variant) and mapping caption_idx -> image_id
+    caption_to_image: List[int] = []
     text_embs = []
-    for cid in caption_ids:
-        variants = encs[cid]
-        try:
-            if isinstance(variants, torch.Tensor):
-                mean_emb = variants.mean(dim=0)
-            else:
-                stacked = torch.stack(variants)
-                mean_emb = stacked.mean(dim=0)
-        except Exception:
-            try:
-                stacked = torch.stack([torch.as_tensor(x) for x in variants])
-                mean_emb = stacked.mean(dim=0)
-            except Exception:
-                continue
-        text_embs.append(mean_emb)
-
+    for img_id in sorted(caps.keys()):
+        variants = caps[img_id]
+        for v in variants:
+            t = v.float()
+            # if token dim >1, average across first dim (safe)
+            if t.ndim > 1:
+                t = t.mean(dim=0)
+            text_embs.append(t)
+            caption_to_image.append(int(img_id))
     if len(text_embs) == 0:
-        raise RuntimeError("No text embeddings could be constructed from val_dataset.encodings")
+        raise RuntimeError("No caption embeddings found.")
 
-    text_embs = torch.stack(text_embs)         # (M, D)
-    text_embs = F.normalize(text_embs, dim=1)
-    return caption_ids, text_embs.to(DEVICE), caption_to_image
-
-
-@torch.no_grad()
-def compute_image_embeddings(model, val_loader, val_dataset):
-    """
-    Returns:
-      image_embs: tensor (N_images, D)
-      true_caption_ids: list[int]  -- chosen annotation id per image (length N_images)
-      image_ids: list[int]         -- image ids in the same order
-    """
+    # Build image embeddings (one per image). Average variants per image.
+    image_ids = sorted(imgs.keys())
     image_embs = []
-    true_caption_ids = []
-    image_ids = []
+    for img_id in image_ids:
+        variants = imgs[img_id]
+        vs = [v.float() for v in variants]
+        if len(vs) == 0:
+            continue
+        stacked = torch.stack(vs)
+        mean = stacked.mean(dim=0)
+        image_embs.append(mean)
 
-    val_dataset._init_self()
-    ann_map = val_dataset.annotations.get('image_to_ann_ids', {})
-    encs_raw = getattr(val_dataset, "encodings", None)
-    encs_int_keys = set(int(k) for k in encs_raw.keys()) if encs_raw is not None else set()
+    if len(image_embs) == 0:
+        raise RuntimeError("No image embeddings found.")
 
-    for images, img_id_batch in tqdm(val_loader, desc="Images"):
-        # images: [B, 3, H, W]
-        images = images.to(DEVICE)
-
-        feats = model(images)
-        feats = F.normalize(feats, dim=1)
-        image_embs.append(feats.cpu())
-
-        for iid in img_id_batch:
-            img_id = int(iid)
-            image_ids.append(img_id)
-
-            chosen = None
-            ann_candidates = ann_map.get(img_id, [])
-            if ann_candidates:
-                # prefer candidate that has an encoding
-                for aid in ann_candidates:
-                    if int(aid) in encs_int_keys:
-                        chosen = int(aid)
-                        break
-                if chosen is None:
-                    chosen = int(ann_candidates[0])
-            else:
-                chosen = img_id if img_id in encs_int_keys else img_id
-
-            true_caption_ids.append(chosen)
-
-    return torch.cat(image_embs), true_caption_ids, image_ids
+    text_mat = F.normalize(torch.stack(text_embs), dim=1).to(DEVICE)  # (M, D)
+    image_mat = F.normalize(torch.stack(image_embs), dim=1).to(DEVICE)  # (N, D)
+    return text_mat, image_mat, caption_to_image, image_ids
 
 
-def recall_image_to_text(image_emb, text_emb, true_caption_ids, caption_ids, k):
-    """
-    Image -> Text recall@k
-    image_emb: (N, D)
-    text_emb:  (M, D)
-    true_caption_ids: len N
-    caption_ids: len M
-    """
-    sims = image_emb @ text_emb.T  # (N, M)
-    cid_to_index = {cid: i for i, cid in enumerate(caption_ids)}
-    # map ground truth caption ids to text matrix indices
-    gt_indices = torch.tensor([cid_to_index[int(c)] for c in true_caption_ids], device=sims.device)
+def recall_i2t(image_mat: torch.Tensor, text_mat: torch.Tensor, caption_to_image: List[int], image_ids: List[int], ks=(1, 5, 10)):
+    # image -> text: for each image, check if any of the top-k retrieved captions correspond to that image
+    sims = image_mat @ text_mat.T  # (N_images, M_captions)
+    # Build caption index -> image id mapping
+    cap2img = caption_to_image
+    results = {}
+    for k in ks:
+        topk = sims.topk(k, dim=1).indices  # (N, k)
+        hits = 0
+        N = sims.size(0)
+        for i, img_id in enumerate(image_ids):
+            retrieved_cap_idxs = topk[i].tolist()
+            # success if any retrieved caption maps to this image id
+            ok = any(cap2img[cidx] == int(img_id) for cidx in retrieved_cap_idxs)
+            if ok:
+                hits += 1
+        results[k] = hits / max(1, N)
+    return results
 
-    topk = sims.topk(k, dim=1).indices        # (N, k)
-    correct = (topk == gt_indices.unsqueeze(1)).any(dim=1).float()
-    return correct.mean().item()
 
-
-def recall_text_to_image(image_emb, text_emb, caption_ids, caption_to_image, image_ids, k):
-    """
-    Text -> Image recall@k
-    image_emb: (N, D)
-    text_emb:  (M, D)
-    caption_ids: list length M (caption ids in same order as text_emb)
-    caption_to_image: map caption id -> image id
-    image_ids: list length N (image ids in same order as image_emb)
-    """
-    sims_T = text_emb @ image_emb.T  # (M, N)
-    image_id_to_index = {int(iid): idx for idx, iid in enumerate(image_ids)}
-    # build ground truth image index per caption (M length)
-    gt_img_indices = []
-    for cid in caption_ids:
-        img_id = caption_to_image.get(int(cid))
-        if img_id is None:
-            # if no mapping, mark as -1 (miss)
-            print("Warning: no image mapping for caption id", cid)
-            gt_img_indices.append(-1)
+def recall_t2i(image_mat: torch.Tensor, text_mat: torch.Tensor, caption_to_image: List[int], image_ids: List[int], ks=(1, 5, 10)):
+    # text -> image: for each caption, check if any of top-k retrieved images corresponds to the caption's image
+    sims = text_mat @ image_mat.T  # (M_captions, N_images)
+    image_id_to_idx = {int(img_id): idx for idx, img_id in enumerate(image_ids)}
+    M = sims.size(0)
+    results = {}
+    # filter valid captions (whose ground truth image exists in image_ids)
+    gt_indices = []
+    valid_caption_mask = []
+    for cid_img in caption_to_image:
+        if int(cid_img) in image_id_to_idx:
+            gt_indices.append(image_id_to_idx[int(cid_img)])
+            valid_caption_mask.append(True)
         else:
-            # try to map to index
-            try:
-                gt_idx = image_id_to_index.get(int(img_id), -1)
-                print("Debug: mapped caption id", cid, "to image id", img_id, "index", gt_idx)
-            except Exception:
-                # try str then int
-                try:
-                    gt_idx = image_id_to_index.get(int(str(img_id)), -1)
-                    print("Debug: mapped caption id", cid, "to image id", img_id, "index", gt_idx)
-                except Exception:
-                    gt_idx = -1
-                    print("Debug: failed to map caption id", cid, "to image id", img_id)
-            gt_img_indices.append(gt_idx)
-    gt_img_indices = torch.tensor(gt_img_indices, device=sims_T.device)
-
-    topk_imgs = sims_T.topk(k, dim=1).indices  # (M, k)
-    valid_mask = gt_img_indices >= 0
-    if valid_mask.sum().item() == 0:
-        return 0.0
-    relevant_topk = topk_imgs[valid_mask]
-    relevant_gt = gt_img_indices[valid_mask].unsqueeze(1)
-    correct = (relevant_topk == relevant_gt).any(dim=1).float()
-    return correct.mean().item()
+            gt_indices.append(-1)
+            valid_caption_mask.append(False)
+    gt_indices = torch.tensor(gt_indices, device=sims.device)
+    valid_mask = torch.tensor(valid_caption_mask, dtype=torch.bool, device=sims.device)
+    valid_count = int(valid_mask.sum().item())
+    if valid_count == 0:
+        return {k: 0.0 for k in ks}
+    for k in ks:
+        topk = sims.topk(k, dim=1).indices  # (M, k)
+        # only consider valid captions
+        topk_valid = topk[valid_mask]
+        gt_valid = gt_indices[valid_mask].unsqueeze(1)  # (V,1)
+        correct = (topk_valid == gt_valid).any(dim=1).float().sum().item()
+        results[k] = correct / valid_count
+    return results
 
 
-def save_image_grid(image_paths, out_path, titles=None, max_size=(224, 224)):
-    imgs = []
-    for p in image_paths:
+def project_to_clip_space(text_mat: torch.Tensor, image_mat: torch.Tensor, model_name: str = "openai/clip-vit-base-patch32"):
+    """
+    If text/image feature dims differ or are not in the CLIP joint space, use CLIPModel's
+    text_projection and visual_projection to map them into the same projection_dim.
+    Accepts projection stored as nn.Linear modules or tensors.
+    Returns (text_mat_proj, image_mat_proj).
+    """
+    t_dim = text_mat.size(1)
+    v_dim = image_mat.size(1)
+
+    # Quick check: if dims already match, nothing to do
+    if t_dim == v_dim:
+        print("Text and Image embeddings have matching dimensions; no projection applied.")
+        return text_mat, image_mat
+
+    clip = CLIPModel.from_pretrained(model_name)
+    clip.eval()
+
+    text_proj_obj = getattr(clip, "text_projection", None)
+    visual_proj_obj = getattr(clip, "visual_projection", None)
+    if text_proj_obj is None or visual_proj_obj is None:
+        # fallback: try attributes on submodules or named_parameters
+        for n, p in clip.named_parameters():
+            if "text_projection" in n and text_proj_obj is None:
+                text_proj_obj = p
+            if "visual_projection" in n and visual_proj_obj is None:
+                visual_proj_obj = p
+
+    def _proj_to_matrix(proj_obj):
+        """
+        Convert projection object (Tensor, Parameter, nn.Linear, module with .weight) into a
+        plain Tensor of shape (in_dim, proj_dim) ready for X @ P where X has shape (N, in_dim).
+        """
+        if proj_obj is None:
+            return None
+        # Tensor / Parameter: assume shape (in_dim, proj_dim) or (proj_dim, in_dim)
+        if isinstance(proj_obj, torch.Tensor):
+            P = proj_obj
+            # prefer shape where rows correspond to input dim
+            if P.ndim == 2:
+                if P.shape[0] == t_dim or P.shape[0] == v_dim:
+                    return P
+                # if it's (proj_dim, in_dim) transpose
+                return P.T
+            return P
+        # nn.Linear or module with weight attribute
+        if hasattr(proj_obj, "weight"):
+            w = getattr(proj_obj, "weight")
+            if isinstance(w, torch.Tensor) and w.ndim == 2:
+                # nn.Linear.weight has shape (out_features, in_features) => transpose
+                return w.T
+        # last resort: try to convert to tensor
         try:
-            im = Image.open(p).convert("RGB")
-            im = im.resize(max_size)
-            imgs.append(T.ToTensor()(im))
+            P = torch.as_tensor(proj_obj)
+            if P.ndim == 2:
+                return P
         except Exception:
-            # placeholder gray image
-            imgs.append(torch.ones(3, max_size[1], max_size[0]) * 0.5)
-    grid = make_grid(imgs, nrow=len(imgs), normalize=True, scale_each=True)
-    ndarr = (grid.permute(1, 2, 0).numpy() * 255).astype('uint8')
-    Image.fromarray(ndarr).save(out_path)
+            return None
+        return None
+
+    text_proj = _proj_to_matrix(text_proj_obj)
+    visual_proj = _proj_to_matrix(visual_proj_obj)
+
+    if text_proj is None or visual_proj is None:
+        raise RuntimeError("Could not extract usable projection matrices from CLIPModel.")
+
+    # Move projection to same device as mats
+    text_proj = text_proj.to(text_mat.device)
+    visual_proj = visual_proj.to(image_mat.device)
+
+    # Validate compatibility
+    if text_proj.shape[0] != text_mat.size(1):
+        raise RuntimeError(f"text_projection input dim {text_proj.shape[0]} != text_mat dim {text_mat.size(1)}")
+    if visual_proj.shape[0] != image_mat.size(1):
+        raise RuntimeError(f"visual_projection input dim {visual_proj.shape[0]} != image_mat dim {image_mat.size(1)}")
+
+    with torch.no_grad():
+        text_p = text_mat @ text_proj
+        image_p = image_mat @ visual_proj
+
+        text_p = F.normalize(text_p, dim=1)
+        image_p = F.normalize(image_p, dim=1)
+    return text_p, image_p
 
 
-def retrieve_images_for_text_query(query, caption_ids, text_matrix, val_dataset, image_embs, image_ids, topk=5):
+def project_with_custom_model_if_needed(text_mat: torch.Tensor, image_mat: torch.Tensor, weights_path: str = MODEL_WEIGHTS):
     """
-    Find captions that contain the query (case-insensitive), average their embeddings
-    and retrieve top-k images by cosine similarity.
+    If dims mismatch, attempt to load your CLIPModel and apply its projection_head
+    to whichever modality has input dim matching the model.image_encoder.output_dim.
+    Otherwise raise informative error.
     """
-    ann_id_to_caption = val_dataset.annotations.get('ann_id_to_caption', {})
-    matches = [cid for cid, txt in ann_id_to_caption.items() if query.lower() in txt.lower()]
-    if not matches:
-        print("No captions matched the query string.")
-        return []
+    if text_mat.size(1) == image_mat.size(1):
+        return text_mat, image_mat
 
-    cid_to_index = {cid: i for i, cid in enumerate(caption_ids)}
-    idxs = [cid_to_index[int(m)] for m in matches if int(m) in cid_to_index]
-    if not idxs:
-        print("No matched captions have embeddings.")
-        return []
-
-    q_emb = text_matrix[idxs].mean(dim=0, keepdim=True)  # (1, D)
-    sims = q_emb @ image_embs.T.to(DEVICE)               # (1, N)
-    topk_idx = sims.topk(topk, dim=1).indices.squeeze(0).tolist()
-    top_image_ids = [image_ids[i] for i in topk_idx]
-
-    paths = []
-    for iid in top_image_ids:
-        meta = val_dataset.annotations['images'].get(iid, {})
-        fname = meta.get('file_name')
-        if fname:
-            p = f"{val_dataset.root}/images/val2014/{fname}"
-        else:
-            p = None
-        paths.append(p)
-    return paths
-
-
-def classify_image_by_texts(image_index_in_list, class_texts, caption_ids, text_matrix, val_dataset, image_ids, image_embs):
-    """
-    Given an image index (index into image_ids/image_embs), and a list of class text tokens,
-    return similarity scores for each class and sorted classes.
-    Classes are represented by averaging embeddings of captions that contain the class text.
-    """
-    ann_id_to_caption = val_dataset.annotations.get('ann_id_to_caption', {})
-    cid_to_index = {cid: i for i, cid in enumerate(caption_ids)}
-
-    class_embs = []
-    class_names = []
-    for cls in class_texts:
-        matches = [cid for cid, txt in ann_id_to_caption.items() if cls.lower() in txt.lower()]
-        idxs = [cid_to_index[int(m)] for m in matches if int(m) in cid_to_index]
-        if not idxs:
-            # use zeros if no matches
-            emb = torch.zeros(text_matrix.size(1), device=text_matrix.device)
-        else:
-            emb = text_matrix[idxs].mean(dim=0)
-        class_embs.append(emb)
-        class_names.append(cls)
-
-    class_embs = F.normalize(torch.stack(class_embs), dim=1)  # (C, D)
-    img_emb = image_embs[image_index_in_list].to(DEVICE).unsqueeze(0)  # (1, D)
-    sims = (img_emb @ class_embs.T).squeeze(0)  # (C,)
-    scores = sims.tolist()
-    ranked = sorted(zip(class_names, scores), key=lambda x: x[1], reverse=True)
-    return ranked
+    # load model
+    model = CLIPModel()
+    if not os.path.exists(weights_path):
+        raise RuntimeError(f"Model weights not found: {weights_path}. Regenerate encodings with the model first.")
+    sd = torch.load(weights_path, map_location=DEVICE)
+    if isinstance(sd, dict) and "state_dict" in sd:
+        sd = sd["state_dict"]
+    if isinstance(sd, dict) and "model_state_dict" in sd:
+        sd = sd["model_state_dict"]
+    try:
+        model.load_state_dict(sd, strict=False)
+    except Exception:
+        new_sd = {}
+        for k, v in sd.items():
+            nk = k.replace("module.", "")
+            new_sd[nk] = v
+        model.load_state_dict(new_sd, strict=False)
+    model.eval()
+    # projection head is model.projection_head (nn.Sequential)
+    with torch.no_grad():
+        img_in_dim = model.image_encoder.output_dim
+        # if image_mat is raw image encoder features -> project them
+        if image_mat.size(1) == img_in_dim:
+            proj_image = model.projection_head(image_mat)
+            proj_image = F.normalize(proj_image, dim=1)
+            # if text already in same dim as proj_image, done
+            if proj_image.size(1) == text_mat.size(1):
+                return text_mat, proj_image
+            # if text differs, return projected image and leave caller to handle mismatch
+            return text_mat, proj_image
+        # if text_mat equals raw image encoder dims, project text (unlikely) - support anyway
+        if text_mat.size(1) == img_in_dim:
+            proj_text = model.projection_head(text_mat)
+            proj_text = F.normalize(proj_text, dim=1)
+            return proj_text, image_mat
+    # no suitable projection path found
+    raise RuntimeError(
+        "Embeddings dimension mismatch and custom model projection could not be applied. "
+        "Regenerate encodings using the model in src/core/model.py (image encodings should be projected)."
+    )
 
 
 def main():
-    print("Loading dataset...")
-    dataset = Coco2014Dataset(
-        train_encodings_path="coco2014/train_caption_encodings.pt",
-        val_encodings_path="coco2014/val_caption_encodings.pt",
-        batch_size=BATCH_SIZE,
-        n_workers=8,
-        pin=True
-    )
+    print("Loading encodings...")
+    caps = load_encodings(CAPTION_ENCODINGS)
+    imgs = load_encodings(IMAGE_ENCODINGS)
 
-    dataset.setup()
-    val_dataset = dataset.val_ds
-    val_dataset._init_self()
+    # Use dataset to verify / load annotations (optional)
+    ds = Coco2014(root=os.path.join(os.path.dirname(__file__), "..", "coco2014"), is_train=False)
+    ds._init_self()
 
-    val_loader = dataset.val_dataloader()
+    print(f"Found {len(caps)} image keys in caption encodings, {len(imgs)} image keys in image encodings.")
+    text_mat, image_mat, caption_to_image, image_ids = build_matrices(caps, imgs)
 
-    print("Loading model…")
-    model = CLIPModel(
-        projection_dim=512,
-        freeze_backbone=False
-    ).to(DEVICE)
+    # Ensure both modalities live in same space; try to use your model to project if needed
+    if text_mat.size(1) != image_mat.size(1):
+        print(f"Dim mismatch: text {text_mat.size(1)} vs image {image_mat.size(1)}. Trying custom model projection...")
+        text_mat, image_mat = project_with_custom_model_if_needed(text_mat, image_mat)
 
-    model.load_state_dict(torch.load("logs/initial_training/best_model.pth", map_location=DEVICE))
-    model.eval()
+    print("Computing recalls...")
+    ks = (1, 5, 10)
+    i2t = recall_i2t(image_mat, text_mat, caption_to_image, image_ids, ks)
+    t2i = recall_t2i(image_mat, text_mat, caption_to_image, image_ids, ks)
 
-    print("Building text embedding matrix…")
-    caption_ids, text_matrix, caption_to_image = compute_text_matrix(val_dataset)
+    for k in ks:
+        print(f"K={k} | I2T Recall@{k}: {i2t[k]*100:.2f}% | T2I Recall@{k}: {t2i[k]*100:.2f}%")
 
-    print("Embedding images…")
-    image_embs, true_caption_ids, image_ids = compute_image_embeddings(model, val_loader, val_dataset)
-    image_embs = image_embs.to(DEVICE)
-
-    print("Calculating Recall…")
-    for k in [1, 5, 10]:
-        i2t = recall_image_to_text(image_embs, text_matrix, true_caption_ids, caption_ids, k)
-        t2i = recall_text_to_image(image_embs, text_matrix, caption_ids, caption_to_image, image_ids, k)
-        print(f"K={k} | I2T Recall@{k}: {i2t*100:.2f}% | T2I Recall@{k}: {t2i*100:.2f}%")
-
-    query = "sport"
-    img_paths = retrieve_images_for_text_query(query, caption_ids, text_matrix, val_dataset, image_embs, image_ids, topk=5)
-    if img_paths:
-        out = os.path.join(OUT_DIR, f"text_query_{query}_top5.jpg")
-        save_image_grid([p for p in img_paths if p is not None], out)
-        print(f"Saved top-5 images for query '{query}' to {out}")
-
-    class_texts = ["a person", "an animal", "a landscape"]
-    ranked = classify_image_by_texts(0, class_texts, caption_ids, text_matrix, val_dataset, image_ids, image_embs)
-    print("Class scores for image 0:", ranked)
+    # Optionally print some diagnostics
+    total_captions = text_mat.size(0)
+    total_images = image_mat.size(0)
+    print(f"Total images evaluated: {total_images}; total captions: {total_captions}")
 
 
 if __name__ == "__main__":
