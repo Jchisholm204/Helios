@@ -16,15 +16,17 @@ import torch.nn.functional as F
 from typing import Dict, List, Tuple
 
 from dataset import Coco2014
-from core.model import CLIPModel  # used only for fallback projection if needed (kept for compatibility)
+# used only for fallback projection if needed (kept for compatibility)
+from core.model import CLIPModel
 
 # for on-the-fly text encoding and visualization
 from transformers import CLIPTokenizer, CLIPTextModel
 from PIL import Image
 import matplotlib.pyplot as plt
 
+MODEL = "basemodel"
 ROOT = os.path.join(os.path.dirname(__file__), "..", "coco2014")
-ROOT_PTH = os.path.join(os.path.dirname(__file__), "..", "logs", "allmod")
+ROOT_PTH = os.path.join(f"./logs", MODEL)
 CAPTION_ENCODINGS = os.path.join(ROOT, "val_caption_encodings.pt")
 IMAGE_ENCODINGS = os.path.join(ROOT_PTH, "val_image_encodings.pt")
 MODEL_WEIGHTS = os.path.join(ROOT_PTH, "final_model.pth")
@@ -56,7 +58,8 @@ def load_encodings(path: str) -> Dict[int, List[torch.Tensor]]:
         if isinstance(v, torch.Tensor):
             norm[ik] = [v.detach().cpu()]
         elif isinstance(v, (list, tuple)):
-            norm[ik] = [x.detach().cpu() if isinstance(x, torch.Tensor) else torch.as_tensor(x) for x in v]
+            norm[ik] = [x.detach().cpu() if isinstance(x, torch.Tensor)
+                        else torch.as_tensor(x) for x in v]
         else:
             norm[ik] = [torch.as_tensor(v)]
     return norm
@@ -92,8 +95,10 @@ def build_matrices(caps: Dict[int, List[torch.Tensor]], imgs: Dict[int, List[tor
     if len(image_embs) == 0:
         raise RuntimeError("No image embeddings found.")
 
-    text_mat = F.normalize(torch.stack(text_embs), dim=1).to(DEVICE)  # (M, D_text)
-    image_mat = F.normalize(torch.stack(image_embs), dim=1).to(DEVICE)  # (N, D_image)
+    text_mat = F.normalize(torch.stack(text_embs),
+                           dim=1).to(DEVICE)  # (M, D_text)
+    image_mat = F.normalize(torch.stack(image_embs),
+                            dim=1).to(DEVICE)  # (N, D_image)
     return text_mat, image_mat, caption_to_image, image_ids
 
 
@@ -142,7 +147,8 @@ def recall_t2i(image_mat: torch.Tensor, text_mat: torch.Tensor, caption_to_image
     N = image_mat.size(0)
     M = text_mat.size(0)
     max_k = max(ks)
-    image_id_to_idx = {int(img_id): idx for idx, img_id in enumerate(image_ids)}
+    image_id_to_idx = {int(img_id): idx for idx,
+                       img_id in enumerate(image_ids)}
 
     # Build ground-truth indices and valid mask
     gt_indices = []
@@ -215,7 +221,8 @@ def get_text_encoder():
     global _tokenizer, _text_model
     if _tokenizer is None or _text_model is None:
         _tokenizer = CLIPTokenizer.from_pretrained(ENCODER_MODEL_NAME)
-        _text_model = CLIPTextModel.from_pretrained(ENCODER_MODEL_NAME).to(DEVICE).eval()
+        _text_model = CLIPTextModel.from_pretrained(
+            ENCODER_MODEL_NAME).to(DEVICE).eval()
     return _tokenizer, _text_model
 
 
@@ -224,7 +231,8 @@ def encode_texts(texts: List[str]) -> torch.Tensor:
     Tokenize and encode texts -> normalized (num_texts, D) tensor on DEVICE.
     """
     tokenizer, text_model = get_text_encoder()
-    inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(DEVICE)
+    inputs = tokenizer(texts, return_tensors="pt",
+                       padding=True, truncation=True).to(DEVICE)
     with torch.no_grad():
         out = text_model(**inputs)
         emb = out.pooler_output  # (B, D)
@@ -250,7 +258,8 @@ def retrieve_and_show(query: str, image_mat: torch.Tensor, image_ids: List[int],
     """
     Encode 'query' (using CLIPTextModel) and display topk retrieved images (matplotlib).
     """
-    q_emb = encode_texts([f"a photo of {query}"])[0].to(image_mat.device)  # (D,)
+    q_emb = encode_texts([f"a photo of {query}"])[
+        0].to(image_mat.device)  # (D,)
     sims = (image_mat @ q_emb.unsqueeze(1)).squeeze(1)  # (N,)
     vals, idxs = sims.topk(topk)
     ids = [image_ids[i] for i in idxs.tolist()]
@@ -307,7 +316,8 @@ def project_with_custom_model_if_needed(text_mat: torch.Tensor, image_mat: torch
 
     model = CLIPModel()
     if not os.path.exists(weights_path):
-        raise RuntimeError(f"Model weights not found: {weights_path}. Regenerate encodings with the model first.")
+        raise RuntimeError(f"Model weights not found: {
+                           weights_path}. Regenerate encodings with the model first.")
     sd = torch.load(weights_path, map_location=DEVICE)
     if isinstance(sd, dict) and "state_dict" in sd:
         sd = sd["state_dict"]
@@ -329,7 +339,8 @@ def project_with_custom_model_if_needed(text_mat: torch.Tensor, image_mat: torch
         # projection head should be callable on tensors
         proj = getattr(model, "projection_head", None)
         if img_in_dim is None or proj is None:
-            raise RuntimeError("Custom model does not expose expected attributes (image_encoder.output_dim / projection_head).")
+            raise RuntimeError(
+                "Custom model does not expose expected attributes (image_encoder.output_dim / projection_head).")
 
         # If image_mat are raw image encoder features, project them
         if image_mat.size(1) == img_in_dim:
@@ -343,7 +354,8 @@ def project_with_custom_model_if_needed(text_mat: torch.Tensor, image_mat: torch
             proj_text = F.normalize(proj_text, dim=1)
             return proj_text, image_mat
 
-    raise RuntimeError("Embeddings dimension mismatch and custom model projection could not be applied. Regenerate encodings with your model so both modalities share the same projected dim.")
+    raise RuntimeError(
+        "Embeddings dimension mismatch and custom model projection could not be applied. Regenerate encodings with your model so both modalities share the same projected dim.")
 
 
 def main():
@@ -352,23 +364,30 @@ def main():
     imgs = load_encodings(IMAGE_ENCODINGS)
 
     # Use dataset to verify / load annotations (optional)
-    ds = Coco2014(root=os.path.join(os.path.dirname(__file__), "..", "coco2014"), is_train=False)
+    ds = Coco2014(root=os.path.join(os.path.dirname(
+        __file__), "..", "coco2014"), is_train=False)
     ds._init_self()
 
-    print(f"Found {len(caps)} image keys in caption encodings, {len(imgs)} image keys in image encodings.")
-    text_mat, image_mat, caption_to_image, image_ids = build_matrices(caps, imgs)
+    print(f"Found {len(caps)} image keys in caption encodings, {
+          len(imgs)} image keys in image encodings.")
+    text_mat, image_mat, caption_to_image, image_ids = build_matrices(
+        caps, imgs)
 
     # Align dims if mismatch using your model projection (attempt)
     if text_mat.size(1) != image_mat.size(1):
-        print(f"Dim mismatch: text {text_mat.size(1)} vs image {image_mat.size(1)}. Trying custom model projection...")
-        text_mat, image_mat = project_with_custom_model_if_needed(text_mat, image_mat)
+        print(f"Dim mismatch: text {text_mat.size(1)} vs image {
+              image_mat.size(1)}. Trying custom model projection...")
+        text_mat, image_mat = project_with_custom_model_if_needed(
+            text_mat, image_mat)
 
     print("Computing recalls and statistics...")
     do_recall = True
     if do_recall:
         ks = (1, 5, 10)
-        i2t_res, i2t_hits = recall_i2t(image_mat, text_mat, caption_to_image, image_ids, ks)
-        t2i_res, t2i_hits = recall_t2i(image_mat, text_mat, caption_to_image, image_ids, ks)
+        i2t_res, i2t_hits = recall_i2t(
+            image_mat, text_mat, caption_to_image, image_ids, ks)
+        t2i_res, t2i_hits = recall_t2i(
+            image_mat, text_mat, caption_to_image, image_ids, ks)
 
         for k in ks:
             i2t_stat = _compute_stats_from_hits(i2t_hits[k])
@@ -380,7 +399,8 @@ def main():
             print(f"      T2I Recall@{k}: {t2i_res[k]*100:.2f}% | "
                   f"min={t2i_stat['min']:.2f}% max={t2i_stat['max']:.2f}% mean={t2i_stat['mean']:.2f}% std={t2i_stat['std']:.2f}%")
 
-    print(f"Total images evaluated: {image_mat.size(0)}; total captions: {text_mat.size(0)}")
+    print(f"Total images evaluated: {image_mat.size(
+        0)}; total captions: {text_mat.size(0)}")
 
     # -------------------------
     # Example interactive usage
@@ -393,7 +413,8 @@ def main():
         # Example 2: classify an example image using class candidates
         example_img_id = image_ids[0]
         classes = ["a dog", "a shoe", "a basket"]
-        scores = classify_image_by_classes(example_img_id, classes, image_mat, image_ids)
+        scores = classify_image_by_classes(
+            example_img_id, classes, image_mat, image_ids)
         print(f"\nClassification for image id {example_img_id}:")
         for cls, score in scores:
             print(f"  {cls}: {score:.4f}")

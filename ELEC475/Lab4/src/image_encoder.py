@@ -13,11 +13,12 @@ from dataset import Coco2014
 from core.model import CLIPModel
 
 # --- Configuration Constants ---
-OUTPUT_DIR = './coco2014/'
+MODEL = "basemodel"
+OUTPUT_DIR = f'./logs/{MODEL}'
 OUTPUT_FILENAME = 'val_image_encodings.pt'
 COCO_ANNOTATIONS_FILE = 'coco2014/annotations/captions_val2014.json'
 COCO_IMAGES_DIR = 'coco2014/images/val2014'
-MODEL_WEIGHTS = os.path.join(os.path.dirname(__file__), "..", "logs", "augmentation", "best_model.pth")
+MODEL_WEIGHTS = os.path.join(f"./logs/{MODEL}", "best_model.pth")
 BATCH_SIZE = 64
 IMAGE_SIZE = 224
 
@@ -43,10 +44,12 @@ class ImageEncoder:
 
     def load_annotations(self) -> List[int]:
         if not os.path.exists(COCO_ANNOTATIONS_FILE):
-            raise FileNotFoundError(f"Annotations file not found: {COCO_ANNOTATIONS_FILE}")
+            raise FileNotFoundError(f"Annotations file not found: {
+                                    COCO_ANNOTATIONS_FILE}")
         with open(COCO_ANNOTATIONS_FILE, "r") as f:
             coco = json.load(f)
-        img_ids = sorted({ann["image_id"] for ann in coco.get("annotations", [])})
+        img_ids = sorted({ann["image_id"]
+                         for ann in coco.get("annotations", [])})
         return img_ids
 
     def load_encoder(self):
@@ -56,7 +59,8 @@ class ImageEncoder:
         model = CLIPModel().to(device)
         # Robust state dict loading (accept raw state_dict or dict with 'state_dict'/'model_state_dict')
         if not os.path.exists(self.weights_path):
-            raise FileNotFoundError(f"Model weights not found: {self.weights_path}")
+            raise FileNotFoundError(
+                f"Model weights not found: {self.weights_path}")
         sd = torch.load(self.weights_path, map_location=device)
         if isinstance(sd, dict) and "state_dict" in sd:
             sd = sd["state_dict"]
@@ -84,7 +88,8 @@ class ImageEncoder:
 
     def encode_images(self, image_ids: List[int]) -> Dict[int, List[torch.Tensor]]:
         if self.model is None:
-            raise RuntimeError("Encoder not loaded; call load_encoder() first.")
+            raise RuntimeError(
+                "Encoder not loaded; call load_encoder() first.")
         all_embeddings: Dict[int, List[torch.Tensor]] = {}
         start = time.time()
         imgs_batch = []
@@ -100,7 +105,8 @@ class ImageEncoder:
             if len(imgs_batch) >= BATCH_SIZE:
                 batch = torch.stack(imgs_batch).to(device)
                 with torch.no_grad():
-                    vecs = self.model(batch)  # model returns normalized projected embeddings
+                    # model returns normalized projected embeddings
+                    vecs = self.model(batch)
                     vecs = vecs.cpu()
                 for idx, img_id in enumerate(ids_batch):
                     all_embeddings[img_id] = [vecs[idx]]
@@ -122,7 +128,8 @@ class ImageEncoder:
         ds = Coco2014(root=os.path.dirname(self.COCO_ANNOTATIONS_FILE) if hasattr(self, 'COCO_ANNOTATIONS_FILE') else './coco2014',
                       image_size=(IMAGE_SIZE, IMAGE_SIZE), is_train=False)
         ds._init_self()
-        loader = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
+        loader = DataLoader(ds, batch_size=batch_size, shuffle=False,
+                            num_workers=num_workers, pin_memory=True)
         all_embeddings = {}
         self.load_encoder()
         self.model.eval()
@@ -145,7 +152,8 @@ if __name__ == "__main__":
         raise SystemExit(1)
 
     enc.load_encoder()
-    embeddings = enc.encode_images_with_dataloader(batch_size=BATCH_SIZE, num_workers=1)
+    embeddings = enc.encode_images_with_dataloader(
+        batch_size=BATCH_SIZE, num_workers=1)
 
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR, exist_ok=True)
