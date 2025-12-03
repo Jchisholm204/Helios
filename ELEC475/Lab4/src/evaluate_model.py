@@ -24,9 +24,10 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "coco2014")
+ROOT_PTH = os.path.join(os.path.dirname(__file__), "..", "logs", "allmod")
 CAPTION_ENCODINGS = os.path.join(ROOT, "val_caption_encodings.pt")
-IMAGE_ENCODINGS = os.path.join(ROOT, "val_image_encodings.pt")
-MODEL_WEIGHTS = os.path.join(os.path.dirname(__file__), "..", "logs", "augmentation_20251130_105023", "best_model.pth")
+IMAGE_ENCODINGS = os.path.join(ROOT_PTH, "val_image_encodings.pt")
+MODEL_WEIGHTS = os.path.join(ROOT_PTH, "final_model.pth")
 
 # encoding model name used by caption_encoder.py
 ENCODER_MODEL_NAME = "openai/clip-vit-base-patch32"
@@ -96,28 +97,54 @@ def build_matrices(caps: Dict[int, List[torch.Tensor]], imgs: Dict[int, List[tor
     return text_mat, image_mat, caption_to_image, image_ids
 
 
-def recall_i2t(image_mat: torch.Tensor, text_mat: torch.Tensor, caption_to_image: List[int], image_ids: List[int], ks=(1, 5, 10)):
-    sims = image_mat @ text_mat.T  # (N_images, M_captions)
+def recall_i2t(image_mat: torch.Tensor, text_mat: torch.Tensor, caption_to_image: List[int], image_ids: List[int], ks=(1, 5, 10), chunk_size: int = 512):
+    """
+    Image->Text Recall@k computed in image chunks to avoid allocating full (N x M) sims.
+    Returns:
+      results: dict k -> recall (float)
+      hits_per_k: dict k -> list[int] (0/1) per image (length = num_images)
+    """
+    device = image_mat.device
+    M = text_mat.size(0)
+    N = image_mat.size(0)
+    max_k = max(ks)
+    hits_count = {k: 0 for k in ks}
+    hits_per_k = {k: [0] * N for k in ks}
     cap2img = caption_to_image
-    results = {}
-    for k in ks:
-        topk = sims.topk(k, dim=1).indices  # (N, k)
-        hits = 0
-        N = sims.size(0)
-        for i, img_id in enumerate(image_ids):
-            retrieved_cap_idxs = topk[i].tolist()
-            ok = any(cap2img[cidx] == int(img_id) for cidx in retrieved_cap_idxs)
-            if ok:
-                hits += 1
-        results[k] = hits / max(1, N)
-    return results
+
+    for i0 in range(0, N, chunk_size):
+        i1 = min(N, i0 + chunk_size)
+        imgs_chunk = image_mat[i0:i1]                 # (B, D)
+        sims = imgs_chunk @ text_mat.T               # (B, M)
+        topk = sims.topk(max_k, dim=1).indices       # (B, max_k)
+        topk = topk.cpu().tolist()
+        for local_idx, retrieved in enumerate(topk):
+            img_global_idx = i0 + local_idx
+            img_id = int(image_ids[img_global_idx])
+            for k in ks:
+                ok = any(cap2img[cidx] == img_id for cidx in retrieved[:k])
+                hits_per_k[k][img_global_idx] = 1 if ok else 0
+                if ok:
+                    hits_count[k] += 1
+
+    results = {k: hits_count[k] / max(1, N) for k in ks}
+    return results, hits_per_k
 
 
-def recall_t2i(image_mat: torch.Tensor, text_mat: torch.Tensor, caption_to_image: List[int], image_ids: List[int], ks=(1, 5, 10)):
-    sims = text_mat @ image_mat.T  # (M_captions, N_images)
+def recall_t2i(image_mat: torch.Tensor, text_mat: torch.Tensor, caption_to_image: List[int], image_ids: List[int], ks=(1, 5, 10), chunk_size: int = 2048):
+    """
+    Text->Image Recall@k computed in caption chunks to avoid allocating full (M x N) sims.
+    Returns:
+      results: dict k -> recall (float)
+      hits_per_k: dict k -> list[int] (0/1) per valid caption (length = num_valid_captions)
+    """
+    device = image_mat.device
+    N = image_mat.size(0)
+    M = text_mat.size(0)
+    max_k = max(ks)
     image_id_to_idx = {int(img_id): idx for idx, img_id in enumerate(image_ids)}
-    results = {}
-    # build ground truth indices and valid mask
+
+    # Build ground-truth indices and valid mask
     gt_indices = []
     valid_mask_list = []
     for cid_img in caption_to_image:
@@ -127,18 +154,54 @@ def recall_t2i(image_mat: torch.Tensor, text_mat: torch.Tensor, caption_to_image
         else:
             gt_indices.append(-1)
             valid_mask_list.append(False)
-    gt_indices = torch.tensor(gt_indices, device=sims.device)
-    valid_mask = torch.tensor(valid_mask_list, dtype=torch.bool, device=sims.device)
+    gt_indices = torch.tensor(gt_indices, device=device)
+    valid_mask = torch.tensor(valid_mask_list, dtype=torch.bool, device=device)
     valid_count = int(valid_mask.sum().item())
     if valid_count == 0:
-        return {k: 0.0 for k in ks}
-    for k in ks:
-        topk = sims.topk(k, dim=1).indices  # (M, k)
-        topk_valid = topk[valid_mask]
-        gt_valid = gt_indices[valid_mask].unsqueeze(1)
-        correct = (topk_valid == gt_valid).any(dim=1).float().sum().item()
-        results[k] = correct / valid_count
-    return results
+        return {k: 0.0 for k in ks}, {k: [] for k in ks}
+
+    hits_count = {k: 0 for k in ks}
+    # we'll accumulate per-valid-caption hits in lists (only valid captions)
+    hits_per_k_valid = {k: [] for k in ks}
+
+    for c0 in range(0, M, chunk_size):
+        c1 = min(M, c0 + chunk_size)
+        text_chunk = text_mat[c0:c1]                 # (B, D)
+        sims = text_chunk @ image_mat.T              # (B, N)
+        topk = sims.topk(max_k, dim=1).indices       # (B, max_k)
+
+        # only consider valid captions in this chunk
+        chunk_gt = gt_indices[c0:c1].to(topk.device)        # (B,)
+        chunk_valid = valid_mask[c0:c1].to(topk.device)     # (B,)
+        if chunk_valid.sum().item() == 0:
+            continue
+        topk_valid = topk[chunk_valid]                       # (V, max_k)
+        gt_valid = chunk_gt[chunk_valid].unsqueeze(1)        # (V,1)
+
+        # For each k compute per-caption hit
+        for k in ks:
+            correct_mask = (topk_valid[:, :k] == gt_valid).any(dim=1)  # (V,)
+            correct_list = correct_mask.cpu().int().tolist()
+            hits_per_k_valid[k].extend(correct_list)
+            hits_count[k] += int(correct_mask.sum().item())
+
+    results = {k: hits_count[k] / max(1, valid_count) for k in ks}
+    return results, hits_per_k_valid
+
+
+def _compute_stats_from_hits(hits_list: List[int]):
+    """
+    Given a list of 0/1 ints, return dict with min,max,mean,std (as floats 0..100).
+    If list is empty, return zeros.
+    """
+    if len(hits_list) == 0:
+        return {"min": 0.0, "max": 0.0, "mean": 0.0, "std": 0.0}
+    t = torch.tensor(hits_list, dtype=torch.float32)
+    mn = float(t.min().item()) * 100.0
+    mx = float(t.max().item()) * 100.0
+    mean = float(t.mean().item()) * 100.0
+    std = float(t.std(unbiased=False).item()) * 100.0
+    return {"min": mn, "max": mx, "mean": mean, "std": std}
 
 
 # ---------------------------
@@ -300,15 +363,22 @@ def main():
         print(f"Dim mismatch: text {text_mat.size(1)} vs image {image_mat.size(1)}. Trying custom model projection...")
         text_mat, image_mat = project_with_custom_model_if_needed(text_mat, image_mat)
 
-    print("Computing recalls...")
-    do_recall = False
+    print("Computing recalls and statistics...")
+    do_recall = True
     if do_recall:
         ks = (1, 5, 10)
-        i2t = recall_i2t(image_mat, text_mat, caption_to_image, image_ids, ks)
-        t2i = recall_t2i(image_mat, text_mat, caption_to_image, image_ids, ks)
+        i2t_res, i2t_hits = recall_i2t(image_mat, text_mat, caption_to_image, image_ids, ks)
+        t2i_res, t2i_hits = recall_t2i(image_mat, text_mat, caption_to_image, image_ids, ks)
 
         for k in ks:
-            print(f"K={k} | I2T Recall@{k}: {i2t[k]*100:.2f}% | T2I Recall@{k}: {t2i[k]*100:.2f}%")
+            i2t_stat = _compute_stats_from_hits(i2t_hits[k])
+            t2i_stat = _compute_stats_from_hits(t2i_hits[k])
+
+            print(f"K={k} | I2T Recall@{k}: {i2t_res[k]*100:.2f}% | "
+                  f"min={i2t_stat['min']:.2f}% max={i2t_stat['max']:.2f}% mean={i2t_stat['mean']:.2f}% std={i2t_stat['std']:.2f}%")
+
+            print(f"      T2I Recall@{k}: {t2i_res[k]*100:.2f}% | "
+                  f"min={t2i_stat['min']:.2f}% max={t2i_stat['max']:.2f}% mean={t2i_stat['mean']:.2f}% std={t2i_stat['std']:.2f}%")
 
     print(f"Total images evaluated: {image_mat.size(0)}; total captions: {text_mat.size(0)}")
 
@@ -322,7 +392,7 @@ def main():
 
         # Example 2: classify an example image using class candidates
         example_img_id = image_ids[0]
-        classes = ["a person", "an animal", "a landscape"]
+        classes = ["a dog", "a shoe", "a basket"]
         scores = classify_image_by_classes(example_img_id, classes, image_mat, image_ids)
         print(f"\nClassification for image id {example_img_id}:")
         for cls, score in scores:
