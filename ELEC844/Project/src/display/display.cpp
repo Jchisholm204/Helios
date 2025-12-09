@@ -131,6 +131,8 @@ void Display::draw_grid(int rows, int cols) {
 
 void Display::draw_path(std::vector<std::pair<float, float>> path,
                         std::vector<int> color) {
+    (void) path;
+    (void) color;
 }
 
 void Display::draw_points(std::vector<std::pair<float, float>> points,
@@ -146,7 +148,7 @@ void Display::draw_points(std::vector<std::pair<float, float>> points,
         throw std::invalid_argument("Display Color Invalid Size\n");
     }
 
-    for (int i = 0; i < points.size(); i++) {
+    for (size_t i = 0; i < points.size(); i++) {
         int x = (int) IN_PIXELS(points[i].first);
         int y = (int) IN_PIXELS(points[i].second);
         SDL_Rect r = {(x) + PX_BORDER - PIXEL_PER_GRID / 2,
@@ -164,7 +166,6 @@ void Display::draw_dims(
         return;
 
     int W = IN_PIXELS(size_x);
-    int H = IN_PIXELS(size_y);
 
     int box_w = 40; // example, use your actual box width
     int box_h = IN_PIXELS(size_y) -
@@ -189,9 +190,9 @@ void Display::draw_dims(
     SDL_SetRenderDrawColor(sdl_ren, 255, 0, 0, 255);
 
     // Draw the invalid regions
-    for (int i = 0; i < n; i++) {
+    for (size_t i = 0; i < n; i++) {
         std::vector<std::pair<float, float>>& regions = invalids[i];
-        for (int j = 0; j < regions.size(); j++) {
+        for (size_t j = 0; j < regions.size(); j++) {
             int x = s + i * (box_w + s) + PX_BORDER;
             int y = PX_BORDER * 2;
 

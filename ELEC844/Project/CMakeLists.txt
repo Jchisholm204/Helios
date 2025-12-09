@@ -30,11 +30,10 @@ set(INCLUDE_DIRECTORIES
 )
 
 set(GENERIC_COMPILE_OPTIONS
-    # -Wall
-    # -Wextra
-    # -Wpedantic
-    # -pedantic
-    # -fno-common
+    -Wall
+    -Wextra
+    -Wpedantic
+    -pedantic
     )
 
 file(GLOB_RECURSE PROJECT_SOURCES FOLLOW_SYMLINKS
@@ -73,19 +72,8 @@ target_include_directories(${EXECUTABLE} PRIVATE
 target_compile_options(${EXECUTABLE} PRIVATE
     ${CPU_PARAMETERS}
     ${GENERIC_COMPILE_OPTIONS}
-    # -Wdouble-promotion
-    # -Wformat
-    # -Wshadow
-    # -Wconversion
-    # -fstack-usage
+    # Include Debug Symbols
     -g
-    # -fmessage-length=0
-    # -ffunction-sections
-    # -fdata-sections
-    # --specs=nano.specs
-    #$<$<CONFIG:Debug>:-Os -g3>
-    #$<$<CONFIG:Release>:-Os -g0>
-
     # Maximum Optimization
      -O3
      #-O0
@@ -95,17 +83,7 @@ target_compile_options(${EXECUTABLE} PRIVATE
 target_link_libraries(${EXECUTABLE}
     -lm
     pthread
-    # -lc
-    # ssh
-    # protobuf
-    # pthread
-    # protobuf-c
-    # -lgcc
-    # -lnosys
-    # -lrdimon
     mpi
-    #lapack
-    #blas
     gfortran
     OpenMP::OpenMP_CXX
     ${SDL2_LIBRARIES}
