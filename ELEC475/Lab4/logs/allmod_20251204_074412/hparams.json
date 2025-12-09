@@ -1,12 +1,13 @@
 {
     "epochs": 80,
     "backbone_lr": 0.0005,
-    "head_lr": 0.003,
+    "head_lr": 0.005,
     "weight_decay": 0.0003,
-    "batch_size": 128,
-    "exp_name": "ShitCrap",
+    "batch_size": 150,
+    "exp_name": "allmod",
     "projection_dim": 512,
     "temperature": 0.07,
+    "temp_decay": 0.985,
     "freeze_backbone": false,
     "num_workers": 16
 }
