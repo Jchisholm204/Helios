@@ -1,0 +1,39 @@
+const dbank = "tr909"
+const lbank = "mc303"
+setCps(140/60/4)
+// setCps(60/60/4)
+// $: s("bd").struct("{1 0 0 1 0 1 0}%8").bank(dbank).scope()
+$: s("hh!8").gain(.3).sometimesBy(.1, x=> x.ply(2))
+$: s("hh!8").gain(.2)
+$: s("bd(<7 6>, 16)").bank(dbank)
+$: s("bd(<6 8>,16)").bank(lbank)
+$: s("sd").bank(dbank).beat("<6 7>, <7 6>", 16)
+$: s("<sawtooth>*8")
+  .decay(0.08)
+  .sustain(.02)
+  .gain(1.5)
+  ._scope()
+// $: note("<b4 b3 <[b5, a3]> <[b6, a2, a3]> a2 >*4")
+//   .sound("gm_electric_guitar_jazz")
+//   .sustain(0.8)
+//   .gain(0.7)
+//   .room(0.3)
+//   ._pianoroll()
+
+// $: "60 65(3,8) 67 g3*2"
+  
+// .superimpose(
+//   x=>x.slow(2).add(12),
+//   x=>x.slow(4).sub(5)
+// ).add("<0 1>/16").gain(0.81)
+// .note().s('gm_pan_flute').clip(1)
+// .release(.5).room(0.4).gain(.81)
+// .color("salmon | orange | darkseagreen")
+// .pianoroll({fold:0,autorange:0,vertical:0,cycles:12,smear:0,minMidi:40})
+
+// $: note("[55, <[77, 80] [80, 85] 88>]*8")
+//   .gain(0.2)
+//   ._punchcard()
+// $: note("<c4>").struct("0 1 1 1 0")
+// $: note("c5").struct("0 0 1 1 0")
+
