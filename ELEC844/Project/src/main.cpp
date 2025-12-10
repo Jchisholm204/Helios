@@ -12,6 +12,8 @@
 #include "main.h"
 
 #include "display/display.hpp"
+#include "statespace/statespace.h"
+#include "statespace/geometric_obstacle_generator.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -21,11 +23,25 @@ int main(int argc, char** argv) {
     (void) argv;
 
     Display d(100, 100);
+    
+    gog_t *gog = gog_init(122345);
+
+    std::vector<std::pair<float, float>> points;
+    for(uint8_t x = 0; x < 100; x++){
+        for(uint8_t y = 0; y < 100; y++){
+            state_t s = {(uint8_t)x, (uint8_t)y};
+            if(gog_check(gog, &s)){
+                points.push_back({x, y});
+            }
+        }
+    }
+
     while (!d.poll_quit()) {
         d.clear();
         d.label("ELEC 844 Project - FMT* - Jacob Chisholm");
         d.draw_grid(10, 10);
         d.draw_points({{44, 66}, {22, 33}}, {0, 0, 255});
+        d.draw_points(points, {255, 0, 0});
         d.render();
     }
     return 0;

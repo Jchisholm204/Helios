@@ -151,8 +151,8 @@ void Display::draw_points(std::vector<std::pair<float, float>> points,
     for (size_t i = 0; i < points.size(); i++) {
         int x = (int) IN_PIXELS(points[i].first);
         int y = (int) IN_PIXELS(points[i].second);
-        SDL_Rect r = {(x) + PX_BORDER - PIXEL_PER_GRID / 2,
-                      (y) + PX_BORDER - PIXEL_PER_GRID / 2, PIXEL_PER_GRID,
+        SDL_Rect r = {(x) + PX_BORDER,
+                      (y) + PX_BORDER, PIXEL_PER_GRID,
                       PIXEL_PER_GRID};
         SDL_RenderFillRect(this->sdl_ren, &r);
     }
