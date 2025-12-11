@@ -12,9 +12,11 @@
 #include "main.h"
 
 #include "display/display.hpp"
-#include "statespace/statespace.h"
 #include "statespace/geometric_obstacle_generator.h"
+#include "statespace/statespace.h"
 
+#include <chrono>
+#include <ctime>
 #include <iostream>
 #include <stdio.h>
 
@@ -23,14 +25,35 @@ int main(int argc, char** argv) {
     (void) argv;
 
     Display d(100, 100);
-    
-    gog_t *gog = gog_init(122345);
+
+    gog_t* gog = gog_init(923487);
+
+    auto start = std::chrono::steady_clock::now();
+
+    size_t n_invalid = 0;
+    size_t n_valid = 0;
+    for (size_t i = 0; i < 1000000; i++) {
+        // state_t s = {(uint8_t) rand(), (uint8_t) rand()};
+        state_t s = {0};
+        for(int d = 0; d < STATESPACE_DIMS; d++)
+            s[d] = (uint8_t)rand();
+        if (gog_check(gog, &s)) {
+            n_invalid++;
+        } else {
+            n_valid++;
+        }
+    }
+    printf("Found %ld invalid / %ld valid points in %ld ms\n", n_invalid,
+           n_valid,
+           std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::steady_clock::now() - start)
+               .count());
 
     std::vector<std::pair<float, float>> points;
-    for(uint8_t x = 0; x < 100; x++){
-        for(uint8_t y = 0; y < 100; y++){
-            state_t s = {(uint8_t)x, (uint8_t)y};
-            if(gog_check(gog, &s)){
+    for (uint8_t x = 0; x < 100; x++) {
+        for (uint8_t y = 0; y < 100; y++) {
+            state_t s = {(uint8_t) x, (uint8_t) y};
+            if (gog_check(gog, &s)) {
                 points.push_back({x, y});
             }
         }

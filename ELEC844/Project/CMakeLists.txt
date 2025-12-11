@@ -78,6 +78,7 @@ target_compile_options(${EXECUTABLE} PRIVATE
      -O3
      #-O0
      -fopenmp
+     -march=native
 )
 
 target_link_libraries(${EXECUTABLE}
