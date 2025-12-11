@@ -52,13 +52,10 @@ static inline bool gog_check(gog_t* gog, state_t* p) {
     unsigned char invalid = 0x00;
     gog->access_counter++;
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-        unsigned char dim_val = (*p)[i];
-        unsigned char mbit = gog->bmasks[i];
-        unsigned char pbit = gog->patterns[i];
-        unsigned char pattern = (dim_val >> (pbit & 0x07)) & 0xFF;
+        unsigned char dim_val = (*p)[i] ^ 0x37;
+        unsigned char pattern = (dim_val >> ((gog->patterns[i]) & 0x07)) & 0xFF;
         unsigned char dim_inval = (pattern + dim_val) & 0xFF;
-        dim_inval = (dim_inval >> (mbit & 0x07));
-        // dim_inval = (dim_inval ^ invalid) & 0x01;
+        dim_inval = (dim_inval >> ((gog->bmasks[i]) & 0x07));
         invalid += (dim_inval & 0x01);
     }
     return invalid == (STATESPACE_DIMS);
