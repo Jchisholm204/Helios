@@ -15,14 +15,13 @@
 #include "statespace.h"
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdio.h>
-
-#define GOG_N_IDENTIFIERS 2
+#include <stdlib.h>
 
 typedef struct {
-    state_t patterns[GOG_N_IDENTIFIERS];
-    state_t masks[GOG_N_IDENTIFIERS];
+    state_t bmasks;
+    state_t patterns;
+    state_t protecteds;
     size_t access_counter;
 } gog_t;
 
@@ -31,10 +30,8 @@ static inline gog_t* gog_init(size_t seed) {
     gog_t* gog = (gog_t*) malloc(sizeof(gog_t));
 
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-        gog->masks[i][0] = 0x06;
-        gog->patterns[i][0] = 0x02;
-        gog->masks[i][1] = 0x018;
-        gog->patterns[i][1] = 0x08;
+        gog->bmasks[i] = 2;
+        gog->patterns[i] = 3;
     }
 
     gog->access_counter = 0;
@@ -52,20 +49,19 @@ static inline void gog_free(gog_t** gog) {
 }
 
 static inline bool gog_check(gog_t* gog, state_t* p) {
-    unsigned char valid = 0xFF;
+    unsigned char invalid = 0x00;
     gog->access_counter++;
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-        int j = 0;
-        // unsigned char dim_inval = 0x00;
-        // for(size_t j = 0; j < GOG_N_IDENTIFIERS; j++){
-            unsigned char temp = (*p)[i] & gog->masks[i][j];
-            unsigned char temp2 = temp ^ gog->patterns[i][j];
-            // printf("0x%x & 0x%x ^ 0x%x\n", (*p)[i], temp, temp2);
-            valid &= temp2;
-        // }
-        // valid &= dim_inval;
+        unsigned char dim_val = (*p)[i];
+        unsigned char mbit = gog->bmasks[i];
+        unsigned char pbit = gog->patterns[i];
+        unsigned char pattern = (dim_val >> (pbit & 0x07)) & 0xFF;
+        unsigned char dim_inval = (pattern + dim_val) & 0xFF;
+        dim_inval = (dim_inval >> (mbit & 0x07));
+        // dim_inval = (dim_inval ^ invalid) & 0x01;
+        invalid += (dim_inval & 0x01);
     }
-    return valid != 0x0;
+    return invalid == (STATESPACE_DIMS);
 }
 
 #endif
