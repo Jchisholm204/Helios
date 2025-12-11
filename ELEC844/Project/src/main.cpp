@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
 
     Display d(100, 100);
 
-    gog_t* gog = gog_init(923487);
+    gog_t* gog = gog_init(93847468, 2, 3);
 
     auto start = std::chrono::steady_clock::now();
 
@@ -52,6 +52,7 @@ int main(int argc, char** argv) {
     std::vector<std::pair<float, float>> points;
     for (uint8_t x = 0; x < 100; x++) {
         for (uint8_t y = 0; y < 100; y++) {
+            // state_t s = {(uint8_t) x, (uint8_t) y, 10};
             state_t s = {(uint8_t) x, (uint8_t) y};
             if (gog_check(gog, &s)) {
                 points.push_back({x, y});

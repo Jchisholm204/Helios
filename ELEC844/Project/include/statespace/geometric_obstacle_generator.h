@@ -25,15 +25,20 @@ typedef struct {
     size_t access_counter;
 } gog_t;
 
-static inline gog_t* gog_init(size_t seed) {
+static inline gog_t* gog_init(size_t seed, uint bmask, uint pmask) {
     srand(seed);
     gog_t* gog = (gog_t*) malloc(sizeof(gog_t));
 
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {
         gog->variable[i] = rand() & 0xFF;
-        gog->bmasks[i] = (rand() % 3) + 1;
-        gog->patterns[i] = (rand() % 3) + 2;
-        printf("%ld: %d %d 0x%x\n", i, gog->bmasks[i], gog->patterns[i], gog->variable[i]);
+        // gog->variable[i] = 0;
+        gog->bmasks[i] = bmask + (1 - (rand() & 0x03));
+        gog->patterns[i] = pmask + (1 - (rand() & 0x03));
+        // gog->patterns[i] = (rand() % pmask) + 1;
+        // gog->bmasks[i] = 4;
+        // gog->patterns[i] = 2;
+        printf("%ld: %d %d 0x%x\n", i, gog->bmasks[i], gog->patterns[i],
+               gog->variable[i]);
     }
 
     gog->access_counter = 0;
@@ -55,10 +60,10 @@ static inline bool gog_check(gog_t* gog, state_t* p) {
     gog->access_counter++;
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {
         unsigned char dim_val = (*p)[i] ^ gog->variable[i];
-        unsigned char pattern = (dim_val >> ((gog->patterns[i]) & 0x07));
+        unsigned char pattern = (((*p)[i] >> (gog->patterns[i]) & 0x07));
         unsigned char dim_inval = (pattern + dim_val);
         dim_inval = (dim_inval >> ((gog->bmasks[i]) & 0x07));
-        invalid += (dim_inval & 0x01);
+        invalid += ((dim_inval) & 0x01);
     }
     return invalid == (STATESPACE_DIMS);
 }
