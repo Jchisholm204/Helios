@@ -18,8 +18,8 @@ PenaltyBreakString: 1000
 PenaltyReturnTypeOnItsOwnLine: 200
 
 # Pointer & reference alignment
-PointerAlignment: Left
-ReferenceAlignment: Left
+PointerAlignment: Right
+ReferenceAlignment: Right
 
 # Namespace formatting
 NamespaceIndentation: None
