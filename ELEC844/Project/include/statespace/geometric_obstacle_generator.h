@@ -29,7 +29,7 @@ typedef struct {
  * @brief Initialize the GOG
  *
  * @param seed RNG Seed used to generate the environment
- * @param bmask Bit used to set the frequency obstacles (1 <= bmask <= 6)
+ * @param bmask Bit used to set the frequency of obstacles (1 <= bmask <= 6)
  * @param pmask Bit used to introduce variability in the pattern (1 <= pmask <= 6)
  * @return Null on failure, GOG object on success
  */
@@ -86,6 +86,19 @@ static inline bool gog_check(gog_t* gog, state_t* p) {
         invalid += ((dim_inval) & 0x01);
     }
     return invalid == (STATESPACE_DIMS);
+}
+
+/**
+ * @brief Get the number of accesses to the GOG object
+ *
+ * @param gog GOG object to check
+ * @return 0 on failure, number of accesses on success
+ */
+static inline size_t gog_get_accesses(gog_t *gog){
+    if(!gog){
+        return 0;
+    }
+    return gog->access_counter;
 }
 
 #endif

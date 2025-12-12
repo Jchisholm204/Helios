@@ -13,6 +13,8 @@
 #define _STATESPACE_H_
 
 #define STATESPACE_DIMS 2
+#define STATESPACE_MIN 0
+#define STATESPACE_MAX 100
 
 typedef unsigned char state_t[STATESPACE_DIMS];
 
