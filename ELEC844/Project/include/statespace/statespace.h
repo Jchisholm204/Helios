@@ -16,6 +16,9 @@
 #define STATESPACE_MIN 0
 #define STATESPACE_MAX 100
 
+// Offset of start and target points from the edge
+#define STATESPACE_ST_OFFSET 8
+
 typedef unsigned char state_t[STATESPACE_DIMS];
 
 #endif
