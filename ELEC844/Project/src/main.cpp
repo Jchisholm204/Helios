@@ -10,6 +10,7 @@
  */
 
 #include "main.h"
+#include "ompl/ompl.hpp"
 
 #include "display/display.hpp"
 #include "statespace/geometric_obstacle_generator.h"
@@ -24,6 +25,13 @@
 int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
+    if(_ompl_init()){
+        printf("OMPL WTF??\n");
+    }
+    else{
+        printf("OMPL OK\n");
+    }
+
     return statespace_test_gog(argc, argv);
 
     Display d(100, 100);
