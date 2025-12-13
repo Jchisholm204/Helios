@@ -11,10 +11,11 @@
 
 #ifndef _FMT_HPP_
 #define _FMT_HPP_
+#include "ompl/ompl.hpp"
 
 /**
  * @brief Initialize the FMT Planner
  */
-extern struct ompl_planner *ompl_init_fmt(void);
+extern struct ompl_planner *ompl_init_fmt(const unsigned int n_samples);
 
 #endif

@@ -13,12 +13,15 @@
 #define _OMPL_HPP_
 
 #include "util/solution_metrics.h"
+#include "statespace/statespace.h"
+#include "statespace/gog_ompl_wrapper.hpp"
 
 #include <ompl/base/ProblemDefinition.h>
 #include <ompl/base/ScopedState.h>
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
-#include <ompl/geometric/planners/rrt/RRTstar.h>
+#include <ompl/geometric/planners/fmt/FMT.h>
+#include <ompl/geometric/planners/informedtrees/BITstar.h>
 
 struct ompl_planner {
     ompl::base::StateSpacePtr space;
@@ -28,6 +31,7 @@ struct ompl_planner {
     ompl::base::PlannerPtr planner;
     ompl::base::PlannerStatus planner_status;
     ompl::base::PlannerTerminationCondition termination_condition;
+    GOGValidityChecker gog;
 };
 
 extern struct ompl_planner *_ompl_init(void);

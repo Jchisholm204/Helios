@@ -37,6 +37,14 @@ class GOGValidityChecker : public ompl::base::StateValidityChecker {
         return !gog_check(this->gog, &real_state);
     }
 
+    state_t *getStartPoint(void){
+        return gog_start(this->gog);
+    }
+
+    state_t *getTargetPoint(void){
+        return gog_target(this->gog);
+    }
+
     size_t getAccesses(void) const {
         return gog_get_accesses(this->gog);
     }
