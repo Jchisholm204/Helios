@@ -13,6 +13,7 @@
 
 #include "display/display.hpp"
 #include "ompl/fmt.hpp"
+#include "ompl/bit.hpp"
 #include "ompl/ompl.hpp"
 #include "statespace/geometric_obstacle_generator.h"
 #include "statespace/statespace.h"
@@ -29,7 +30,8 @@ int main(int argc, char **argv) {
 
     // return statespace_test_gog(argc, argv);
 
-    struct ompl_planner *fmt = ompl_init_fmt(5000);
+    // struct ompl_planner *fmt = ompl_init_fmt(5000);
+    struct ompl_planner *fmt = ompl_init_bit();
     ompl_solve(fmt);
     struct ompl_metrics *metrics = ompl_evaluate(fmt);
 

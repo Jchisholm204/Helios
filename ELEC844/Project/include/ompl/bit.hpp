@@ -11,6 +11,7 @@
 
 #ifndef _BITSTAR_HPP_
 #define _BITSTAR_HPP_
+#include "ompl/ompl.hpp"
 
 extern struct ompl_planner *ompl_init_bit(void);
 

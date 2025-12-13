@@ -79,8 +79,13 @@ int ompl_solve(struct ompl_planner *planner) {
     }
 
     ompl::base::PlannerTerminationCondition ptc =
-        ompl::base::PlannerTerminationCondition(
-            [&]() { return planner->problem_definition->hasSolution(); });
+        ompl::base::plannerOrTerminationCondition(
+            ompl::base::PlannerTerminationCondition([&]() {
+                bool solved = planner->problem_definition->hasSolution();
+                // printf("Has Solution? %d\n", solved);
+                return solved;
+            }),
+            ompl::base::timedPlannerTerminationCondition(5.0));
 
     // Log the start time
     auto start_time = std::chrono::steady_clock::now();
@@ -94,6 +99,7 @@ int ompl_solve(struct ompl_planner *planner) {
         std::chrono::duration_cast<std::chrono::milliseconds>(first_time -
                                                               start_time)
             .count();
+    printf("Found First Solution\n");
 
     // Log the number of checks to the collision checker
     planner->metrics.first.n_collision_checks = planner->gog->getAccesses();
