@@ -17,6 +17,7 @@ struct ompl_planner *_ompl_init(void) {
     if (!planner) {
         return NULL;
     }
+    memset((void *) planner, 0, sizeof(struct ompl_planner));
 
     // Set up the robot state space (match the definitions from statespace.h)
     planner->space = ompl::base::StateSpacePtr(
@@ -32,29 +33,33 @@ struct ompl_planner *_ompl_init(void) {
         new ompl::base::SpaceInformation(planner->space));
 
     // Create the GOG OMPL wrapper object
-    planner->gog = GOGValidityChecker(planner->space_information);
+    planner->gog =
+        std::make_shared<GOGValidityChecker>(planner->space_information);
 
     // Link the GOG OMPL wrapper into the space information object
-    planner->space_information->setStateValidityChecker(
-        ompl::base::StateValidityCheckerPtr(&planner->gog));
+    planner->space_information->setStateValidityChecker(planner->gog);
 
     // Call the space information setup function before setting points
     planner->space_information->setup();
 
     // Create the start and target point objects
-    planner->start = ompl::base::ScopedState(planner->space);
-    planner->target = ompl::base::ScopedState(planner->space);
+    planner->start =
+        ompl::base::ScopedStatePtr(new ompl::base::ScopedState(planner->space));
+    planner->target =
+        ompl::base::ScopedStatePtr(new ompl::base::ScopedState(planner->space));
 
     // Set the start and target points to be the points returned by the GOG
     // object
-    state_t *point_start = planner->gog.getStartPoint();
-    state_t *point_target = planner->gog.getTargetPoint();
+    state_t *point_start = planner->gog->getStartPoint();
+    state_t *point_target = planner->gog->getTargetPoint();
 
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-        planner->start->as<ompl::base::RealVectorStateSpace::StateType>()
-            ->values[i] = (float) (*point_start)[i];
-        planner->target->as<ompl::base::RealVectorStateSpace::StateType>()
-            ->values[i] = (float) (*point_target)[i];
+        (*planner->start)
+            ->as<ompl::base::RealVectorStateSpace::StateType>()
+            ->values[i] = (double) (*point_start)[i];
+        (*planner->target)
+            ->as<ompl::base::RealVectorStateSpace::StateType>()
+            ->values[i] = (double) (*point_target)[i];
     }
 
     // Create the problem definitions
@@ -62,8 +67,8 @@ struct ompl_planner *_ompl_init(void) {
         new ompl::base::ProblemDefinition(planner->space_information));
 
     // Link start/target states to the problem definition
-    planner->problem_definition->setStartAndGoalStates(planner->start,
-                                                       planner->target);
+    planner->problem_definition->setStartAndGoalStates(*planner->start,
+                                                       *planner->target);
 
     return planner;
 }
@@ -74,17 +79,88 @@ int ompl_solve(struct ompl_planner *planner) {
     }
 
     ompl::base::PlannerTerminationCondition ptc =
-        ompl::base::plannerOrTerminationCondition(
-            ompl::base::timedPlannerTerminationCondition(5.0),
-            ompl::base::PlannerTerminationCondition(
-                [&]() { return planner->problem_definition->hasSolution(); }
-                )
-            );
+        ompl::base::PlannerTerminationCondition(
+            [&]() { return planner->problem_definition->hasSolution(); });
+
+    // Log the start time
+    auto start_time = std::chrono::steady_clock::now();
+
+    // Run the planner until it has a solution
+    planner->planner->solve(ptc);
+
+    // Log the time of the first solution
+    auto first_time = std::chrono::steady_clock::now();
+    planner->metrics.first.time =
+        std::chrono::duration_cast<std::chrono::milliseconds>(first_time -
+                                                              start_time)
+            .count();
+
+    // Log the number of checks to the collision checker
+    planner->metrics.first.n_collision_checks = planner->gog->getAccesses();
+    auto *path = planner->problem_definition->getSolutionPath()
+                     ->as<ompl::geometric::PathGeometric>();
+    // Log the initial path length
+    planner->metrics.first.length = path->length();
+
+    planner->planner->solve(5.0);
+
+    // Log the time of the first solution
+    auto final_time = std::chrono::steady_clock::now();
+    planner->metrics.final.time =
+        std::chrono::duration_cast<std::chrono::milliseconds>(final_time -
+                                                              start_time)
+            .count();
+
+    // Log the number of checks to the collision checker
+    planner->metrics.final.n_collision_checks = planner->gog->getAccesses();
+    path = planner->problem_definition->getSolutionPath()
+               ->as<ompl::geometric::PathGeometric>();
+    // Log the initial path length
+    planner->metrics.final.length = path->length();
 
     return 0;
 }
 
-struct solution_metrics *ompl_evaluate(struct ompl_planner *planner) {
-    (void) planner;
-    return NULL;
+struct ompl_metrics *ompl_evaluate(struct ompl_planner *planner) {
+    if (!planner) {
+        return NULL;
+    }
+    // Recover the final path
+    auto *path = planner->problem_definition->getSolutionPath()
+                     ->as<ompl::geometric::PathGeometric>();
+
+    planner->metrics.final.path =
+        (state_t *) malloc(sizeof(state_t) * path->getStateCount());
+    if (!planner->metrics.final.path) {
+        return &planner->metrics;
+    }
+    planner->metrics.final.n_path = path->getStateCount();
+
+    std::vector<ompl::base::State *> states = path->getStates();
+
+    for (size_t i = 0; i < path->getStateCount(); i++) {
+        for (size_t d = 0; d < STATESPACE_DIMS; d++) {
+            planner->metrics.final.path[i][d] =
+                states[i]
+                    ->as<ompl::base::RealVectorStateSpace::StateType>()
+                    ->values[d];
+        }
+    }
+
+    // Find the optimal path and path quality
+
+    state_t *start_point = planner->gog->getStartPoint();
+    state_t *target_point = planner->gog->getTargetPoint();
+    double optimal_length2 = 0;
+
+    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+        optimal_length2 += ((*target_point)[i] - (*start_point)[i]) *
+                           ((*target_point)[i] - (*start_point)[i]);
+        // printf("%d - %d\n", (*target_point)[i], (*start_point)[i]);
+    }
+    planner->metrics.final.optimal_length = sqrt(optimal_length2);
+    planner->metrics.final.quality =
+        planner->metrics.final.length / planner->metrics.final.optimal_length;
+
+    return &planner->metrics;
 }

@@ -10,9 +10,10 @@
  */
 
 #include "main.h"
-#include "ompl/ompl.hpp"
 
 #include "display/display.hpp"
+#include "ompl/fmt.hpp"
+#include "ompl/ompl.hpp"
 #include "statespace/geometric_obstacle_generator.h"
 #include "statespace/statespace.h"
 #include "statespace/statespace_tests.h"
@@ -25,18 +26,27 @@
 int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
-    if(_ompl_init()){
-        printf("OMPL WTF??\n");
-    }
-    else{
-        printf("OMPL OK\n");
-    }
 
-    return statespace_test_gog(argc, argv);
+    // return statespace_test_gog(argc, argv);
+
+    struct ompl_planner *fmt = ompl_init_fmt(5000);
+    ompl_solve(fmt);
+    struct ompl_metrics *metrics = ompl_evaluate(fmt);
+
+    printf("Took %2.2f ms to find path\n", metrics->final.time);
+    printf("Path Length: %3.2f (%ld)\n", metrics->final.length,
+           metrics->final.n_path);
+    printf("Optimal Path Length: %3.2f\n", metrics->final.optimal_length);
+    printf("Path Quality: %2.3f\n", metrics->final.quality);
+
+    std::vector<std::pair<float, float>> path;
+    for (size_t i = 0; i < metrics->final.n_path; i++) {
+        path.push_back({metrics->final.path[i][0], metrics->final.path[i][1]});
+    }
 
     Display d(100, 100);
 
-    gog_t *gog = gog_init(93847468, 2, 3);
+    gog_t *gog = fmt->gog->gog;
 
     auto start = std::chrono::steady_clock::now();
 
@@ -76,6 +86,7 @@ int main(int argc, char **argv) {
         d.draw_grid(10, 10);
         d.draw_points({{44, 66}, {22, 33}}, {0, 0, 255});
         d.draw_points(points, {255, 0, 0});
+        d.draw_path(path, {0, 255, 0});
         d.render();
     }
     return 0;

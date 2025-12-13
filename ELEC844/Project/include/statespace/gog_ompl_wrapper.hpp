@@ -49,7 +49,6 @@ class GOGValidityChecker : public ompl::base::StateValidityChecker {
         return gog_get_accesses(this->gog);
     }
 
-  private:
     gog_t *gog = NULL;
 };
 

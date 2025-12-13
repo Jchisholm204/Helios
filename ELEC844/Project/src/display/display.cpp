@@ -83,13 +83,13 @@ void Display::render(void) {
 void Display::label(std::string label) {
     SDL_Color color = {0, 0, 0, 255}; // white text
 
-    SDL_Surface* surface =
+    SDL_Surface *surface =
         TTF_RenderText_Solid(this->sdl_font, label.c_str(), color);
     if (!surface) {
         throw std::runtime_error("SDL Failed to create a surface");
     }
 
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(this->sdl_ren, surface);
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(this->sdl_ren, surface);
     SDL_FreeSurface(surface);
     if (!texture) {
         fprintf(stderr, "CreateTexture Error: %s\n", SDL_GetError());
@@ -131,8 +131,14 @@ void Display::draw_grid(int rows, int cols) {
 
 void Display::draw_path(std::vector<std::pair<float, float>> path,
                         std::vector<int> color) {
-    (void) path;
-    (void) color;
+    this->draw_points(path, color);
+    for (size_t i = 0; i < path.size() - 1; i++) {
+        int x1 = (int) IN_PIXELS(path[i].first) + PX_BORDER;
+        int y1 = (int) IN_PIXELS(path[i].second) + PX_BORDER;
+        int x2 = (int) IN_PIXELS(path[i + 1].first) + PX_BORDER;
+        int y2 = (int) IN_PIXELS(path[i + 1].second) + PX_BORDER;
+        SDL_RenderDrawLine(this->sdl_ren, x1, y1, x2, y2);
+    }
 }
 
 void Display::draw_points(std::vector<std::pair<float, float>> points,
@@ -151,15 +157,14 @@ void Display::draw_points(std::vector<std::pair<float, float>> points,
     for (size_t i = 0; i < points.size(); i++) {
         int x = (int) IN_PIXELS(points[i].first);
         int y = (int) IN_PIXELS(points[i].second);
-        SDL_Rect r = {(x) + PX_BORDER,
-                      (y) + PX_BORDER, PIXEL_PER_GRID,
+        SDL_Rect r = {(x) + PX_BORDER, (y) + PX_BORDER, PIXEL_PER_GRID,
                       PIXEL_PER_GRID};
         SDL_RenderFillRect(this->sdl_ren, &r);
     }
 }
 
 void Display::draw_dims(
-    std::vector<std::vector<std::pair<float, float>>>& invalids) {
+    std::vector<std::vector<std::pair<float, float>>> &invalids) {
     // Draw the boxes to contain the spaces
     size_t n = invalids.size();
     if (n == 0)
@@ -191,7 +196,7 @@ void Display::draw_dims(
 
     // Draw the invalid regions
     for (size_t i = 0; i < n; i++) {
-        std::vector<std::pair<float, float>>& regions = invalids[i];
+        std::vector<std::pair<float, float>> &regions = invalids[i];
         for (size_t j = 0; j < regions.size(); j++) {
             int x = s + i * (box_w + s) + PX_BORDER;
             int y = PX_BORDER * 2;

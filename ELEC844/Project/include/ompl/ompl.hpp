@@ -23,21 +23,27 @@
 #include <ompl/geometric/planners/fmt/FMT.h>
 #include <ompl/geometric/planners/informedtrees/BITstar.h>
 
+struct ompl_metrics {
+    struct solution_metrics first;
+    struct solution_metrics final;
+};
+
 struct ompl_planner {
     ompl::base::StateSpacePtr space;
     ompl::base::SpaceInformationPtr space_information;
-    ompl::base::ScopedState<> start, target;
+    ompl::base::ScopedStatePtr start, target;
     ompl::base::ProblemDefinitionPtr problem_definition;
     ompl::base::PlannerPtr planner;
     ompl::base::PlannerStatus planner_status;
     ompl::base::PlannerTerminationCondition termination_condition;
-    GOGValidityChecker gog;
+    std::shared_ptr<GOGValidityChecker> gog;
+    struct ompl_metrics metrics;
 };
 
 extern struct ompl_planner *_ompl_init(void);
 
 extern int ompl_solve(struct ompl_planner *planner);
 
-extern struct solution_metrics *ompl_evaluate(struct ompl_planner *planner);
+extern struct ompl_metrics *ompl_evaluate(struct ompl_planner *planner);
 
 #endif
