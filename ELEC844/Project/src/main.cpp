@@ -12,8 +12,8 @@
 #include "main.h"
 
 #include "display/display.hpp"
-#include "ompl/fmt.hpp"
 #include "ompl/bit.hpp"
+#include "ompl/fmt.hpp"
 #include "ompl/ompl.hpp"
 #include "statespace/geometric_obstacle_generator.h"
 #include "statespace/statespace.h"
@@ -28,14 +28,17 @@ int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
 
-    ompl_evaluate();
+    ompl_evaluate(1);
+    ompl_evaluate(2);
+    ompl_evaluate(5);
+    ompl_evaluate(10);
     return 0;
 
     // return statespace_test_gog(argc, argv);
 
     // struct ompl_planner *fmt = ompl_init_fmt(5000);
     struct ompl_planner *fmt = ompl_init_bit();
-    ompl_solve(fmt);
+    ompl_solve(fmt, 1);
     struct ompl_metrics *metrics = ompl_get_path(fmt);
 
     printf("Took %2.2f ms to find path\n", metrics->final.time);

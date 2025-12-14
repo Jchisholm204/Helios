@@ -23,8 +23,6 @@
 #include <ompl/geometric/planners/fmt/FMT.h>
 #include <ompl/geometric/planners/informedtrees/BITstar.h>
 
-#define OMPL_PLAN_TIME (1.0)
-
 struct ompl_metrics {
     struct solution_metrics first;
     struct solution_metrics best;
@@ -54,7 +52,7 @@ extern struct ompl_planner *_ompl_init(void);
  * @param planner
  * @return
  */
-extern int ompl_solve(struct ompl_planner *planner);
+extern int ompl_solve(struct ompl_planner *planner, double solve_time);
 
 /**
  * @brief Get the final path returned by the planner
@@ -65,6 +63,6 @@ extern struct ompl_metrics *ompl_get_path(struct ompl_planner *planner);
 
 extern void ompl_free(struct ompl_planner **pPlanner);
 
-extern void ompl_evaluate(void);
+extern void ompl_evaluate(double solve_time);
 
 #endif

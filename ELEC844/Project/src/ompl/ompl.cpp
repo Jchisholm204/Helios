@@ -35,7 +35,7 @@ struct ompl_planner *_ompl_init(void) {
     planner->space_information = ompl::base::SpaceInformationPtr(
         new ompl::base::SpaceInformation(planner->space));
 
-    planner->space_information->setStateValidityCheckingResolution(0.001);
+    planner->space_information->setStateValidityCheckingResolution(0.00001);
 
     // double res = planner->space_information->getStateValidityCheckingResolution();
     // printf("Sampling Resolution=%f\n", res);
@@ -84,7 +84,7 @@ struct ompl_planner *_ompl_init(void) {
     return planner;
 }
 
-int ompl_solve(struct ompl_planner *planner) {
+int ompl_solve(struct ompl_planner *planner, double solve_time) {
     if (!planner) {
         return -1;
     }
@@ -151,7 +151,7 @@ int ompl_solve(struct ompl_planner *planner) {
         });
 
     // Allow the planner to run for a maxumim of n seconds
-    planner->planner->solve(OMPL_PLAN_TIME);
+    planner->planner->solve(solve_time);
 
     // Log the time of the final solution
     planner->metrics.final.time =

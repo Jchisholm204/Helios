@@ -18,11 +18,12 @@
 #define N_TESTS 100
 #define STRLN 200
 
-void ompl_evaluate(void) {
+void ompl_evaluate(double solve_time) {
     char fname[STRLN];
-    snprintf(fname, STRLN, "./tests/bit_%dD.csv", STATESPACE_DIMS);
+    int sec = (int) solve_time;
+    snprintf(fname, STRLN, "./tests/bit_%dD_%dS.csv", STATESPACE_DIMS, sec);
     FILE *fp = fopen(fname, "w");
-    if(!fp){
+    if (!fp) {
         fprintf(stderr, "Failed to open output file..\n");
         return;
     }
@@ -37,7 +38,7 @@ void ompl_evaluate(void) {
         printf("Running Test %ld..\n", test_i);
         // struct ompl_planner *planner = ompl_init_fmt(5000);
         struct ompl_planner *planner = ompl_init_bit();
-        ompl_solve(planner);
+        ompl_solve(planner, solve_time);
         // Grab all of the metrics from the run
         struct ompl_metrics *metrics = &planner->metrics;
         struct solution_metrics *m_first = &metrics->first;
