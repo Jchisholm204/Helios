@@ -22,6 +22,8 @@ extern "C"{
 #include <stdio.h>
 #include <stdlib.h>
 
+#define GOG_SEED (10989050468683613ul)
+
 typedef struct {
     state_t bmasks;
     state_t patterns;

@@ -22,7 +22,7 @@
 class GOGValidityChecker : public ompl::base::StateValidityChecker {
   public:
     GOGValidityChecker(const ompl::base::SpaceInformationPtr &si,
-                       size_t seed = 93847468, uint bmask = 2, uint pmask = 3)
+                       size_t seed = GOG_SEED, uint bmask = 1, uint pmask = 3)
         : ompl::base::StateValidityChecker(si) {
         this->gog = gog_init(seed, bmask, pmask);
     }

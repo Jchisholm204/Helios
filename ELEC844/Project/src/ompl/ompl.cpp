@@ -11,6 +11,7 @@
 
 #include "ompl/ompl.hpp"
 
+#include <float.h>
 #include <stdio.h>
 
 struct ompl_planner *_ompl_init(void) {
@@ -34,9 +35,17 @@ struct ompl_planner *_ompl_init(void) {
     planner->space_information = ompl::base::SpaceInformationPtr(
         new ompl::base::SpaceInformation(planner->space));
 
+    planner->space_information->setStateValidityCheckingResolution(0.001);
+
+    // double res = planner->space_information->getStateValidityCheckingResolution();
+    // printf("Sampling Resolution=%f\n", res);
+
     // Create the GOG OMPL wrapper object
+    // long seed = ompl::RNG::getSeed();
+    ulong seed = GOG_SEED;
     planner->gog =
-        std::make_shared<GOGValidityChecker>(planner->space_information);
+        std::make_shared<GOGValidityChecker>(planner->space_information, seed);
+    // printf("Using Seed %ld\n", seed);
 
     // Link the GOG OMPL wrapper into the space information object
     planner->space_information->setStateValidityChecker(planner->gog);
@@ -114,24 +123,26 @@ int ompl_solve(struct ompl_planner *planner) {
             // Log the first path returned
             if (planner->metrics.first.time < 0) {
                 planner->metrics.first.time =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::duration_cast<std::chrono::microseconds>(
                         std::chrono::steady_clock::now() - start_time)
-                        .count();
+                        .count() /
+                    1000.0;
                 planner->metrics.first.length = c.value();
                 planner->metrics.first.quality =
-                    planner->metrics.first.quality /
+                    planner->metrics.first.length /
                     planner->metrics.first.optimal_length;
                 planner->metrics.first.n_collision_checks =
                     planner->gog->getAccesses();
             }
             // Quality of the latest returned path
             double quality = c.value() / planner->metrics.best.optimal_length;
+            double time = std::chrono::duration_cast<std::chrono::microseconds>(
+                              std::chrono::steady_clock::now() - start_time)
+                              .count() /
+                          1000.0;
             // Save the first best path
-            if (quality < OMPL_OPTIMAL_RATIO && planner->metrics.best.time < 0) {
-                planner->metrics.best.time =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::steady_clock::now() - start_time)
-                        .count();
+            if (quality >= (((planner->metrics.first.quality - 1) / 2) + 1)) {
+                planner->metrics.best.time = time;
                 planner->metrics.best.length = c.value();
                 planner->metrics.best.quality = quality;
                 planner->metrics.best.n_collision_checks =
@@ -139,8 +150,8 @@ int ompl_solve(struct ompl_planner *planner) {
             }
         });
 
-    // Allow the planner to run for a maxumim of 5 seconds
-    planner->planner->solve(1.0);
+    // Allow the planner to run for a maxumim of n seconds
+    planner->planner->solve(OMPL_PLAN_TIME);
 
     // Log the time of the final solution
     planner->metrics.final.time =

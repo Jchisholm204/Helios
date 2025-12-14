@@ -23,7 +23,7 @@
 #include <ompl/geometric/planners/fmt/FMT.h>
 #include <ompl/geometric/planners/informedtrees/BITstar.h>
 
-#define OMPL_OPTIMAL_RATIO (1.05)
+#define OMPL_PLAN_TIME (1.0)
 
 struct ompl_metrics {
     struct solution_metrics first;
