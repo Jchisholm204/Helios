@@ -77,57 +77,85 @@ int ompl_solve(struct ompl_planner *planner) {
     if (!planner) {
         return -1;
     }
+    // Find the optimal path and path quality
+    state_t *start_point = planner->gog->getStartPoint();
+    state_t *target_point = planner->gog->getTargetPoint();
+    double optimal_length2 = 0;
 
-    ompl::base::PlannerTerminationCondition ptc =
-        ompl::base::plannerOrTerminationCondition(
-            ompl::base::PlannerTerminationCondition([&]() {
-                bool solved = planner->problem_definition->hasSolution();
-                // printf("Has Solution? %d\n", solved);
-                return solved;
-            }),
-            ompl::base::timedPlannerTerminationCondition(5.0));
+    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+        optimal_length2 += ((*target_point)[i] - (*start_point)[i]) *
+                           ((*target_point)[i] - (*start_point)[i]);
+    }
+    planner->metrics.first.optimal_length = sqrt(optimal_length2);
+    planner->metrics.best.optimal_length = sqrt(optimal_length2);
+    planner->metrics.final.optimal_length = sqrt(optimal_length2);
+
+    // Setup the metrics data
+    planner->metrics.first.time = -1;
+    planner->metrics.first.quality = 100;
+    planner->metrics.final.time = -1;
+    planner->metrics.final.quality = 100;
 
     // Log the start time
     auto start_time = std::chrono::steady_clock::now();
 
-    // Run the planner until it has a solution
-    planner->planner->solve(ptc);
+    // Set the path solution callback (called whenever the planner finds a new
+    // path)
+    planner->problem_definition->setIntermediateSolutionCallback(
+        [&](const ompl::base::Planner *p,
+            const std::vector<const ompl::base::State *> &sp,
+            const ompl::base::Cost c) {
+            (void) p;
+            (void) sp;
+            // Log the first path returned
+            if (planner->metrics.first.time < 0) {
+                planner->metrics.first.time =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now() - start_time)
+                        .count();
+                planner->metrics.first.length = c.value();
+                planner->metrics.first.quality =
+                    planner->metrics.first.quality /
+                    planner->metrics.first.optimal_length;
+                planner->metrics.first.n_collision_checks =
+                    planner->gog->getAccesses();
+            }
+            // Quality of the latest returned path
+            double quality = c.value() / planner->metrics.best.optimal_length;
+            // Save the best path
+            if (quality < OMPL_OPTIMAL_RATIO) {
+                planner->metrics.best.time =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now() - start_time)
+                        .count();
+                planner->metrics.best.quality = quality;
+                planner->metrics.best.n_collision_checks =
+                    planner->gog->getAccesses();
+            }
+        });
 
-    // Log the time of the first solution
-    auto first_time = std::chrono::steady_clock::now();
-    planner->metrics.first.time =
-        std::chrono::duration_cast<std::chrono::milliseconds>(first_time -
-                                                              start_time)
-            .count();
-    printf("Found First Solution\n");
-
-    // Log the number of checks to the collision checker
-    planner->metrics.first.n_collision_checks = planner->gog->getAccesses();
-    auto *path = planner->problem_definition->getSolutionPath()
-                     ->as<ompl::geometric::PathGeometric>();
-    // Log the initial path length
-    planner->metrics.first.length = path->length();
-
+    // Allow the planner to run for a maxumim of 5 seconds
     planner->planner->solve(5.0);
 
-    // Log the time of the first solution
-    auto final_time = std::chrono::steady_clock::now();
+    // Log the time of the final solution
     planner->metrics.final.time =
-        std::chrono::duration_cast<std::chrono::milliseconds>(final_time -
-                                                              start_time)
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - start_time)
             .count();
 
     // Log the number of checks to the collision checker
     planner->metrics.final.n_collision_checks = planner->gog->getAccesses();
-    path = planner->problem_definition->getSolutionPath()
-               ->as<ompl::geometric::PathGeometric>();
+    auto *path = planner->problem_definition->getSolutionPath()
+                     ->as<ompl::geometric::PathGeometric>();
     // Log the initial path length
     planner->metrics.final.length = path->length();
+    planner->metrics.final.quality =
+        planner->metrics.final.length / planner->metrics.final.optimal_length;
 
     return 0;
 }
 
-struct ompl_metrics *ompl_evaluate(struct ompl_planner *planner) {
+struct ompl_metrics *ompl_get_path(struct ompl_planner *planner) {
     if (!planner) {
         return NULL;
     }
@@ -152,21 +180,6 @@ struct ompl_metrics *ompl_evaluate(struct ompl_planner *planner) {
                     ->values[d];
         }
     }
-
-    // Find the optimal path and path quality
-
-    state_t *start_point = planner->gog->getStartPoint();
-    state_t *target_point = planner->gog->getTargetPoint();
-    double optimal_length2 = 0;
-
-    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-        optimal_length2 += ((*target_point)[i] - (*start_point)[i]) *
-                           ((*target_point)[i] - (*start_point)[i]);
-        // printf("%d - %d\n", (*target_point)[i], (*start_point)[i]);
-    }
-    planner->metrics.final.optimal_length = sqrt(optimal_length2);
-    planner->metrics.final.quality =
-        planner->metrics.final.length / planner->metrics.final.optimal_length;
 
     return &planner->metrics;
 }

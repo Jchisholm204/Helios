@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     // struct ompl_planner *fmt = ompl_init_fmt(5000);
     struct ompl_planner *fmt = ompl_init_bit();
     ompl_solve(fmt);
-    struct ompl_metrics *metrics = ompl_evaluate(fmt);
+    struct ompl_metrics *metrics = ompl_get_path(fmt);
 
     printf("Took %2.2f ms to find path\n", metrics->final.time);
     printf("Path Length: %3.2f (%ld)\n", metrics->final.length,

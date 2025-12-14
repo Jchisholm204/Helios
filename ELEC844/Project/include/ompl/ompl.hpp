@@ -23,8 +23,11 @@
 #include <ompl/geometric/planners/fmt/FMT.h>
 #include <ompl/geometric/planners/informedtrees/BITstar.h>
 
+#define OMPL_OPTIMAL_RATIO (1.05)
+
 struct ompl_metrics {
     struct solution_metrics first;
+    struct solution_metrics best;
     struct solution_metrics final;
 };
 
@@ -42,8 +45,19 @@ struct ompl_planner {
 
 extern struct ompl_planner *_ompl_init(void);
 
+/**
+ * @brief Run the planner and gather the results
+ *
+ * @param planner 
+ * @return 
+ */
 extern int ompl_solve(struct ompl_planner *planner);
 
-extern struct ompl_metrics *ompl_evaluate(struct ompl_planner *planner);
+/**
+ * @brief Get the final path returned by the planner
+ *
+ * @param planner 
+ */
+extern struct ompl_metrics *ompl_get_path(struct ompl_planner *planner);
 
 #endif
