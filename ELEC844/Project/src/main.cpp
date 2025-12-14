@@ -28,11 +28,11 @@ int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
 
-    ompl_evaluate(1);
-    ompl_evaluate(2);
-    ompl_evaluate(5);
-    ompl_evaluate(10);
-    return 0;
+    // ompl_evaluate(1);
+    // ompl_evaluate(2);
+    // ompl_evaluate(5);
+    // ompl_evaluate(10);
+    // return 0;
 
     // return statespace_test_gog(argc, argv);
 

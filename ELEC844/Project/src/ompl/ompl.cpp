@@ -35,20 +35,22 @@ struct ompl_planner *_ompl_init(void) {
     planner->space_information = ompl::base::SpaceInformationPtr(
         new ompl::base::SpaceInformation(planner->space));
 
-    planner->space_information->setStateValidityCheckingResolution(0.00001);
-
-    // double res = planner->space_information->getStateValidityCheckingResolution();
-    // printf("Sampling Resolution=%f\n", res);
+    // planner->space_information->setStateValidityCheckingResolution(0.00001);
 
     // Create the GOG OMPL wrapper object
-    // long seed = ompl::RNG::getSeed();
     ulong seed = GOG_SEED;
+    // ulong seed = 1234;
     planner->gog =
         std::make_shared<GOGValidityChecker>(planner->space_information, seed);
-    // printf("Using Seed %ld\n", seed);
 
     // Link the GOG OMPL wrapper into the space information object
     planner->space_information->setStateValidityChecker(planner->gog);
+
+    // Link the gog motion validator into the space information object
+    planner->motion_validator =
+        std::make_shared<GOGMotionValidator>(planner->space_information,
+                                             planner->gog);
+    planner->space_information->setMotionValidator(planner->motion_validator);
 
     // Call the space information setup function before setting points
     planner->space_information->setup();

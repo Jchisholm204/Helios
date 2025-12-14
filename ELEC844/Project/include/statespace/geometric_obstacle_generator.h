@@ -77,7 +77,7 @@ static inline void gog_free(gog_t **gog) {
  *
  * @param gog The GOG object pointer
  * @param p point to check
- * @return 1 if invalid, 0 otherwise (including failure)
+ * @returns 1 if invalid, 0 otherwise (including failure)
  */
 static inline bool gog_check(gog_t *gog, state_t *p) {
     if (!gog || !p) {

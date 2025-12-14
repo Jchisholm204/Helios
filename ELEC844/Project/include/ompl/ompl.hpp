@@ -15,6 +15,7 @@
 #include "statespace/gog_ompl_wrapper.hpp"
 #include "statespace/statespace.h"
 #include "util/solution_metrics.h"
+#include "gog_motion_validator.hpp"
 
 #include <ompl/base/ProblemDefinition.h>
 #include <ompl/base/ScopedState.h>
@@ -38,6 +39,7 @@ struct ompl_planner {
     ompl::base::PlannerStatus planner_status;
     ompl::base::PlannerTerminationCondition termination_condition;
     std::shared_ptr<GOGValidityChecker> gog;
+    std::shared_ptr<GOGMotionValidator> motion_validator;
     struct ompl_metrics metrics;
 };
 
