@@ -11,6 +11,8 @@
 
 #include "ompl/ompl.hpp"
 
+#include <stdio.h>
+
 struct ompl_planner *_ompl_init(void) {
     struct ompl_planner *planner =
         (struct ompl_planner *) malloc(sizeof(struct ompl_planner));
@@ -93,6 +95,8 @@ int ompl_solve(struct ompl_planner *planner) {
     // Setup the metrics data
     planner->metrics.first.time = -1;
     planner->metrics.first.quality = 100;
+    planner->metrics.best.time = -1;
+    planner->metrics.best.quality = 100;
     planner->metrics.final.time = -1;
     planner->metrics.final.quality = 100;
 
@@ -122,12 +126,13 @@ int ompl_solve(struct ompl_planner *planner) {
             }
             // Quality of the latest returned path
             double quality = c.value() / planner->metrics.best.optimal_length;
-            // Save the best path
-            if (quality < OMPL_OPTIMAL_RATIO) {
+            // Save the first best path
+            if (quality < OMPL_OPTIMAL_RATIO && planner->metrics.best.time < 0) {
                 planner->metrics.best.time =
                     std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::steady_clock::now() - start_time)
                         .count();
+                planner->metrics.best.length = c.value();
                 planner->metrics.best.quality = quality;
                 planner->metrics.best.n_collision_checks =
                     planner->gog->getAccesses();
@@ -135,7 +140,7 @@ int ompl_solve(struct ompl_planner *planner) {
         });
 
     // Allow the planner to run for a maxumim of 5 seconds
-    planner->planner->solve(5.0);
+    planner->planner->solve(1.0);
 
     // Log the time of the final solution
     planner->metrics.final.time =
@@ -182,4 +187,29 @@ struct ompl_metrics *ompl_get_path(struct ompl_planner *planner) {
     }
 
     return &planner->metrics;
+}
+
+void ompl_free(struct ompl_planner **pPlanner) {
+    if (!pPlanner) {
+        return;
+    }
+    struct ompl_planner *planner = *pPlanner;
+    if (!planner) {
+        return;
+    }
+
+    planner->planner->clear();
+    planner->planner.reset();
+    planner->problem_definition.reset();
+    planner->start.reset();
+    planner->target.reset();
+    planner->space_information.reset();
+    planner->space.reset();
+
+    if (planner->metrics.final.path) {
+        free(planner->metrics.final.path);
+    }
+
+    free(planner);
+    *pPlanner = NULL;
 }

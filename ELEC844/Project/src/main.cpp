@@ -28,6 +28,9 @@ int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
 
+    ompl_evaluate();
+    return 0;
+
     // return statespace_test_gog(argc, argv);
 
     // struct ompl_planner *fmt = ompl_init_fmt(5000);
