@@ -14,6 +14,7 @@
 
 #include "statespace/gog_ompl_wrapper.hpp"
 
+#include <float.h>
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/State.h>
 #include <ompl/base/StateValidityChecker.h>
@@ -32,46 +33,73 @@ class GOGMotionValidator : public ompl::base::MotionValidator {
                      const ompl::base::State *s2) const override {
         const auto *a = s1->as<ompl::base::RealVectorStateSpace::StateType>();
         const auto *b = s2->as<ompl::base::RealVectorStateSpace::StateType>();
-        double distance2 = 0;
-        double increments[STATESPACE_DIMS] = {0};
-        printf("Planning:\n from: ");
-        for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-            increments[i] = (b->values[i] - a->values[i]);
-            printf("%2.2f ", a->values[i]);
-            distance2 += increments[i] * increments[i];
-        }
-        double distance = sqrt(distance2);
-        if (distance == 0) {
-            return true;
-        }
-        state_t current = {0};
-        printf("\n to: ");
-        for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-            printf("%2.2f ", b->values[i]);
-            increments[i] = increments[i] / distance;
-            current[i] = a->values[i];
-        }
-        printf("Increments: ");
-        for(int i = 0; i < STATESPACE_DIMS; i++){
-            printf("%2.2f ", increments[i]);
-        }
-        printf("\nDistance=%3.2f\n", distance);
-        printf("Running %d collision checks\n", (int)distance * STATESPACE_DIMS);
 
-        bool invalid = 0;
-        for (size_t i = 0; i < (size_t) abs(ceil(distance)); i++) {
-            for (size_t d = 0; d < STATESPACE_DIMS; d++) {
-                current[d] += increments[d];
-                invalid |= gog_check(this->gog, &current);
+        state_t voxel;    // current voxel indices
+        state_t endVoxel; // target voxel indices
+        state_t step;     // step direction in each dimension
+        double
+            tMax[STATESPACE_DIMS]; // distance along ray to next voxel boundary
+        double
+            tDelta[STATESPACE_DIMS]; // distance to cross one voxel in each axis
+
+        // Initialize voxel coordinates, steps, and tMax/tDelta
+        for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+            voxel[i] = (int) std::floor(a->values[i]);
+            endVoxel[i] = (int) std::floor(b->values[i]);
+
+            if (endVoxel[i] > voxel[i])
+                step[i] = 1;
+            else if (endVoxel[i] < voxel[i])
+                step[i] = -1;
+            else
+                step[i] = 0;
+
+            if (step[i] != 0) {
+                double nextBoundary = voxel[i] + (step[i] > 0 ? 1.0 : 0.0);
+                tMax[i] = (nextBoundary - a->values[i]) /
+                          (b->values[i] - a->values[i]);
+                tDelta[i] = 1.0 / std::abs(b->values[i] - a->values[i]);
+            } else {
+                tMax[i] = std::numeric_limits<double>::infinity();
+                tDelta[i] = std::numeric_limits<double>::infinity();
             }
         }
-        printf("Final: ");
-        for(int i = 0; i < STATESPACE_DIMS; i++){
-            printf("%d ", current[i]);
-        }
-        printf("\n");
 
-        return !invalid;
+        // Traverse voxels until reaching the end voxel
+        while (true) {
+            // Check collision at current voxel
+            if (gog_check(this->gog, &voxel)) {
+                return false;
+            }
+
+            // Check if we've reached the end voxel
+            bool done = true;
+            for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+                if (voxel[i] != endVoxel[i]) {
+                    done = false;
+                    break;
+                }
+            }
+            if (done)
+                break;
+
+            // Find axis with smallest tMax -> next voxel to cross
+            size_t minAxis = 0;
+            for (size_t i = 1; i < STATESPACE_DIMS; i++) {
+                if (tMax[i] < tMax[minAxis])
+                    minAxis = i;
+            }
+
+            // Step in that axis
+            voxel[minAxis] += step[minAxis];
+            tMax[minAxis] += tDelta[minAxis];
+        }
+
+        // Final voxel check
+        if (gog_check(this->gog, &endVoxel))
+            return false;
+
+        return true;
     }
 
     bool checkMotion(const ompl::base::State *s1, const ompl::base::State *s2,

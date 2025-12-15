@@ -30,24 +30,19 @@ class GOGValidityChecker : public ompl::base::StateValidityChecker {
     bool isValid(const ompl::base::State *state) const {
         const auto *s =
             state->as<ompl::base::RealVectorStateSpace::StateType>();
-        state_t real_state;
+        state_t high, low;
         for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-            real_state[i] = (uint8_t) (s->values[i]);
+            high[i] = (uint8_t) ceil(s->values[i]);
+            low[i] = (uint8_t) floor(s->values[i]);
         }
-        return !gog_check(this->gog, &real_state);
+        return !(gog_check(this->gog, &high) || gog_check(this->gog, &low));
     }
 
-    state_t *getStartPoint(void){
-        return gog_start(this->gog);
-    }
+    state_t *getStartPoint(void) { return gog_start(this->gog); }
 
-    state_t *getTargetPoint(void){
-        return gog_target(this->gog);
-    }
+    state_t *getTargetPoint(void) { return gog_target(this->gog); }
 
-    size_t getAccesses(void) const {
-        return gog_get_accesses(this->gog);
-    }
+    size_t getAccesses(void) const { return gog_get_accesses(this->gog); }
 
     gog_t *gog = NULL;
 };

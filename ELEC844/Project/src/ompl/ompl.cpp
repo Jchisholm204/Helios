@@ -35,7 +35,7 @@ struct ompl_planner *_ompl_init(void) {
     planner->space_information = ompl::base::SpaceInformationPtr(
         new ompl::base::SpaceInformation(planner->space));
 
-    // planner->space_information->setStateValidityCheckingResolution(0.00001);
+    planner->space_information->setStateValidityCheckingResolution(0.01/pow(10, STATESPACE_DIMS/2));
 
     // Create the GOG OMPL wrapper object
     ulong seed = GOG_SEED;
@@ -43,14 +43,14 @@ struct ompl_planner *_ompl_init(void) {
     planner->gog =
         std::make_shared<GOGValidityChecker>(planner->space_information, seed);
 
-    // Link the GOG OMPL wrapper into the space information object
+    // // Link the GOG OMPL wrapper into the space information object
     planner->space_information->setStateValidityChecker(planner->gog);
 
     // Link the gog motion validator into the space information object
-    planner->motion_validator =
-        std::make_shared<GOGMotionValidator>(planner->space_information,
-                                             planner->gog);
-    planner->space_information->setMotionValidator(planner->motion_validator);
+    // planner->motion_validator =
+    //     std::make_shared<GOGMotionValidator>(planner->space_information,
+    //                                          planner->gog);
+    // planner->space_information->setMotionValidator(planner->motion_validator);
 
     // Call the space information setup function before setting points
     planner->space_information->setup();
@@ -166,9 +166,14 @@ int ompl_solve(struct ompl_planner *planner, double solve_time) {
     auto *path = planner->problem_definition->getSolutionPath()
                      ->as<ompl::geometric::PathGeometric>();
     // Log the initial path length
-    planner->metrics.final.length = path->length();
-    planner->metrics.final.quality =
-        planner->metrics.final.length / planner->metrics.final.optimal_length;
+    if (!path) {
+        planner->metrics.final.length = FLT_MAX;
+        planner->metrics.final.quality = FLT_MAX;
+    } else {
+        planner->metrics.final.length = path->length();
+        planner->metrics.final.quality = planner->metrics.final.length /
+                                         planner->metrics.final.optimal_length;
+    }
 
     return 0;
 }

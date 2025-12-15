@@ -28,17 +28,19 @@ int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
 
+    // ompl_evaluate(0.5);
     // ompl_evaluate(1);
     // ompl_evaluate(2);
     // ompl_evaluate(5);
     // ompl_evaluate(10);
-    // return 0;
+    ompl_evaluate(20);
+    return 0;
 
     // return statespace_test_gog(argc, argv);
 
     // struct ompl_planner *fmt = ompl_init_fmt(5000);
     struct ompl_planner *fmt = ompl_init_bit();
-    ompl_solve(fmt, 1);
+    ompl_solve(fmt, 10);
     struct ompl_metrics *metrics = ompl_get_path(fmt);
 
     printf("Took %2.2f ms to find path\n", metrics->final.time);
@@ -46,6 +48,7 @@ int main(int argc, char **argv) {
            metrics->final.n_path);
     printf("Optimal Path Length: %3.2f\n", metrics->final.optimal_length);
     printf("Path Quality: %2.3f\n", metrics->final.quality);
+    printf("Collision Checks = %ld\n", fmt->gog->getAccesses());
 
     std::vector<std::pair<float, float>> path;
     for (size_t i = 0; i < metrics->final.n_path; i++) {

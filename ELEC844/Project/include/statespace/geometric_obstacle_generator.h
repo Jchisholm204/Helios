@@ -13,11 +13,13 @@
 #define _GEOMETRIC_OBSTACLE_GENERATOR_H_
 
 #ifdef __cplusplus
-extern "C"{
+extern "C" {
 #endif
 
 #include "statespace.h"
 
+#include <float.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,9 +92,23 @@ static inline bool gog_check(gog_t *gog, state_t *p) {
         unsigned char pattern = (((*p)[i] >> (gog->patterns[i]) & 0x07));
         unsigned char dim_inval = (pattern + dim_val);
         dim_inval = (dim_inval >> ((gog->bmasks[i]) & 0x07));
-        invalid += ((dim_inval) & 0x01);
+        invalid += ((dim_inval) & 0x03);
     }
-    return invalid == (STATESPACE_DIMS);
+    // return invalid == (STATESPACE_DIMS);
+#if STATESPACE_DIMS == 10
+    return invalid >= (19);
+#elif STATESPACE_DIMS == 8
+    return invalid >= (16);
+#elif STATESPACE_DIMS == 6
+    return invalid >= (14);
+#elif STATESPACE_DIMS == 4
+    return invalid >= (9);
+#elif STATESPACE_DIMS == 2
+    return invalid >= (5);
+#else
+#warning "GOG: Unknown dimension count"
+    return invalid;
+#endif
 }
 
 /**
