@@ -33,10 +33,10 @@ int main(int argc, char **argv) {
     // ompl_evaluate(2);
     // ompl_evaluate(5);
     // ompl_evaluate(10);
-    // ompl_evaluate(120);
-    // return 0;
+    ompl_evaluate(20);
+    return 0;
 
-    return statespace_test_gog(argc, argv);
+    // return statespace_test_gog(argc, argv);
 
     // struct ompl_planner *fmt = ompl_init_fmt(5000);
     struct ompl_planner *fmt = ompl_init_bit();
