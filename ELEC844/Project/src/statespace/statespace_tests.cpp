@@ -27,17 +27,38 @@ int statespace_test_gog(int argc, char **argv) {
 
     Display d(STATESPACE_MAX, STATESPACE_MAX);
 
-    size_t seed = 93847468;
+    size_t seed = GOG_SEED;
     uint bmask = 2;
     uint pmask = 3;
     gog_t *gog = gog_init(seed, bmask, pmask);
 
     printf("Initialied GOG: seed=%ld bmask=%d pmask=%d\n", seed, bmask, pmask);
 
-    auto start = std::chrono::steady_clock::now();
+
+    printf("Evaluating Axis Coverage...\n");
+    
+    size_t hist[STATESPACE_DIMS][4] = {{0}};
+    size_t contributions[STATESPACE_DIMS] = {0};
+    size_t total_contribution = 0;
+    for(size_t i = 0; i < STATESPACE_DIMS; i++){
+        printf("  Evaluating Axis %ld:\n", i);
+        for(uint8_t j = STATESPACE_MIN; j < STATESPACE_MAX; j++){
+            hist[i][gog_check_axis(gog, i, j)]++;
+        }
+        for(size_t j = 0; j < 4; j++){
+            contributions[i]+= j*hist[i][j];
+            total_contribution += contributions[i];
+            printf("\t%ld: %ld (%ld)\n", j, hist[i][j], j*hist[i][j]);
+        }
+        printf("\tContribution = %ld\n", contributions[i]);
+    }
+    double total_size = pow(STATESPACE_MAX - STATESPACE_MIN, STATESPACE_DIMS);
+
+    printf("Total = %ld / %.1lf = %.2lf\n", total_contribution, total_size, total_contribution/total_size);
 
     printf("Expected Invalid Ratio = (1/2)^d = (1/2)^%d = %0.3f\n",
            STATESPACE_DIMS, pow(0.5, STATESPACE_DIMS));
+    auto start = std::chrono::steady_clock::now();
     size_t n_invalid = 0;
     size_t n_valid = 0;
     for (size_t i = 0; i < 1000000; i++) {
@@ -57,12 +78,16 @@ int statespace_test_gog(int argc, char **argv) {
                std::chrono::steady_clock::now() - start)
                .count());
 
-    printf("Plotting invalid points, z=0\n");
+    uint8_t z = 0;
+    printf("Plotting invalid points, z=%d\n", z);
     std::vector<std::pair<float, float>> points;
     for (uint8_t x = 0; x < 100; x++) {
         for (uint8_t y = 0; y < 100; y++) {
-            // state_t s = {(uint8_t) x, (uint8_t) y, 10};
+#if STATESPACE_DIMS == 3
+            state_t s = {(uint8_t) x, (uint8_t) y, z};
+#else
             state_t s = {(uint8_t) x, (uint8_t) y};
+#endif
             if (gog_check(gog, &s)) {
                 points.push_back({x, y});
             }

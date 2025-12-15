@@ -21,7 +21,7 @@
 void ompl_evaluate(double solve_time) {
     char fname[STRLN];
     int sec = (int) solve_time;
-    snprintf(fname, STRLN, "./tests/bit_%dD_%dS.csv", STATESPACE_DIMS, sec);
+    snprintf(fname, STRLN, "./tests/fmt_%dD_%dS.csv", STATESPACE_DIMS, sec);
     FILE *fp = fopen(fname, "w");
     if (!fp) {
         fprintf(stderr, "Failed to open output file..\n");
@@ -36,8 +36,9 @@ void ompl_evaluate(double solve_time) {
 
     for (size_t test_i = 0; test_i < N_TESTS; test_i++) {
         printf("Running Test %ld..\n", test_i);
-        // struct ompl_planner *planner = ompl_init_fmt(5000);
-        struct ompl_planner *planner = ompl_init_bit();
+        struct ompl_planner *planner =
+            ompl_init_fmt(2000 + 1500 * pow(STATESPACE_DIMS - 2, 2));
+        // struct ompl_planner *planner = ompl_init_bit();
         ompl_solve(planner, solve_time);
         // Grab all of the metrics from the run
         struct ompl_metrics *metrics = &planner->metrics;

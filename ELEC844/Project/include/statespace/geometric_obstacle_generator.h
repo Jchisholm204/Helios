@@ -26,6 +26,31 @@ extern "C" {
 
 #define GOG_SEED (10989050468683613ul)
 
+// GOG Usage Modes (internal usage only/NO external usage)
+#define GOG_NORMAL 0
+// Make the space empty (no obstacles)
+#define GOG_EMPTY 1
+// Make the space full (no valid points exist)
+#define GOG_FULL 2
+
+// GOG Usage Mode Selector
+#define _GOG_USAGE GOG_NORMAL
+
+#if STATESPACE_DIMS == 10
+#define GOG_THRESH (19)
+#elif STATESPACE_DIMS == 8
+#define GOG_THRESH (16);
+#elif STATESPACE_DIMS == 6
+#define GOG_THRESH (14);
+#elif STATESPACE_DIMS == 4
+#define GOG_THRESH (9);
+#elif STATESPACE_DIMS == 2
+#define GOG_THRESH (5);
+#else
+#warning "GOG: Unknown dimension count"
+return invalid;
+#endif
+
 typedef struct {
     state_t bmasks;
     state_t patterns;
@@ -75,6 +100,31 @@ static inline void gog_free(gog_t **gog) {
 }
 
 /**
+ * @brief Get the contribution of an axis to a point
+ *
+ * @param gog GOG object to use
+ * @param axis axis number [0, STATESPACE_DIMS-1]
+ * @param point [STATESPACE_MIN, STATESPACE_MAX)
+ * @return The contribution of the axis [0, 3]
+ */
+static inline unsigned char gog_check_axis(gog_t *gog, unsigned char axis,
+                                           unsigned char point) {
+    // Prevent null access
+    if (!gog) {
+        return 0;
+    }
+    // Prevent out of bounds axis
+    if(axis >= STATESPACE_DIMS){
+        return 0;
+    }
+    unsigned char dim_val = point ^ gog->variable[axis];
+    unsigned char pattern = ((point >> (gog->patterns[axis]) & 0x07));
+    unsigned char dim_inval = (pattern + dim_val);
+    dim_inval = (dim_inval >> ((gog->bmasks[axis]) & 0x07));
+    return ((dim_inval) & 0x03);
+}
+
+/**
  * @brief Check if a point is valid/invalid
  *
  * @param gog The GOG object pointer
@@ -82,32 +132,21 @@ static inline void gog_free(gog_t **gog) {
  * @returns 1 if invalid, 0 otherwise (including failure)
  */
 static inline bool gog_check(gog_t *gog, state_t *p) {
+#if _GOG_USAGE == GOG_EMPTY
+    return false;
+#elif _GOG_USAGE == GOG_FULL
+    return true;
+#else
     if (!gog || !p) {
         return false;
     }
     unsigned char invalid = 0x00;
     gog->access_counter++;
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-        unsigned char dim_val = (*p)[i] ^ gog->variable[i];
-        unsigned char pattern = (((*p)[i] >> (gog->patterns[i]) & 0x07));
-        unsigned char dim_inval = (pattern + dim_val);
-        dim_inval = (dim_inval >> ((gog->bmasks[i]) & 0x07));
-        invalid += ((dim_inval) & 0x03);
+        invalid += gog_check_axis(gog, i, (*p)[i]);
     }
     // return invalid == (STATESPACE_DIMS);
-#if STATESPACE_DIMS == 10
-    return invalid >= (19);
-#elif STATESPACE_DIMS == 8
-    return invalid >= (16);
-#elif STATESPACE_DIMS == 6
-    return invalid >= (14);
-#elif STATESPACE_DIMS == 4
-    return invalid >= (9);
-#elif STATESPACE_DIMS == 2
-    return invalid >= (5);
-#else
-#warning "GOG: Unknown dimension count"
-    return invalid;
+    return invalid >= GOG_THRESH;
 #endif
 }
 
