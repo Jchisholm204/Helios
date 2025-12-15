@@ -6,20 +6,37 @@
  * @date Created: 2025-12-09
  * @modified Last Modified: 2025-12-09
  *
+ *
+ * NOTE:
+ *  Sizes of all objects declared within this file must be known at compile
+ *  time.
+ *
  * @copyright Copyright (c) 2025
  */
 
 #ifndef _STATESPACE_H_
 #define _STATESPACE_H_
 
-#define STATESPACE_DIMS 6
+#define STATESPACE_DIMS 2
 #define STATESPACE_MIN 0
 #define STATESPACE_MAX 100
 
 // Offset of start and target points from the edge
 #define STATESPACE_ST_OFFSET 8
 
+// State object to hold a coordinate vector
 typedef unsigned char state_t[STATESPACE_DIMS];
 
-#endif
+// Weighted State object to hold a coordinate vector and a weight
+typedef struct {
+    state_t state;
+    float weight;
+} wstate_t;
 
+// wstate object with a extra parameter to hold the parent state
+typedef struct {
+    state_t state, parent;
+    float weight;
+} vstate_t;
+
+#endif

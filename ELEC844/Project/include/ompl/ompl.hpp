@@ -65,6 +65,11 @@ extern struct ompl_metrics *ompl_get_path(struct ompl_planner *planner);
 
 extern void ompl_free(struct ompl_planner **pPlanner);
 
+/**
+ * @brief Generic Function used to evaluate OMPL Planners, Call this from Main
+ *
+ * @param solve_time The maximum planner timeout
+ */
 extern void ompl_evaluate(double solve_time);
 
 #endif

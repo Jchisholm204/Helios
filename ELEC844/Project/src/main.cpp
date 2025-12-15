@@ -19,6 +19,8 @@
 #include "statespace/statespace.h"
 #include "statespace/statespace_tests.h"
 
+#include "mpi/mpi_plannerbase.h"
+
 #include <chrono>
 #include <ctime>
 #include <iostream>
@@ -27,6 +29,10 @@
 int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
+
+    mpi_planner_evaluate(argc, argv);
+
+    return 0;
 
     // ompl_evaluate(0.5);
     // ompl_evaluate(1);
