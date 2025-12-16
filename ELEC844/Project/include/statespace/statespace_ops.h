@@ -11,14 +11,18 @@
 
 #ifndef _STATESPACE_OPS_H_
 #define _STATESPACE_OPS_H_
-#include "statespace.h"
+#include "statespace/statespace.h"
 
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 static inline bool state_eq(state_t a, state_t b) {
-    (void) a;
-    (void) b;
-    return false;
+    uint8_t neq = 0x00;
+    for(size_t i = 0; i < STATESPACE_DIMS; i++){
+        neq |= a[i] ^ b[i];
+    }
+    return neq == 0x0;
 }
 
 #endif
