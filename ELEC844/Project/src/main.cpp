@@ -12,14 +12,13 @@
 #include "main.h"
 
 #include "display/display.hpp"
+#include "mpi/mpi_plannerbase.h"
 #include "ompl/bit.hpp"
 #include "ompl/fmt.hpp"
 #include "ompl/ompl.hpp"
 #include "statespace/geometric_obstacle_generator.h"
 #include "statespace/statespace.h"
 #include "statespace/statespace_tests.h"
-
-#include "mpi/mpi_plannerbase.h"
 
 #include <chrono>
 #include <ctime>
@@ -30,7 +29,40 @@ int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
 
-    mpi_planner_evaluate(argc, argv);
+    min_heap_t *h = mheap_init(100);
+    wstate_t s;
+    for (int i = 0; i < 100000; i++) {
+        s.weight = (float) (rand() % 5000);
+        mheap_push(h, &s);
+    }
+
+    float last = 0;
+    for (int i = 0; i < 100000; i++) {
+        s.weight = 0;
+        int r = mheap_pop(h, &s);
+        if (last > s.weight) {
+            printf("Heap Error\n");
+        }
+        last = s.weight;
+        printf("Heap RetVal = %2.2f (%d)\n", s.weight, r);
+    }
+
+    for (int i = 0; i < 100000; i++) {
+        s.weight = (float) (rand() % 5000);
+        mheap_push(h, &s);
+    }
+    for (int i = 0; i < 100000; i++) {
+        s.weight = 0;
+        int r = mheap_pop(h, &s);
+        if (last > s.weight) {
+            printf("Heap Error\n");
+        }
+        last = s.weight;
+        printf("Heap RetVal = %2.2f (%d)\n", s.weight, r);
+    }
+    mheap_free(&h);
+
+    // mpi_planner_evaluate(argc, argv);
 
     return 0;
 

@@ -30,4 +30,8 @@ static inline void state_cpy(state_t *dst, const state_t * src) {
     (void) memcpy(dst, src, sizeof(state_t));
 }
 
+static inline void wstate_cpy(wstate_t *dst, const wstate_t * src) {
+    (void) memcpy(dst, src, sizeof(wstate_t));
+}
+
 #endif
