@@ -21,6 +21,12 @@
 #define STATESPACE_MIN 0
 #define STATESPACE_MAX 100
 
+#define STATESPACE_MASK (0x7F)
+
+#define STATESPACE_FLAG (0x80)
+#define STATESPACE_GETFLAG(state) ((state) & STATESPACE_FLAG)
+#define STATESPACE_SETFLAG(state) ((state) |= STATESPACE_FLAG)
+
 // Offset of start and target points from the edge
 #define STATESPACE_ST_OFFSET 8
 
