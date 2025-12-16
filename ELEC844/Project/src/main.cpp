@@ -19,6 +19,7 @@
 #include "statespace/geometric_obstacle_generator.h"
 #include "statespace/statespace.h"
 #include "statespace/statespace_tests.h"
+#include "util/hashtable.h"
 
 #include <chrono>
 #include <ctime>
@@ -29,40 +30,20 @@ int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
 
-    min_heap_t *h = mheap_init(100);
-    wstate_t s;
-    for (int i = 0; i < 100000; i++) {
-        s.weight = (float) (rand() % 5000);
-        mheap_push(h, &s);
-    }
+    hashtable_t *t = hashtable_init(1 << 8);
+    vstate_t s = {{12, 2}, {88, 3}, 3};
+    hashtable_insert(t, &s, state_index(s.state));
 
-    float last = 0;
-    for (int i = 0; i < 100000; i++) {
-        s.weight = 0;
-        int r = mheap_pop(h, &s);
-        if (last > s.weight) {
-            printf("Heap Error\n");
-        }
-        last = s.weight;
-        printf("Heap RetVal = %2.2f (%d)\n", s.weight, r);
+    vstate_t *k = hashtable_find(t, &s.state, state_index(s.state));
+    if (k) {
+        printf("Got %d\n", k->parent[0]);
+    } else {
+        printf("Non\n");
     }
-
-    for (int i = 0; i < 100000; i++) {
-        s.weight = (float) (rand() % 5000);
-        mheap_push(h, &s);
-    }
-    for (int i = 0; i < 100000; i++) {
-        s.weight = 0;
-        int r = mheap_pop(h, &s);
-        if (last > s.weight) {
-            printf("Heap Error\n");
-        }
-        last = s.weight;
-        printf("Heap RetVal = %2.2f (%d)\n", s.weight, r);
-    }
-    mheap_free(&h);
+    hashtable_free(&t);
 
     // mpi_planner_evaluate(argc, argv);
+    // _min_heap_test();
 
     return 0;
 

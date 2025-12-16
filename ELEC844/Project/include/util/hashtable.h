@@ -12,35 +12,40 @@
 #ifndef _HASHTABLE_H_
 #define _HASHTABLE_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "statespace/statespace.h"
 
 #include <stddef.h>
+#include <stdint.h>
+
+#define HASHTABLE_LOGGING
 
 typedef struct {
     size_t n_elements;
     size_t n_size;
     vstate_t *data;
+#ifdef HASHTABLE_LOGGING
+    struct {
+        size_t n_insertions;
+        size_t n_lookups;
+    } metrics;
+#endif
 } hashtable_t;
 
-static inline hashtable_t *hashtable_init(size_t n_elements) {
-    (void) n_elements;
-    return NULL;
-}
+extern hashtable_t *hashtable_init(size_t n_elements);
 
-static inline void hashtable_free(hashtable_t **pTable) {
-    (void) pTable;
-}
+extern void hashtable_free(hashtable_t **pTable);
 
-static inline int hashtable_insert(hashtable_t *table, vstate_t *ws) {
-    (void) table;
-    (void) ws;
-    return -1;
-}
+extern int hashtable_insert(hashtable_t *table, const vstate_t *ws,
+                            uint64_t index);
 
-static inline float hashtable_find(hashtable_t *table, state_t *s){
-    (void) table;
-    (void) s;
-    return -1;
-}
+extern vstate_t *hashtable_find(hashtable_t *table, const state_t *s,
+                                uint64_t index);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

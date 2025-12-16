@@ -72,6 +72,8 @@ static inline min_heap_t *mheap_init(size_t n_size) {
 }
 
 static inline void mheap_free(min_heap_t **pHeap) {
+    if (!pHeap)
+        return;
     if (*pHeap) {
         min_heap_t *heap = *pHeap;
         if (heap) {
@@ -116,10 +118,9 @@ static inline void mheap_push(min_heap_t *heap, wstate_t *wstate) {
         if (heap->data[i].weight >= heap->data[p].weight) {
             break;
         }
-        wstate_t tmp;
-        wstate_cpy(&tmp, &heap->data[i]);
-        wstate_cpy(&heap->data[i], &heap->data[p]);
-        wstate_cpy(&heap->data[p], &tmp);
+        wstate_t tmp = heap->data[i];
+        heap->data[i] = heap->data[p];
+        heap->data[p] = tmp;
 #ifdef HEAP_LOGGING
         heap->metrics.n_insert_swaps++;
 #endif
@@ -158,10 +159,9 @@ static inline int mheap_pop(min_heap_t *heap, wstate_t *wstate) {
             }
         }
         if (heap->data[smallest].weight < heap->data[i].weight) {
-            wstate_t tmp;
-            wstate_cpy(&tmp, &heap->data[i]);
-            wstate_cpy(&heap->data[i], &heap->data[smallest]);
-            wstate_cpy(&heap->data[smallest], &tmp);
+            wstate_t tmp = heap->data[i];
+            heap->data[i] = heap->data[smallest];
+            heap->data[smallest] = tmp;
             i = smallest;
 #ifdef HEAP_LOGGING
             heap->metrics.n_del_swaps++;

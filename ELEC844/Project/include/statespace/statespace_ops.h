@@ -11,6 +11,11 @@
 
 #ifndef _STATESPACE_OPS_H_
 #define _STATESPACE_OPS_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "statespace/statespace.h"
 
 #include <memory.h>
@@ -18,7 +23,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static inline bool state_eq(state_t a, state_t b) {
+static inline bool state_eq(const state_t a, const state_t b) {
     uint8_t neq = 0x00;
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {
         neq |= a[i] ^ b[i];
@@ -26,12 +31,26 @@ static inline bool state_eq(state_t a, state_t b) {
     return neq == 0x0;
 }
 
-static inline void state_cpy(state_t *dst, const state_t * src) {
+static inline void state_cpy(state_t *dst, const state_t *src) {
     (void) memcpy(dst, src, sizeof(state_t));
 }
 
-static inline void wstate_cpy(wstate_t *dst, const wstate_t * src) {
+static inline void wstate_cpy(wstate_t *dst, const wstate_t *src) {
     (void) memcpy(dst, src, sizeof(wstate_t));
 }
 
+static inline uint64_t state_index(const state_t state) {
+    uint32_t hash = 0;
+    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+        hash |= (uint64_t) ((uint64_t) (state[i] & STATESPACE_MASK) << 7 * i);
+    }
+    hash = (hash ^ (hash >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    hash = (hash ^ (hash >> 27)) * 0x94d049bb133111ebULL;
+    hash = hash ^ (hash >> 31);
+    return hash;
+}
+
+#ifdef __cplusplus
+}
+#endif
 #endif
