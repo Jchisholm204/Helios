@@ -1,5 +1,5 @@
 /**
- * @file bfs.h
+ * @file bfs.c
  * @author Jacob Chisholm (https://Jchisholm204.github.io)
  * @brief
  * @version 0.1
@@ -9,11 +9,9 @@
  * @copyright Copyright (c) 2025
  */
 
-#ifndef _MPI_BFS_H_
-#define _MPI_BFS_H_
+#include "mpi/bfs.h"
 
-#include "mpi_plannerbase.h"
-
-extern float mpi_bfs_solve(struct mpi_planner *planner);
-
-#endif
+float mpi_bfs_solve(struct mpi_planner *planner) {
+    (void) planner;
+    return -1;
+}

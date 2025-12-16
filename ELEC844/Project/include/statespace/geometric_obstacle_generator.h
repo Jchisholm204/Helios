@@ -58,6 +58,33 @@ typedef struct {
     size_t access_counter;
 } gog_t;
 
+
+/**
+ * @brief Initialize the GOG (static object)
+ *
+ * @param gog GOG object to initialize
+ * @param seed RNG Seed used to generate the environment
+ * @param bmask Bit used to set the frequency of obstacles (1 <= bmask <= 6)
+ * @param pmask Bit used to introduce variability in the pattern (1 <= pmask <=
+ * 6)
+ * @return 0 on success
+ */
+static inline int gog_init_static(gog_t *gog, size_t seed, uint bmask, uint pmask) {
+    srand(seed);
+    if (!gog || bmask > 6 || bmask < 1 || pmask > 6 || pmask < 1) {
+        return -1;
+    }
+
+    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+        gog->variable[i] = rand() & 0xFF;
+        gog->bmasks[i] = bmask + (1 - (rand() & 0x03));
+        gog->patterns[i] = pmask + (1 - (rand() & 0x03));
+    }
+
+    gog->access_counter = 0;
+    return 0;
+}
+
 /**
  * @brief Initialize the GOG
  *
@@ -68,20 +95,14 @@ typedef struct {
  * @return Null on failure, GOG object on success
  */
 static inline gog_t *gog_init(size_t seed, uint bmask, uint pmask) {
-    srand(seed);
     gog_t *gog = (gog_t *) malloc(sizeof(gog_t));
-    if (!gog || bmask > 6 || bmask < 1 || pmask > 6 || pmask < 1) {
+    if(!gog){
         return NULL;
     }
-
-    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-        gog->variable[i] = rand() & 0xFF;
-        gog->bmasks[i] = bmask + (1 - (rand() & 0x03));
-        gog->patterns[i] = pmask + (1 - (rand() & 0x03));
+    if(gog_init_static(gog, seed, bmask, pmask) != 0){
+        free(gog);
+        return NULL;
     }
-
-    gog->access_counter = 0;
-
     return gog;
 }
 

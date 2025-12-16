@@ -31,14 +31,15 @@ static inline void mheap_free(min_heap_t **pHeap) {
     (void) pHeap;
 }
 
-static inline void mheap_push(min_heap_t *heap, wstate_t *ws) {
+static inline void mheap_push(min_heap_t *heap, wstate_t *wstate) {
     (void) heap;
-    (void) ws;
+    (void) wstate;
 }
 
-static inline wstate_t mheap_pop(min_heap_t *heap) {
+static inline int mheap_pop(min_heap_t *heap, wstate_t *wstate) {
     (void) heap;
-    return {{0}, 0};
+    (void) wstate;
+    return -1;
 }
 
 #endif

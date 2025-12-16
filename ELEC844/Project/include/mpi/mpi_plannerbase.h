@@ -17,35 +17,43 @@ extern "C" {
 
 #include "statespace/geometric_obstacle_generator.h"
 #include "statespace/statespace.h"
+#include "util/hashtable.h"
+#include "util/minheap.h"
 #include "util/solution_metrics.h"
 
 struct mpi_planner {
-    gog_t *gog;
+    // Global Data
+    gog_t gog;
     state_t start, target;
+    // Per process data
+    hashtable_t *table;
+    min_heap_t *heap;
+    min_heap_t *heap2;
     struct solution_metrics metrics;
 };
 
 /**
- * @brief Internal Function - Performs basic setup required for all MPI planners
+ * @brief Performs basic setup required for all MPI planners
  *
+ * Handles setting up the distributed collision checker
  */
-extern struct mpi_planner *_mpi_planner_init(void);
+extern struct mpi_planner *mpi_planner_init(void);
 
 /**
- * @brief Internal Function - Performs basic cleanup required for all MPI planners
+ * @brief Performs basic cleanup required for all MPI planners
  *
- * @param pPlanner 
+ * @param pPlanner
  */
-extern void _mpi_planner_free(struct mpi_planner **pPlanner);
+extern void mpi_planner_free(struct mpi_planner **planner);
 
 /**
- * @brief Generic Function used to evaluate the MPI based planners, Call this from main
+ * @brief Generic Function used to evaluate the MPI based planners, Call this
+ * from main
  *
- * @param argc 
- * @param argv 
+ * @param argc
+ * @param argv
  */
 extern void mpi_planner_evaluate(int argc, char **argv);
-
 
 #ifdef __cplusplus
 }

@@ -24,8 +24,9 @@
 
 #define MAXGROUPS                                                              \
     65536 // number of nodes (core processes form a group on a same node)
-#define AGGR (1024 * 32) // aggregation buffer size per dest in bytes :
-                         // internode
+#define AGGR                                                                   \
+    (1024 * 32) // aggregation buffer size per dest in bytes :
+                // internode
 #define AGGR_intra                                                             \
     (1024 * 32)       // aggregation buffer size per dest in bytes : intranode
 #define NRECV 4       // number of preposted recvs internode
@@ -51,9 +52,9 @@ static int loggroup, groupmask;
 #define GROUP_FROM_PROC(p) ((p) / group_size)
 #define LOCAL_FROM_PROC(p) ((p) % group_size)
 #endif
-volatile static int ack = 0;
+static volatile int ack = 0;
 
-volatile static int inbarrier = 0;
+static volatile int inbarrier = 0;
 
 static void (*aml_handlers[256])(int, void *,
                                  int); // pointers to user-provided AM handlers
@@ -83,7 +84,7 @@ static ushort activebuf_intra[NSEND_intra];
 static MPI_Request rqsend_intra[NSEND_intra];
 static char recvbuf_intra[AGGR_intra * NRECV_intra];
 static MPI_Request rqrecv_intra[NRECV_intra];
-volatile static int ack_intra = 0;
+static volatile int ack_intra = 0;
 extern inline void aml_send_intra(void *srcaddr, int type, int length,
                                   int local, int from);
 
@@ -116,9 +117,11 @@ static void process(int fromgroup, int length, char *message) {
         int hndl = h->hndl;
         int destlocal = LOCAL_FROM_PROC(h->routing);
         if (destlocal == mylocal)
-            aml_handlers[hndl](from, m + sizeof(struct hdr), hsz);
+            aml_handlers[hndl](from, ((unsigned char *) m) + sizeof(struct hdr),
+                               hsz);
         else
-            aml_send_intra(m + sizeof(struct hdr), hndl, hsz, destlocal, from);
+            aml_send_intra(((unsigned char *) m) + sizeof(struct hdr), hndl,
+                           hsz, destlocal, from);
         i += hsz + sizeof(struct hdr);
     }
 }
@@ -137,7 +140,7 @@ static void process_intra(int fromlocal, int length, char *message) {
         int hsz = h->sz;
         int hndl = h->hndl;
         aml_handlers[hndl](PROC_FROM_GROUPLOCAL((int) (h->routing), fromlocal),
-                           m + sizeof(struct hdri), hsz);
+                           ((unsigned char *) m) + sizeof(struct hdri), hsz);
         i += sizeof(struct hdri) + hsz;
     }
 }
@@ -245,15 +248,19 @@ inline void aml_send_intra(void *src, int type, int length, int local,
 }
 
 SOATTR void aml_send(void *src, int type, int length, int node) {
-    if (node == myproc)
-        return aml_handlers[type](myproc, src, length);
+    if (node == myproc) {
+        aml_handlers[type](myproc, src, length);
+        return;
+    }
 
     int group = GROUP_FROM_PROC(node);
     int local = LOCAL_FROM_PROC(node);
 
     // send to another node in my group
-    if (group == mygroup)
-        return aml_send_intra(src, type, length, local, myproc);
+    if (group == mygroup) {
+        aml_send_intra(src, type, length, local, myproc);
+        return;
+    }
 
     // send to another group
     int nmax = AGGR - sendsize[group] - sizeof(struct hdr);
@@ -275,7 +282,7 @@ int stringCmp(const void *a, const void *b) {
 
 // Should be called by user instead of MPI_Init()
 SOATTR int aml_init(int *argc, char ***argv) {
-    int r, i, j, tmpmax;
+    int r, i, j;
 
     r = MPI_Init(argc, argv);
     if (r != MPI_SUCCESS)
