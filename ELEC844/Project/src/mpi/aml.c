@@ -39,7 +39,7 @@
 #define SENDSOURCE_intra(node) (sendbuf_intra + (AGGR_intra * nbuf_intra[node]))
 
 #define ushort unsigned short
-static int myproc, num_procs;
+static int myproc, num_procs, lg_procs;
 static int mygroup, num_groups;
 static int mylocal, group_size;
 #ifndef PROCS_PER_NODE_NOT_POWER_OF_TWO
@@ -291,6 +291,15 @@ SOATTR int aml_init(int *argc, char ***argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &myproc);
 
+    // Figure out the lgsize
+    if ((num_procs & (num_procs - 1)) != 0) {
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+    for (lg_procs = 0; lg_procs < num_procs; ++lg_procs) {
+        if (num_procs == (1 << lg_procs))
+            break;
+    }
+
     // split communicator
     char host_name[MPI_MAX_PROCESSOR_NAME];
     char(*host_names)[MPI_MAX_PROCESSOR_NAME];
@@ -505,6 +514,9 @@ SOATTR int aml_my_pe(void) {
 }
 SOATTR int aml_n_pes(void) {
     return num_procs;
+}
+SOATTR int aml_lgn_pes(void) {
+    return lg_procs;
 }
 SOATTR int aml_node_size(void) {
     return group_size;

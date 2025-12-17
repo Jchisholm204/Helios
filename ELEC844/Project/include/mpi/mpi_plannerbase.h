@@ -24,7 +24,7 @@ extern "C" {
 struct mpi_planner {
     // Global Data
     gog_t gog;
-    state_t start, target;
+    state_t *start, *target;
     // Per process data
     hashtable_t *table;
     min_heap_t *heap;

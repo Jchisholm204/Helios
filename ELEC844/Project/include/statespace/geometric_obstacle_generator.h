@@ -58,7 +58,6 @@ typedef struct {
     size_t access_counter;
 } gog_t;
 
-
 /**
  * @brief Initialize the GOG (static object)
  *
@@ -69,7 +68,8 @@ typedef struct {
  * 6)
  * @return 0 on success
  */
-static inline int gog_init_static(gog_t *gog, size_t seed, uint bmask, uint pmask) {
+static inline int gog_init_static(gog_t *gog, size_t seed, uint bmask,
+                                  uint pmask) {
     srand(seed);
     if (!gog || bmask > 6 || bmask < 1 || pmask > 6 || pmask < 1) {
         return -1;
@@ -96,10 +96,10 @@ static inline int gog_init_static(gog_t *gog, size_t seed, uint bmask, uint pmas
  */
 static inline gog_t *gog_init(size_t seed, uint bmask, uint pmask) {
     gog_t *gog = (gog_t *) malloc(sizeof(gog_t));
-    if(!gog){
+    if (!gog) {
         return NULL;
     }
-    if(gog_init_static(gog, seed, bmask, pmask) != 0){
+    if (gog_init_static(gog, seed, bmask, pmask) != 0) {
         free(gog);
         return NULL;
     }
@@ -135,7 +135,7 @@ static inline unsigned char gog_check_axis(const gog_t *gog, unsigned char axis,
         return 0;
     }
     // Prevent out of bounds axis
-    if(axis >= STATESPACE_DIMS){
+    if (axis >= STATESPACE_DIMS) {
         return 0;
     }
     unsigned char dim_val = point ^ gog->variable[axis];
@@ -154,8 +154,12 @@ static inline unsigned char gog_check_axis(const gog_t *gog, unsigned char axis,
  */
 static inline bool gog_check(gog_t *gog, const state_t *p) {
 #if _GOG_USAGE == GOG_EMPTY
+    (void) gog;
+    (void) p;
     return false;
 #elif _GOG_USAGE == GOG_FULL
+    (void) gog;
+    (void) p;
     return true;
 #else
     if (!gog || !p) {

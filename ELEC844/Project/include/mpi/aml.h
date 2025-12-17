@@ -29,6 +29,7 @@ extern void aml_send(void *srcaddr, int type, int length, int node);
 // rank and size
 extern int aml_my_pe(void);
 extern int aml_n_pes(void);
+extern int aml_lgn_pes(void);
 extern int aml_node_size(void);
 extern int aml_node_id(void);
 
@@ -43,6 +44,8 @@ extern int aml_node_id(void);
 #define n_procs aml_n_pes()
 // ID of current process
 #define proc_id aml_my_pe()
+// Log2 of number of processes
+#define lgprocs aml_lgn_pes()
 
 // Number of running processes on the current node
 #define node_size aml_node_size()

@@ -31,8 +31,8 @@ struct mpi_planner *mpi_planner_init(void) {
 
     // Init the gog object on all processes
     gog_init_static(&planner->gog, GOG_SEED, 2, 3);
-    memcpy(planner->start, gog_start(&(planner->gog)), sizeof(state_t));
-    memcpy(planner->target, gog_target(&(planner->gog)), sizeof(state_t));
+    planner->start = gog_start(&planner->gog);
+    planner->target = gog_target(&planner->gog);
 
     // Copy the values from the gog object on rank 0 to all processes for
     // consistency
@@ -49,7 +49,7 @@ struct mpi_planner *mpi_planner_init(void) {
     planner->metrics.length = -1;
 
     // Setup the planner data structures
-    size_t default_arr_size = 0x1ULL << (int) pow(STATESPACE_DIMS - 2, 2);
+    size_t default_arr_size = 0x1ULL << (int) ((STATESPACE_DIMS + 20));
     planner->table = hashtable_init(default_arr_size);
     planner->heap = mheap_init(default_arr_size);
     planner->heap2 = mheap_init(default_arr_size);
@@ -68,6 +68,12 @@ void mpi_planner_free(struct mpi_planner **pPlanner) {
             hashtable_free(&(planner->table));
             mheap_free(&(planner->heap));
             mheap_free(&(planner->heap2));
+            if(planner->start){
+                free(planner->start);
+            }
+            if(planner->target){
+                free(planner->target);
+            }
             if (planner->metrics.path) {
                 free(planner->metrics.path);
             }
@@ -92,8 +98,8 @@ void mpi_planner_evaluate(int argc, char **argv) {
     clock_gettime(CLOCK_MONOTONIC, &t_start);
     struct mpi_planner *p = mpi_planner_init();
     clock_gettime(CLOCK_MONOTONIC, &t_end);
-    printf("MPI Planner Initialized in %2.3f ms (%d)\n", diffms(t_start, t_end),
-           proc_id);
+    printf("MPI Planner Initialized in %2.3f ms (%d/%d)\n",
+           diffms(t_start, t_end), proc_id, n_procs);
 
     MPI_Barrier(MPI_COMM_WORLD);
     clock_gettime(CLOCK_MONOTONIC, &t_start);
