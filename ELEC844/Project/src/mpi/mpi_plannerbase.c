@@ -12,8 +12,12 @@
 #include "mpi/mpi_plannerbase.h"
 
 #include "mpi/aml.h"
+#include "mpi/astar.h"
+#include "mpi/bfs.h"
 
 #include <memory.h>
+#include <stdio.h>
+#include <time.h>
 
 struct mpi_planner *mpi_planner_init(void) {
     // Allocate the planner object
@@ -45,7 +49,7 @@ struct mpi_planner *mpi_planner_init(void) {
     planner->metrics.length = -1;
 
     // Setup the planner data structures
-    size_t default_arr_size = 2000 + 1500 * pow(STATESPACE_DIMS, 2);
+    size_t default_arr_size = 0x1ULL << (int) pow(STATESPACE_DIMS - 2, 2);
     planner->table = hashtable_init(default_arr_size);
     planner->heap = mheap_init(default_arr_size);
     planner->heap2 = mheap_init(default_arr_size);
@@ -73,11 +77,40 @@ void mpi_planner_free(struct mpi_planner **pPlanner) {
     *pPlanner = NULL;
 }
 
+inline double diffms(struct timespec start, struct timespec end) {
+    double timems = end.tv_sec - start.tv_sec;
+    timems += (end.tv_nsec - start.tv_nsec) / 1e9;
+    timems *= 1000;
+    return timems;
+}
+
 void mpi_planner_evaluate(int argc, char **argv) {
     aml_init(&argc, &argv);
-    struct mpi_planner *p = mpi_planner_init();
     // printf("Hello From Process %d/%d\n", proc_id, n_procs);
-    printf("Proc %d: gog=0x%x\n", proc_id, p->gog.variable[0]);
+
+    struct timespec t_start, t_end;
+    clock_gettime(CLOCK_MONOTONIC, &t_start);
+    struct mpi_planner *p = mpi_planner_init();
+    clock_gettime(CLOCK_MONOTONIC, &t_end);
+    printf("MPI Planner Initialized in %2.3f ms (%d)\n", diffms(t_start, t_end),
+           proc_id);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    clock_gettime(CLOCK_MONOTONIC, &t_start);
+
+    float cost = mpi_bfs_solve(p);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    clock_gettime(CLOCK_MONOTONIC, &t_end);
+
+    printf("MPI Planner Finished in %3.2f ms (%d)\n", diffms(t_start, t_end),
+           proc_id);
+
+    if (proc_id == 0) {
+        printf("Path Distance = %3.3f\n", cost);
+    }
+
     mpi_planner_free(&p);
     MPI_Barrier(MPI_COMM_WORLD);
     aml_finalize();

@@ -128,7 +128,7 @@ static inline void gog_free(gog_t **gog) {
  * @param point [STATESPACE_MIN, STATESPACE_MAX)
  * @return The contribution of the axis [0, 3]
  */
-static inline unsigned char gog_check_axis(gog_t *gog, unsigned char axis,
+static inline unsigned char gog_check_axis(const gog_t *gog, unsigned char axis,
                                            unsigned char point) {
     // Prevent null access
     if (!gog) {
@@ -152,7 +152,7 @@ static inline unsigned char gog_check_axis(gog_t *gog, unsigned char axis,
  * @param p point to check
  * @returns 1 if invalid, 0 otherwise (including failure)
  */
-static inline bool gog_check(gog_t *gog, state_t *p) {
+static inline bool gog_check(gog_t *gog, const state_t *p) {
 #if _GOG_USAGE == GOG_EMPTY
     return false;
 #elif _GOG_USAGE == GOG_FULL
@@ -177,7 +177,7 @@ static inline bool gog_check(gog_t *gog, state_t *p) {
  * @param gog GOG object to check
  * @return 0 on failure, number of accesses on success
  */
-static inline size_t gog_get_accesses(gog_t *gog) {
+static inline size_t gog_get_accesses(const gog_t *gog) {
     if (!gog) {
         return 0;
     }

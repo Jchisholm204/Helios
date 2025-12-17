@@ -78,12 +78,14 @@ static inline void mheap_free(min_heap_t **pHeap) {
         min_heap_t *heap = *pHeap;
         if (heap) {
 #ifdef HEAP_LOGGING
+#if ((int) HEAP_LOGGING) == 1
             printf("Heap Metrics:\n");
             printf("\tInsertions: %ld\n", heap->metrics.n_insertions);
             printf("\tDeletions: %ld\n", heap->metrics.n_deletions);
             printf("\tIns Swaps: %ld\n", heap->metrics.n_insert_swaps);
             printf("\tDel Swaps: %ld\n", heap->metrics.n_del_swaps);
             printf("\tResizes: %ld\n", heap->metrics.n_resizes);
+#endif
 #endif
             if (heap->data) {
                 free(heap->data);

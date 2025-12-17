@@ -21,7 +21,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
-#define HASHTABLE_LOGGING
+#define HASHTABLE_LOGGING 
 
 typedef struct {
     size_t n_elements;

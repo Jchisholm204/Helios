@@ -23,6 +23,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
+
 static inline bool state_eq(const state_t a, const state_t b) {
     uint8_t neq = 0x00;
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {
@@ -40,7 +41,7 @@ static inline void wstate_cpy(wstate_t *dst, const wstate_t *src) {
 }
 
 static inline uint64_t state_index(const state_t state) {
-    uint32_t hash = 0;
+    uint64_t hash = 0;
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {
         hash |= (uint64_t) ((uint64_t) (state[i] & STATESPACE_MASK) << 7 * i);
     }

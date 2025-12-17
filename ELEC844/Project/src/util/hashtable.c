@@ -45,9 +45,11 @@ inline void hashtable_free(hashtable_t **pTable) {
         hashtable_t *table = *pTable;
         if (table) {
 #ifdef HASHTABLE_LOGGING
+#if ((int)HASHTABLE_LOGGING) == 1
             printf("HashTable Metrics:\n");
             printf("\tInsertions: %ld\n", table->metrics.n_insertions);
             printf("\tLookups: %ld\n", table->metrics.n_lookups);
+#endif
 #endif
             if (table->data)
                 free(table->data);

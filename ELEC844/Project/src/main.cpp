@@ -30,19 +30,19 @@ int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
 
-    hashtable_t *t = hashtable_init(1 << 8);
-    vstate_t s = {{12, 2}, {88, 3}, 3};
-    hashtable_insert(t, &s, state_index(s.state));
+    // hashtable_t *t = hashtable_init(1 << 8);
+    // vstate_t s = {{12, 2}, {88, 3}, 3};
+    // hashtable_insert(t, &s, state_index(s.state));
+    //
+    // vstate_t *k = hashtable_find(t, &s.state, state_index(s.state));
+    // if (k) {
+    //     printf("Got %d\n", k->parent[0]);
+    // } else {
+    //     printf("Non\n");
+    // }
+    // hashtable_free(&t);
 
-    vstate_t *k = hashtable_find(t, &s.state, state_index(s.state));
-    if (k) {
-        printf("Got %d\n", k->parent[0]);
-    } else {
-        printf("Non\n");
-    }
-    hashtable_free(&t);
-
-    // mpi_planner_evaluate(argc, argv);
+    mpi_planner_evaluate(argc, argv);
     // _min_heap_test();
 
     return 0;
