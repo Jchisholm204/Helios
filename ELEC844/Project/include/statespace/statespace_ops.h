@@ -40,6 +40,14 @@ static inline void wstate_cpy(wstate_t *dst, const wstate_t *src) {
     (void) memcpy(dst, src, sizeof(wstate_t));
 }
 
+static inline uint64_t state_pack(const state_t state){
+    uint64_t hash = 0;
+    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+        hash |= (uint64_t) ((uint64_t) (state[i] & STATESPACE_MASK) << 7 * i);
+    }
+    return hash;
+}
+
 static inline uint64_t state_index(const state_t state) {
     uint64_t hash = 0;
     for (size_t i = 0; i < STATESPACE_DIMS; i++) {

@@ -36,14 +36,10 @@ void visit_hndl(int from, void *dat, int size) {
     vstate_t *new = dat;
 
     uint64_t index = state_index(new->state);
-    if (index == target_idx) {
-        printf("Found Target\n");
-        target_state.weight = new->weight;
-    }
     // printf("Node %d adding (%d %d) c=%2.2f", proc_id, new->state[0],
     //        new->state[1], new->weight);
     // Check if the state is unvisited
-    int r = hashtable_insert(visiteds, new, index);
+    int r = hashtable_insert(visiteds, new, HASH(index));
     if (!r) {
         wstate_t t;
         t.weight = new->weight;
@@ -112,6 +108,12 @@ float mpi_bfs_solve(struct mpi_planner *planner) {
             state_cpy(&next.parent, (const state_t *) &node_v.state);
             next.weight = node_v.weight;
 
+            uint64_t node_idx = state_index(node_v.state);
+            if(node_idx == target_idx){
+                printf("Found Target\n");
+                target_state.weight = node_v.weight;
+            }
+
             // if (proc_id == 0) {
             //     printf("Exploring %d %d\n", next.state[0], next.state[1]);
             // }
@@ -121,8 +123,8 @@ float mpi_bfs_solve(struct mpi_planner *planner) {
                 size_t i = d1 >> 1;
                 // Check the direct connections
                 next.state[i] += d1 & 0x01 ? 1 : -1;
-                if (next.state[i] == STATESPACE_MAX ||
-                    next.state[i] == STATESPACE_MIN) {
+                if ((next.state[i] >= STATESPACE_MAX && (d1 & 0x01)) ||
+                    (next.state[i] <= STATESPACE_MIN && !(d1 & 0x01))) {
                     next.state[i] += d1 & 0x01 ? -1 : 1;
                     continue;
                 }
@@ -149,8 +151,8 @@ float mpi_bfs_solve(struct mpi_planner *planner) {
                     size_t j = d2 >> 1;
                     // Advance the +1 state to allow diagonal connections
                     next.state[j] += d2 & 0x01 ? 1 : -1;
-                    if (next.state[j] == STATESPACE_MAX ||
-                        next.state[j] == STATESPACE_MIN) {
+                    if ((next.state[j] >= STATESPACE_MAX && (d2 & 0x01)) ||
+                        (next.state[j] <= STATESPACE_MIN && !(d2 & 0x01))) {
                         next.state[j] += d2 & 0x01 ? -1 : 1;
                         continue;
                     }
