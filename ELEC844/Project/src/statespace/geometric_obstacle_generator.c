@@ -29,7 +29,8 @@ state_t *gog_start(gog_t *gog) {
 
     // Attempt to find a valid start point
     size_t tries = 0;
-    for (; tries < MAX_RETRY && gog_check(gog, start); tries++) {
+    for (; tries < MAX_RETRY && gog_check(gog, (const state_t *) start);
+         tries++) {
         // Move away from the origin on a 45 deg angle
         for (size_t i = 0; i < STATESPACE_DIMS; i++) {
             (*start)[i]++;
@@ -63,7 +64,8 @@ state_t *gog_target(gog_t *gog) {
 
     // Attempt to find a valid start point
     size_t tries = 0;
-    for (; tries < MAX_RETRY && gog_check(gog, target); tries++) {
+    for (; tries < MAX_RETRY && gog_check(gog, (const state_t *) target);
+         tries++) {
         // Move away from the end on a 45 deg angle
         for (size_t i = 0; i < STATESPACE_DIMS; i++) {
             (*target)[i]--;
