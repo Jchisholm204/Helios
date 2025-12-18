@@ -15,8 +15,13 @@
 
 #define AML_VISIT 1
 
-#define OWNER(state) ((int) ((state) & ((1UL << (lgprocs)) - 1)))
-#define HASH(state) ((int) ((state) >> (lgprocs)))
+// Local variables for fixing aml pe/pes function call overhead
+int lgsize = 0xBEEF;
+int nproc = 0xDEAD;
+int pid = 0xBEEF;
+
+#define OWNER(state) ((int) ((state) & ((1UL << (lgsize)) - 1)))
+#define HASH(state) ((int) ((state) >> (lgsize)))
 
 hashtable_t *visiteds = NULL;
 min_heap_t *s1 = (void *) 0xDEADBEEF;
@@ -30,14 +35,14 @@ wstate_t target_state = {{0}, 0.0};
 
 void visit_hndl(int from, void *dat, int size) {
     (void) from;
-    if (size != sizeof(vstate_t) || !dat) {
-        return;
-    }
+    (void) size;
+    // if (size != sizeof(vstate_t) || !dat) {
+    //     return;
+    // }
     vstate_t *new = dat;
 
     uint64_t index = state_index(new->state);
-    // printf("Node %d adding (%d %d) c=%2.2f", proc_id, new->state[0],
-    //        new->state[1], new->weight);
+
     // Check if the state is unvisited
     int r = hashtable_insert(visiteds, new, HASH(index));
     if (!r) {
@@ -45,9 +50,6 @@ void visit_hndl(int from, void *dat, int size) {
         t.weight = new->weight;
         state_cpy(&t.state, (const state_t *) &new->state);
         mheap_push(s2, &t);
-        // printf("\n");
-    } else {
-        // printf(" -> FAIL (%d)\n", r);
     }
 }
 
@@ -59,6 +61,10 @@ float mpi_bfs_solve(struct mpi_planner *planner) {
     s1 = planner->heap;
     s2 = planner->heap2;
 
+    lgsize = lgprocs;
+    nproc = n_procs;
+    pid = proc_id;
+
     start_idx = state_index(*planner->start);
     target_idx = state_index(*planner->target);
 
@@ -67,33 +73,37 @@ float mpi_bfs_solve(struct mpi_planner *planner) {
     state_cpy(&start_state.state, planner->start);
     state_cpy(&target_state.state, planner->target);
 
-    if (OWNER(start_idx) == proc_id) {
+    if (OWNER(start_idx) == pid) {
         mheap_push(s1, &start_state);
-        printf("Process %d owns the start node (%d, %d)\n", proc_id,
+        printf("Process %d owns the start node (%d, %d)\n", pid,
                start_state.state[0], start_state.state[1]);
     }
 
-    if (OWNER(target_idx) == proc_id) {
-        printf("Process %d owns the target node (%d, %d)\n", proc_id,
+    if (OWNER(target_idx) == pid) {
+        printf("Process %d owns the target node (%d, %d)\n", pid,
                target_state.state[0], target_state.state[1]);
     }
 
-    if (proc_id == 0)
+    if (pid == 0)
         printf("Starting BFS Search\n");
 
     unsigned long long global_work = s1->n_elements;
     unsigned long long local_work = s1->n_elements;
     aml_long_allsum(&global_work);
 
-    if (proc_id == 0) {
+    if (pid == 0) {
         printf("Global Work = %lld\n", global_work);
         printf("Local Work = %lld\n", local_work);
     }
 
     size_t iteration = 0;
+    size_t sum_global = 0;
+    size_t sum_local = 0;
 
     while (global_work > 0 || local_work > 0) {
         iteration++;
+        sum_global += global_work;
+        sum_local += local_work;
         if (proc_id == 0) {
             printf("Entering Iteration %ld (global_work=%lld)\n", iteration,
                    global_work);
@@ -109,78 +119,74 @@ float mpi_bfs_solve(struct mpi_planner *planner) {
             next.weight = node_v.weight;
 
             uint64_t node_idx = state_index(node_v.state);
-            if(node_idx == target_idx){
+            if (node_idx == target_idx) {
                 printf("Found Target\n");
                 target_state.weight = node_v.weight;
             }
 
-            // if (proc_id == 0) {
-            //     printf("Exploring %d %d\n", next.state[0], next.state[1]);
-            // }
-
             // state advance loop for straight xyz connections
-            for (size_t d1 = 0; d1 < (STATESPACE_DIMS << 1); d1++) {
-                size_t i = d1 >> 1;
-                // Check the direct connections
-                next.state[i] += d1 & 0x01 ? 1 : -1;
-                if ((next.state[i] >= STATESPACE_MAX && (d1 & 0x01)) ||
-                    (next.state[i] <= STATESPACE_MIN && !(d1 & 0x01))) {
-                    next.state[i] += d1 & 0x01 ? -1 : 1;
-                    continue;
-                }
-                next.weight += 1;
-                // Check the validity of the point
-                if (!gog_check(gog, (const state_t *) &next.state)) {
-                    uint64_t next_idx = state_index(next.state);
-                    // Check ownership and add to the correct queue
-                    if (OWNER(next_idx) == proc_id) {
-                        visit_hndl(proc_id, &next, sizeof(vstate_t));
-                    } else {
-                        aml_send(&next, AML_VISIT, sizeof(vstate_t),
-                                 OWNER(next_idx));
-                    }
-                }
-                // Restore the weight value
-                next.weight -= 1;
-                // Setup the weight for diagonal connections
-                next.weight += M_SQRT2;
-
-                // state advance loop for diagonal/jump connections
-                for (size_t d2 = ((i + 1) << 1); d2 < (STATESPACE_DIMS << 1);
-                     d2++) {
-                    size_t j = d2 >> 1;
-                    // Advance the +1 state to allow diagonal connections
-                    next.state[j] += d2 & 0x01 ? 1 : -1;
-                    if ((next.state[j] >= STATESPACE_MAX && (d2 & 0x01)) ||
-                        (next.state[j] <= STATESPACE_MIN && !(d2 & 0x01))) {
-                        next.state[j] += d2 & 0x01 ? -1 : 1;
+            for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+                for (int d1 = -1; d1 <= 1; d1 += 2) {
+                    // Check the direct connections
+                    next.state[i] += d1;
+                    if ((next.state[i] >= STATESPACE_MAX && (d1 > 0)) ||
+                        (next.state[i] <= STATESPACE_MIN && (d1 < 0))) {
+                        next.state[i] -= d1;
                         continue;
                     }
-
-                    // if (proc_id == 0) {
-                    //     printf("Exploring %d %d\n", next.state[0],
-                    //            next.state[1]);
-                    // }
-
+                    next.weight += 1;
                     // Check the validity of the point
-                    // Do not allow double length straight line connections
-                    if (!gog_check(gog, (const state_t *) &next.state) &&
-                        j != i) {
+                    if (!gog_check(gog, (const state_t *) &next.state)) {
                         uint64_t next_idx = state_index(next.state);
-                        if (OWNER(next_idx) == proc_id) {
-                            visit_hndl(proc_id, &next, sizeof(vstate_t));
+                        // Check ownership and add to the correct queue
+                        if (OWNER(next_idx) == pid) {
+                            visit_hndl(pid, &next, sizeof(vstate_t));
                         } else {
                             aml_send(&next, AML_VISIT, sizeof(vstate_t),
                                      OWNER(next_idx));
                         }
                     }
+                    // Restore the weight value
+                    next.weight -= 1;
+                    // Setup the weight for diagonal connections
+                    next.weight += M_SQRT2;
+
+                    // state advance loop for diagonal/jump connections
+                    for (size_t j = (i + 1); j < STATESPACE_DIMS; j++) {
+                        for (int d2 = -1; d2 <= 1; d2 += 2) {
+                            // Advance the +1 state to allow diagonal
+                            // connections
+                            next.state[j] += d2;
+                            if ((next.state[j] >= STATESPACE_MAX && (d2 > 0)) ||
+                                (next.state[j] <= STATESPACE_MIN && (d2 < 0))) {
+                                next.state[j] -= d2;
+                                continue;
+                            }
+
+                            // Check the validity of the point
+                            // Do not allow double length straight line
+                            // connections
+                            if (!gog_check(gog,
+                                           (const state_t *) &next.state) &&
+                                j != i) {
+                                uint64_t next_idx = state_index(next.state);
+                                if (OWNER(next_idx) == pid) {
+                                    visit_hndl(pid, &next,
+                                               sizeof(vstate_t));
+                                } else {
+                                    aml_send(&next, AML_VISIT, sizeof(vstate_t),
+                                             OWNER(next_idx));
+                                }
+                            }
+                            // Reset the state to the default state
+                            next.state[j] -= d2;
+                        } // END D2
+                    } // END j
                     // Reset the state to the default state
-                    next.state[j] += d2 & 0x01 ? -1 : 1;
-                }
-                // Reset the state to the default state
-                next.state[i] += d1 & 0x01 ? -1 : 1;
-                next.weight -= M_SQRT2;
-            }
+                    next.state[i] -= d1;
+                    next.weight -= M_SQRT2;
+                } // END D1 Shift
+            } // END first step traversal
             local_work = s1->n_elements;
         }
         aml_barrier();
@@ -204,9 +210,12 @@ float mpi_bfs_solve(struct mpi_planner *planner) {
         }
     }
 
-    if (proc_id == 0) {
+    if (pid== 0) {
         printf("Solved Graph in %ld iterations\n", iteration);
     }
+
+    printf("Proc %d completed %2.5f %% of work\n", pid,
+           (double) sum_local *100.0 / (double) sum_global);
 
     return target_state.weight;
 }

@@ -80,6 +80,10 @@ static inline int gog_init_static(gog_t *gog, size_t seed, uint bmask,
         gog->bmasks[i] = bmask + (1 - (rand() & 0x03));
         gog->patterns[i] = pmask + (1 - (rand() & 0x03));
     }
+    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+        gog->bmasks[i] &= 0x07;
+        gog->patterns[i] &= 0x07;
+    }
 
     gog->access_counter = 0;
     return 0;
@@ -139,9 +143,9 @@ static inline unsigned char gog_check_axis(const gog_t *gog, unsigned char axis,
         return 0;
     }
     unsigned char dim_val = point ^ gog->variable[axis];
-    unsigned char pattern = ((point >> (gog->patterns[axis]) & 0x07));
+    unsigned char pattern = (point >> gog->patterns[axis]);
     unsigned char dim_inval = (pattern + dim_val);
-    dim_inval = (dim_inval >> ((gog->bmasks[axis]) & 0x07));
+    dim_inval = (dim_inval >> gog->bmasks[axis]);
     return ((dim_inval) & 0x03);
 }
 

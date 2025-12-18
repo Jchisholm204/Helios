@@ -1,0 +1,104 @@
+==91007== Memcheck, a memory error detector
+==91007== Copyright (C) 2002-2024, and GNU GPL'd, by Julian Seward et al.
+==91007== Using Valgrind-3.24.0-fcdaa47426-20241101 and LibVEX; rerun with -h for copyright info
+==91007== Command: ./build/844A1
+==91007== Parent PID: 90989
+==91007== 
+--91007-- 
+--91007-- Valgrind options:
+--91007--    --leak-check=full
+--91007--    --show-leak-kinds=all
+--91007--    --track-origins=yes
+--91007--    --verbose
+--91007--    --error-limit=no
+--91007--    --log-file=valgrindout.txt
+--91007-- Contents of /proc/version:
+--91007--   Linux version 6.14.5-100.fc40.x86_64 (mockbuild@b5f5df3fb7eb4a41992667d1c1136a59) (gcc (GCC) 14.2.1 20240912 (Red Hat 14.2.1-3), GNU ld version 2.41-38.fc40) #1 SMP PREEMPT_DYNAMIC Fri May  2 14:22:13 UTC 2025
+--91007-- 
+--91007-- Arch and hwcaps: AMD64, LittleEndian, amd64-cx16-lzcnt-rdtscp-sse3-ssse3-avx-avx2-bmi-f16c-rdrand-rdseed-fma
+--91007-- Page sizes: currently 4096, max supported 4096
+--91007-- Valgrind library directory: /usr/libexec/valgrind
+--91007-- Reading syms from /home/jacob/Documents/h2/ELEC844/Project/build/844A1
+--91007-- Reading syms from /usr/lib64/ld-linux-x86-64.so.2
+--91007-- Warning: cross-CU LIMITATION: some inlined fn names
+--91007-- might be shown as UnknownInlinedFun
+--91007-- Reading syms from /usr/libexec/valgrind/memcheck-amd64-linux
+--91007--    object doesn't have a dynamic symbol table
+--91007-- Scheduler: using generic scheduler lock implementation.
+--91007-- Reading suppressions file: /usr/libexec/valgrind/default.supp
+==91007== embedded gdbserver: reading from /tmp/vgdb-pipe-from-vgdb-to-91007-by-jacob-on-odp0k
+==91007== embedded gdbserver: writing to   /tmp/vgdb-pipe-to-vgdb-from-91007-by-jacob-on-odp0k
+==91007== embedded gdbserver: shared mem   /tmp/vgdb-pipe-shared-mem-vgdb-91007-by-jacob-on-odp0k
+==91007== 
+==91007== TO CONTROL THIS PROCESS USING vgdb (which you probably
+==91007== don't want to do, unless you know exactly what you're doing,
+==91007== or are doing some strange experiment):
+==91007==   /usr/libexec/valgrind/../../bin/vgdb --pid=91007 ...command...
+==91007== 
+==91007== TO DEBUG THIS PROCESS USING GDB: start GDB like this
+==91007==   /path/to/gdb ./build/844A1
+==91007== and then give GDB the following command
+==91007==   target remote | /usr/libexec/valgrind/../../bin/vgdb --pid=91007
+==91007== --pid is optional if only one valgrind process is running
+==91007== 
+==91007== Downloading debug info for /usr/libexec/valgrind/memcheck-amd64-linux...
+--91007--   Considering /home/jacob/.cache/debuginfod_client/b6bbfdac380808a84126e1706651c0b3a38a0c61/debuginfo ..
+--91007--   .. CRC is valid
+==91007== Successfully downloaded debug file for /usr/libexec/valgrind/memcheck-amd64-linux
+==91007== Downloading debug info for /home/jacob/.cache/debuginfod_client/b6bbfdac380808a84126e1706651c0b3a38a0c61/debuginfo...
+--91007--   Considering /home/jacob/.cache/debuginfod_client/ff2ac567a59031a164454f21ac7cf9a93c50d727/debuginfo ..
+--91007--   .. build-id is valid
+==91007== Successfully downloaded debug file for /home/jacob/.cache/debuginfod_client/b6bbfdac380808a84126e1706651c0b3a38a0c61/debuginfo
+--91007-- REDIR: 0x4026520 (ld-linux-x86-64.so.2:strlen) redirected to 0x5821afcf (vgPlain_amd64_linux_REDIR_FOR_strlen)
+--91007-- REDIR: 0x4024ee0 (ld-linux-x86-64.so.2:strcmp) redirected to 0x5821afe9 (vgPlain_amd64_linux_REDIR_FOR_strcmp)
+--91007-- REDIR: 0x4024cb0 (ld-linux-x86-64.so.2:index) redirected to 0x5821b022 (vgPlain_amd64_linux_REDIR_FOR_index)
+--91007-- REDIR: 0x4024040 (ld-linux-x86-64.so.2:bcmp) redirected to 0x5821b004 (vgPlain_amd64_linux_REDIR_FOR_memcmp)
+--91007-- Reading syms from /usr/libexec/valgrind/vgpreload_core-amd64-linux.so
+--91007-- Reading syms from /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so
+==91007== WARNING: new redirection conflicts with existing -- ignoring it
+--91007--     old: 0x04024ee0 (strcmp              ) R-> (0000.0) 0x5821afe9 vgPlain_amd64_linux_REDIR_FOR_strcmp
+--91007--     new: 0x04024ee0 (strcmp              ) R-> (2016.0) 0x0484e550 strcmp
+==91007== WARNING: new redirection conflicts with existing -- ignoring it
+--91007--     old: 0x04026520 (strlen              ) R-> (0000.0) 0x5821afcf vgPlain_amd64_linux_REDIR_FOR_strlen
+--91007--     new: 0x04026520 (strlen              ) R-> (2007.0) 0x0484d200 strlen
+--91007-- REDIR: 0x4024310 (ld-linux-x86-64.so.2:mempcpy) redirected to 0x4852ca0 (mempcpy)
+--91007-- Reading syms from /usr/lib64/openmpi/lib/libmpi.so.40.40.2
+--91007-- Reading syms from /usr/lib64/libgfortran.so.5.0.0
+--91007-- Reading syms from /usr/lib64/libSDL2-2.0.so.0.3000.11
+--91007-- Reading syms from /usr/lib64/libSDL2_ttf-2.0.so.0.2200.0
+--91007-- Reading syms from /usr/lib64/libompl.so.1.6.0
+--91007-- Reading syms from /usr/lib64/libboost_serialization.so.1.83.0
+--91007-- Reading syms from /usr/lib64/libboost_filesystem.so.1.83.0
+--91007-- Reading syms from /usr/lib64/libboost_system.so.1.83.0
+--91007-- Reading syms from /usr/lib64/libode.so.8.2.0
+--91007-- Reading syms from /usr/lib64/libgomp.so.1.0.0
+--91007-- Reading syms from /usr/lib64/libstdc++.so.6.0.33
+--91007-- Reading syms from /usr/lib64/libm.so.6
+--91007-- Reading syms from /usr/lib64/libgcc_s-14-20240912.so.1
+--91007-- Reading syms from /usr/lib64/libc.so.6
+==91007== Downloading debug info for /usr/lib64/libc.so.6...
+--91007--   Considering /home/jacob/.cache/debuginfod_client/fc3b3c4da3283cd44c006682a30b9df3242de053/debuginfo ..
+--91007--   .. CRC is valid
+==91007== Successfully downloaded debug file for /usr/lib64/libc.so.6
+==91007== 
+==91007== Process terminating with default action of signal 2 (SIGINT)
+==91007==    at 0x402357F: __open_nocancel (open64_nocancel.c:39)
+==91007==    by 0x400591B: open_verify.constprop.0 (dl-load.c:1623)
+==91007==    by 0x4005E7F: open_path (dl-load.c:1844)
+==91007==    by 0x4009091: _dl_map_object (dl-load.c:2081)
+==91007==    by 0x40028BC: openaux (dl-deps.c:64)
+==91007==    by 0x4001522: _dl_catch_exception (dl-catch.c:237)
+==91007==    by 0x4002D27: _dl_map_object_deps (dl-deps.c:232)
+==91007==    by 0x402013E: dl_main (rtld.c:1967)
+==91007==    by 0x401CB35: _dl_sysdep_start (dl-sysdep.c:141)
+==91007==    by 0x401E49D: _dl_start_final (rtld.c:494)
+==91007==    by 0x401E49D: _dl_start (rtld.c:581)
+==91007==    by 0x401D187: ??? (in /usr/lib64/ld-linux-x86-64.so.2)
+==91007== 
+==91007== HEAP SUMMARY:
+==91007==     in use at exit: 0 bytes in 0 blocks
+==91007==   total heap usage: 0 allocs, 0 frees, 0 bytes allocated
+==91007== 
+==91007== All heap blocks were freed -- no leaks are possible
+==91007== 
+==91007== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

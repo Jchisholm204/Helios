@@ -23,13 +23,13 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
-
 static inline bool state_eq(const state_t a, const state_t b) {
-    uint8_t neq = 0x00;
-    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-        neq |= a[i] ^ b[i];
-    }
-    return neq == 0x0;
+    return !memcmp(a, b, STATESPACE_DIMS);
+    // uint8_t neq = 0x00;
+    // for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+    //     neq |= a[i] ^ b[i];
+    // }
+    // return neq == 0x0;
 }
 
 static inline void state_cpy(state_t *dst, const state_t *src) {
@@ -40,19 +40,34 @@ static inline void wstate_cpy(wstate_t *dst, const wstate_t *src) {
     (void) memcpy(dst, src, sizeof(wstate_t));
 }
 
-static inline uint64_t state_pack(const state_t state){
+static inline uint64_t state_pack(const state_t state) {
     uint64_t hash = 0;
-    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-        hash |= (uint64_t) ((uint64_t) (state[i] & STATESPACE_MASK) << 7 * i);
-    }
+#if STATESPACE_DIMS == 2
+    hash = *(uint16_t *) state;
+#elif STATESPACE_DIMS == 4
+    hash = *(uint32_t *) state;
+#elif STATESPACE_DIMS == 6
+    hash = *(uint32_t *) state;
+    hash |= *(uint16_t *) &state[4];
+#elif STATESPACE_DIMS == 8
+    *(uint64_t *) (&hash) = *(uint64_t *) state;
+#elif STATESPACE_DIMS == 10
+    *(uint64_t *) (&hash) = *(uint64_t *) state;
+    hash ^= *(uint16_t *) &state[8];
+#endif
+    // for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+    //     hash |= (uint64_t) ((uint64_t) (state[i] & STATESPACE_MASK) << 7 *
+    //     i);
+    // }
     return hash;
 }
 
 static inline uint64_t state_index(const state_t state) {
-    uint64_t hash = 0;
-    for (size_t i = 0; i < STATESPACE_DIMS; i++) {
-        hash |= (uint64_t) ((uint64_t) (state[i] & STATESPACE_MASK) << 7 * i);
-    }
+    uint64_t hash = state_pack(state);
+    // for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+    //     hash |= (uint64_t) ((uint64_t) (state[i] & STATESPACE_MASK) << 7 *
+    //     i);
+    // }
     hash = (hash ^ (hash >> 30)) * 0xbf58476d1ce4e5b9ULL;
     hash = (hash ^ (hash >> 27)) * 0x94d049bb133111ebULL;
     hash = hash ^ (hash >> 31);

@@ -21,7 +21,7 @@ extern "C" {
 #include <malloc.h>
 #include <stddef.h>
 
-#define HEAP_LOGGING
+// #define HEAP_LOGGING
 
 typedef struct {
     size_t n_elements;
