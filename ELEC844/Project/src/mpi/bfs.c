@@ -16,24 +16,24 @@
 #define AML_VISIT 1
 
 // Local variables for fixing aml pe/pes function call overhead
-int lgsize = 0xBEEF;
-int nproc = 0xDEAD;
-int pid = 0xBEEF;
+static int lgsize = 0xBEEF;
+static int nproc = 0xDEAD;
+static int pid = 0xBEEF;
 
 #define OWNER(state) ((int) ((state) & ((1UL << (lgsize)) - 1)))
 #define HASH(state) ((int) ((state) >> (lgsize)))
 
-hashtable_t *visiteds = NULL;
-min_heap_t *s1 = (void *) 0xDEADBEEF;
-min_heap_t *s2 = (void *) 0xBEEFDEAD;
+static hashtable_t *visiteds = NULL;
+static min_heap_t *s1 = (void *) 0xDEADBEEF;
+static min_heap_t *s2 = (void *) 0xBEEFDEAD;
 
-uint64_t start_idx = 0x00;
-uint64_t target_idx = 0x00;
+static uint64_t start_idx = 0x00;
+static uint64_t target_idx = 0x00;
 
-wstate_t start_state = {{0}, 0.0};
-wstate_t target_state = {{0}, 0.0};
+static wstate_t start_state = {{0}, 0.0, 0.0};
+static wstate_t target_state = {{0}, 0.0, 0.0};
 
-void visit_hndl(int from, void *dat, int size) {
+static void visit_hndl(int from, void *dat, int size) {
     (void) from;
     (void) size;
     // if (size != sizeof(vstate_t) || !dat) {
@@ -48,6 +48,7 @@ void visit_hndl(int from, void *dat, int size) {
     if (!r) {
         wstate_t t;
         t.weight = new->weight;
+        t.cost = 0;
         state_cpy(&t.state, (const state_t *) &new->state);
         mheap_push(s2, &t);
     }
@@ -70,8 +71,8 @@ float mpi_bfs_solve(struct mpi_planner *planner) {
 
     start_state.weight = 0.0;
     target_state.weight = 0.0;
-    state_cpy(&start_state.state, planner->start);
-    state_cpy(&target_state.state, planner->target);
+    state_cpy(&start_state.state, (const state_t *__restrict) planner->start);
+    state_cpy(&target_state.state, (const state_t *__restrict) planner->target);
 
     if (OWNER(start_idx) == pid) {
         mheap_push(s1, &start_state);
@@ -108,7 +109,7 @@ float mpi_bfs_solve(struct mpi_planner *planner) {
             printf("Entering Iteration %ld (global_work=%lld)\n", iteration,
                    global_work);
         }
-        wstate_t node_v = {{0}, FLT_MAX};
+        wstate_t node_v = {{0}, FLT_MAX, FLT_MAX};
         // Pull the next state to be explored
         while (s1->n_elements > 0) {
             mheap_pop(s1, &node_v);

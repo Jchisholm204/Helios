@@ -56,6 +56,7 @@ static inline min_heap_t *mheap_init(size_t n_size) {
     for (size_t i = 0; i < n_size; i++) {
         for (size_t j = 0; j < STATESPACE_DIMS; j++)
             heap->data[i].state[j] = STATESPACE_FLAG | ~(STATESPACE_MASK);
+        heap->data[i].cost = -1;
         heap->data[i].weight = -1;
     }
 
@@ -117,7 +118,7 @@ static inline void mheap_push(min_heap_t *heap, wstate_t *wstate) {
 
     while (i > 0) {
         size_t p = (i - 1) >> 2;
-        if (heap->data[i].weight >= heap->data[p].weight) {
+        if (heap->data[i].cost >= heap->data[p].cost) {
             break;
         }
         wstate_t tmp = heap->data[i];
@@ -155,12 +156,11 @@ static inline int mheap_pop(min_heap_t *heap, wstate_t *wstate) {
         size_t smallest = child_base;
         for (size_t j = 1; j < 4; j++) {
             if (child_base + j < heap->n_elements &&
-                heap->data[child_base + j].weight <
-                    heap->data[smallest].weight) {
+                heap->data[child_base + j].cost < heap->data[smallest].cost) {
                 smallest = child_base + j;
             }
         }
-        if (heap->data[smallest].weight < heap->data[i].weight) {
+        if (heap->data[smallest].cost < heap->data[i].cost) {
             wstate_t tmp = heap->data[i];
             heap->data[i] = heap->data[smallest];
             heap->data[smallest] = tmp;

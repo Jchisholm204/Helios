@@ -45,7 +45,7 @@ inline void hashtable_free(hashtable_t **pTable) {
         hashtable_t *table = *pTable;
         if (table) {
 #ifdef HASHTABLE_LOGGING
-#if ((int)HASHTABLE_LOGGING) == 1
+#if ((int) HASHTABLE_LOGGING) == 1
             printf("HashTable Metrics:\n");
             printf("\tInsertions: %ld\n", table->metrics.n_insertions);
             printf("\tLookups: %ld\n", table->metrics.n_lookups);
@@ -85,7 +85,7 @@ inline int hashtable_insert(hashtable_t *table, const vstate_t *ws,
         // 2. Found an Existing Match (A* Update Logic)
         // We must check if the coordinates are identical
         if (state_eq(entry->state, ws->state)) {
-            if (ws->weight < entry->weight) {
+            if (ws->weight < (entry->weight - 0.0001f)) {
                 entry->weight = ws->weight; // Found a better path!
                 return 1;                   // Signal for a "re-push" to heap
             }

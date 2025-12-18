@@ -104,7 +104,7 @@ void mpi_planner_evaluate(int argc, char **argv) {
     MPI_Barrier(MPI_COMM_WORLD);
     clock_gettime(CLOCK_MONOTONIC, &t_start);
 
-    float cost = mpi_bfs_solve(p);
+    float cost = mpi_astar_solve(p);
 
     MPI_Barrier(MPI_COMM_WORLD);
 

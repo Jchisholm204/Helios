@@ -17,7 +17,7 @@
 #ifndef _STATESPACE_H_
 #define _STATESPACE_H_
 
-#define STATESPACE_DIMS 4
+#define STATESPACE_DIMS 6
 #define STATESPACE_MIN 0
 #define STATESPACE_MAX 100
 
@@ -36,7 +36,8 @@ typedef unsigned char state_t[STATESPACE_DIMS];
 // Weighted State object to hold a coordinate vector and a weight
 typedef struct {
     state_t state;
-    float weight;
+    float weight; // = g(n) = cost to come
+    float cost; // f(n) = total cost for queue
 } wstate_t;
 
 // wstate object with a extra parameter to hold the parent state

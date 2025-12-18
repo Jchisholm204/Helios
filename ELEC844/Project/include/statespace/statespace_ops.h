@@ -27,7 +27,7 @@ static inline bool state_eq(const state_t a, const state_t b) {
     return !memcmp(a, b, STATESPACE_DIMS);
 }
 
-static inline void state_cpy(state_t *dst, const state_t *src) {
+static inline void state_cpy(state_t *dst, const state_t *__restrict src) {
     (void) memcpy(dst, src, sizeof(state_t));
 }
 

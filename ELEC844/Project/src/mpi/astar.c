@@ -16,24 +16,23 @@
 #define AML_VISIT 1
 
 // Local variables for fixing aml pe/pes function call overhead
-int lgsize = 0xBEEF;
-int nproc = 0xDEAD;
-int pid = 0xBEEF;
+static int lgsize = 0xBEEF;
+static int nproc = 0xDEAD;
+static int pid = 0xBEEF;
 
 #define OWNER(state) ((int) ((state) & ((1UL << (lgsize)) - 1)))
 #define HASH(state) ((int) ((state) >> (lgsize)))
 
-hashtable_t *visiteds = NULL;
-min_heap_t *s1 = (void *) 0xDEADBEEF;
-min_heap_t *s2 = (void *) 0xBEEFDEAD;
+static hashtable_t *visiteds = NULL;
+static min_heap_t *s1 = (void *) 0xDEADBEEF;
 
-uint64_t start_idx = 0x00;
-uint64_t target_idx = 0x00;
+static uint64_t start_idx = 0x00;
+static uint64_t target_idx = 0x00;
 
-wstate_t start_state = {{0}, 0.0};
-wstate_t target_state = {{0}, 0.0};
+static wstate_t start_state = {{0}, 0.0, 0.0};
+static wstate_t target_state = {{0}, FLT_MAX, 0.0};
 
-void visit_hndl(int from, void *dat, int size) {
+static void visit_hndl(int from, void *dat, int size) {
     (void) from;
     (void) size;
     // if (size != sizeof(vstate_t) || !dat) {
@@ -41,25 +40,34 @@ void visit_hndl(int from, void *dat, int size) {
     // }
     vstate_t *new = dat;
 
+    if (new->weight >= target_state.weight) {
+        return;
+    }
+
     uint64_t index = state_index(new->state);
 
     // Check if the state is unvisited
     int r = hashtable_insert(visiteds, new, HASH(index));
-    if (!r) {
+    if (!r || r == 1) {
         wstate_t t;
         t.weight = new->weight;
+        t.cost = 0;
+        for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+            t.cost += (new->state[i] - target_state.state[i]) *
+                      (new->state[i] - target_state.state[i]);
+        }
+        t.cost = sqrt(t.cost) * 1.4 + t.weight;
         state_cpy(&t.state, (const state_t *) &new->state);
-        mheap_push(s2, &t);
+        mheap_push(s1, &t);
     }
 }
 
-extern float mpi_astar_solve(struct mpi_planner *planner) {
+float mpi_astar_solve(struct mpi_planner *planner) {
     // Setup local handles
     aml_register_handler(visit_hndl, AML_VISIT);
     gog_t *gog = &planner->gog;
     visiteds = planner->table;
     s1 = planner->heap;
-    s2 = planner->heap2;
 
     lgsize = lgprocs;
     nproc = n_procs;
@@ -69,9 +77,9 @@ extern float mpi_astar_solve(struct mpi_planner *planner) {
     target_idx = state_index(*planner->target);
 
     start_state.weight = 0.0;
-    target_state.weight = 0.0;
-    state_cpy(&start_state.state, planner->start);
-    state_cpy(&target_state.state, planner->target);
+    target_state.weight = FLT_MAX;
+    state_cpy(&start_state.state, (const state_t *__restrict) planner->start);
+    state_cpy(&target_state.state, (const state_t *__restrict) planner->target);
 
     if (OWNER(start_idx) == pid) {
         mheap_push(s1, &start_state);
@@ -108,10 +116,21 @@ extern float mpi_astar_solve(struct mpi_planner *planner) {
             printf("Entering Iteration %ld (global_work=%lld)\n", iteration,
                    global_work);
         }
-        wstate_t node_v = {{0}, FLT_MAX};
+        wstate_t node_v = {{0}, FLT_MAX, FLT_MAX};
+        float local_min_f = (s1->n_elements > 0) ? s1->data[0].cost : FLT_MAX;
+        float global_min_f;
+        MPI_Allreduce(&local_min_f, &global_min_f, 1, MPI_FLOAT, MPI_MIN,
+                      MPI_COMM_WORLD);
+        if (target_state.weight <= global_min_f + 0.001f &&
+            target_state.weight != FLT_MAX) {
+            break;
+        }
         // Pull the next state to be explored
-        while (s1->n_elements > 0) {
+        for (size_t batch = 0; s1->n_elements > 0 && batch < 20000; batch++) {
             mheap_pop(s1, &node_v);
+            if (node_v.cost > local_min_f) {
+                continue;
+            }
             // Clone copy for push adjustments
             vstate_t next;
             state_cpy(&next.state, (const state_t *) &node_v.state);
@@ -124,6 +143,8 @@ extern float mpi_astar_solve(struct mpi_planner *planner) {
                 target_state.weight = node_v.weight;
             }
 
+            float base_weight = next.weight;
+
             // state advance loop for straight xyz connections
             for (size_t i = 0; i < STATESPACE_DIMS; i++) {
                 for (int d1 = -1; d1 <= 1; d1 += 2) {
@@ -134,7 +155,7 @@ extern float mpi_astar_solve(struct mpi_planner *planner) {
                         next.state[i] -= d1;
                         continue;
                     }
-                    next.weight += 1;
+                    next.weight = base_weight + 1;
                     // Check the validity of the point
                     if (!gog_check(gog, (const state_t *) &next.state)) {
                         uint64_t next_idx = state_index(next.state);
@@ -146,10 +167,8 @@ extern float mpi_astar_solve(struct mpi_planner *planner) {
                                      OWNER(next_idx));
                         }
                     }
-                    // Restore the weight value
-                    next.weight -= 1;
                     // Setup the weight for diagonal connections
-                    next.weight += M_SQRT2;
+                    next.weight = base_weight + M_SQRT2;
 
                     // state advance loop for diagonal/jump connections
                     for (size_t j = (i + 1); j < STATESPACE_DIMS; j++) {
@@ -183,29 +202,23 @@ extern float mpi_astar_solve(struct mpi_planner *planner) {
                     } // END j
                     // Reset the state to the default state
                     next.state[i] -= d1;
-                    next.weight -= M_SQRT2;
                 } // END D1 Shift
             } // END first step traversal
-            local_work = s1->n_elements;
         }
-        aml_barrier();
-        min_heap_t *temp = s1;
-        s1 = s2;
-        s2 = temp;
 
         // Work Sync
+        aml_barrier();
 
         local_work = s1->n_elements;
         global_work = local_work;
         aml_long_allsum(&global_work);
 
         MPI_Allreduce(&target_state.weight, &target_state.weight, 1, MPI_FLOAT,
-                      MPI_SUM, MPI_COMM_WORLD);
+                      MPI_MIN, MPI_COMM_WORLD);
         // if (proc_id == 0)
         //     printf("Target Distance: %3.2f\n", target_cost);
-        if (target_state.weight > 0) {
+        if (target_state.weight < 400 && pid == 0) {
             printf("Target Distance: %3.2f\n", target_state.weight);
-            break;
         }
     }
 
