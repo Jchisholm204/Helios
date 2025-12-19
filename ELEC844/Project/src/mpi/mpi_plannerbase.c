@@ -50,10 +50,10 @@ struct mpi_planner *mpi_planner_init(void) {
 
     // Setup the planner data structures
     size_t default_arr_size = 0x1ULL
-                              << (int) ((STATESPACE_DIMS + 20 - lgprocs));
+                              << (int) ((STATESPACE_DIMS/2 + 24 - lgprocs));
     planner->table = hashtable_init(default_arr_size);
     planner->heap = mheap_init(default_arr_size);
-    planner->heap2 = mheap_init(default_arr_size);
+    // planner->heap2 = mheap_init(default_arr_size);
 
     // Ensure all processes allocate the planner before continuing
     MPI_Barrier(MPI_COMM_WORLD);

@@ -14,7 +14,7 @@
 #include "mpi/aml.h"
 
 #define AML_VISIT 1
-// #define GREEDY
+#define GREEDY
 
 // Local variables for fixing aml pe/pes function call overhead
 static int lgsize = 0xBEEF;
@@ -57,11 +57,10 @@ static void visit_hndl(int from, void *dat, int size) {
             t.cost += (new->state[i] - target_state.state[i]) *
                       (new->state[i] - target_state.state[i]);
         }
-        t.cost = sqrt(t.cost) * M_SQRT2 + t.weight;
+        t.cost = sqrt(t.cost) * M_SQRT2 / 2 + t.weight;
         state_cpy(&t.state, (const state_t *) &new->state);
         mheap_push(s1, &t);
-    }
-    else if(r == -2){
+    } else if (r == -2) {
         fprintf(stderr, "Hash Table - EnoMEM\n");
     }
 }
@@ -87,8 +86,7 @@ float mpi_astar_solve(struct mpi_planner *planner) {
 
     if (OWNER(start_idx) == pid) {
         mheap_push(s1, &start_state);
-        printf("Process %d owns the start node (%d\n", pid,
-               start_state.state[0]);
+        printf("Process %d owns the start node (%d", pid, start_state.state[0]);
         for (size_t i = 1; i < STATESPACE_DIMS; i++)
             printf(", %d", start_state.state[i]);
         printf(")\n");
@@ -138,8 +136,14 @@ float mpi_astar_solve(struct mpi_planner *planner) {
         // Pull the next state to be explored
         for (size_t batch = 0; s1->n_elements > 0 && batch < 20000; batch++) {
             mheap_pop(s1, &node_v);
+            uint64_t node_idx = state_index(node_v.state);
+            // float node_weight =
+            //     hashtable_find(visiteds, &node_v.state, node_idx)->weight;
+            // if (node_v.weight >= node_weight) {
+            //     continue;
+            // }
 #ifdef GREEDY
-            if (node_v.cost > local_min_f) {
+            if (node_v.cost > local_min_f * 1.0001f) {
                 continue;
             }
 #endif
@@ -148,8 +152,6 @@ float mpi_astar_solve(struct mpi_planner *planner) {
             state_cpy(&next.state, (const state_t *) &node_v.state);
             state_cpy(&next.parent, (const state_t *) &node_v.state);
             next.weight = node_v.weight;
-
-            uint64_t node_idx = state_index(node_v.state);
             if (node_idx == target_idx) {
                 printf("Found Target\n");
                 target_state.weight = node_v.weight;

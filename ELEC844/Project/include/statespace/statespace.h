@@ -18,7 +18,7 @@
 #define _STATESPACE_H_
 
 #ifndef STATESPACE_DIMS
-#define STATESPACE_DIMS 6
+#define STATESPACE_DIMS 10
 #endif
 #define STATESPACE_MIN 0
 #define STATESPACE_MAX 100
