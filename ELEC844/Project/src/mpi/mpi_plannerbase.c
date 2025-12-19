@@ -91,7 +91,7 @@ inline double diffms(struct timespec start, struct timespec end) {
     return timems;
 }
 
-#define N_TESTS 1
+#define N_TESTS 20
 #define STRLN 200
 
 void mpi_planner_evaluate(int argc, char **argv) {
