@@ -61,6 +61,9 @@ static void visit_hndl(int from, void *dat, int size) {
         state_cpy(&t.state, (const state_t *) &new->state);
         mheap_push(s1, &t);
     }
+    else if(r == -2){
+        fprintf(stderr, "Hash Table - EnoMEM\n");
+    }
 }
 
 float mpi_astar_solve(struct mpi_planner *planner) {
