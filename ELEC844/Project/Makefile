@@ -15,6 +15,7 @@ ${BUILD_DIR}/Makefile:
 		-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 		-G "Unix Makefiles" \
+		-DSTATESPACE_DIMS=4 \
 
 cmake: ${BUILD_DIR}/Makefile
 

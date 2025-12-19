@@ -24,7 +24,6 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -isystem ${CMAKE_C_COMPILER_INCLUDE_DIRS}")
 # Enable export of compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-
 set(INCLUDE_DIRECTORIES
     ${PROJECT_DIR}/include
 )
@@ -80,6 +79,13 @@ target_compile_options(${EXECUTABLE} PRIVATE
      -fopenmp
      -march=native
 )
+
+if(STATESPACE_DIMS)
+target_compile_definitions(${EXECUTABLE} PRIVATE
+        STATESPACE_DIMS=${STATESPACE_DIMS}
+)
+endif()
+
 
 target_link_libraries(${EXECUTABLE}
     -lm
