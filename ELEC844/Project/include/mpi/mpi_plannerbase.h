@@ -30,6 +30,7 @@ struct mpi_planner {
     min_heap_t *heap;
     min_heap_t *heap2;
     struct solution_metrics metrics;
+    size_t sum_global, sum_local;
 };
 
 /**

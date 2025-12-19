@@ -49,7 +49,8 @@ struct mpi_planner *mpi_planner_init(void) {
     planner->metrics.length = -1;
 
     // Setup the planner data structures
-    size_t default_arr_size = 0x1ULL << (int) ((STATESPACE_DIMS + 20));
+    size_t default_arr_size = 0x1ULL
+                              << (int) ((STATESPACE_DIMS + 20 - lgprocs));
     planner->table = hashtable_init(default_arr_size);
     planner->heap = mheap_init(default_arr_size);
     planner->heap2 = mheap_init(default_arr_size);
@@ -68,10 +69,10 @@ void mpi_planner_free(struct mpi_planner **pPlanner) {
             hashtable_free(&(planner->table));
             mheap_free(&(planner->heap));
             mheap_free(&(planner->heap2));
-            if(planner->start){
+            if (planner->start) {
                 free(planner->start);
             }
-            if(planner->target){
+            if (planner->target) {
                 free(planner->target);
             }
             if (planner->metrics.path) {
@@ -90,35 +91,91 @@ inline double diffms(struct timespec start, struct timespec end) {
     return timems;
 }
 
+#define N_TESTS 100
+#define STRLN 200
+
 void mpi_planner_evaluate(int argc, char **argv) {
     aml_init(&argc, &argv);
-    // printf("Hello From Process %d/%d\n", proc_id, n_procs);
-
-    struct timespec t_start, t_end;
-    clock_gettime(CLOCK_MONOTONIC, &t_start);
-    struct mpi_planner *p = mpi_planner_init();
-    clock_gettime(CLOCK_MONOTONIC, &t_end);
-    printf("MPI Planner Initialized in %2.3f ms (%d/%d)\n",
-           diffms(t_start, t_end), proc_id, n_procs);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    clock_gettime(CLOCK_MONOTONIC, &t_start);
-
-    float cost = mpi_astar_solve(p);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    clock_gettime(CLOCK_MONOTONIC, &t_end);
-
-    printf("MPI Planner Finished in %3.2f ms (%d)\n", diffms(t_start, t_end),
-           proc_id);
-
+    FILE *fp = NULL;
     if (proc_id == 0) {
-        printf("Path Distance = %3.3f\n", cost);
+        char fname[STRLN];
+        snprintf(fname, STRLN, "./tests/astar_%dD_p%d.csv", STATESPACE_DIMS,
+                 n_procs);
+        fp = fopen(fname, "w");
+        if (!fp) {
+            fprintf(stderr, "Failed to open output file..\n");
+            MPI_Abort(MPI_COMM_WORLD, MPI_ERR_FILE);
+        }
+        fprintf(fp, "init time,solve time,optimal "
+                    "length,length,quality,collision checks,");
+        for (int i = 0; i < n_procs; i++) {
+            fprintf(fp, "process %d work,", i);
+        }
+        fprintf(fp, "\n");
     }
 
-    mpi_planner_free(&p);
-    MPI_Barrier(MPI_COMM_WORLD);
+    for (size_t test_i = 0; test_i < N_TESTS; test_i++) {
+        struct timespec t_start, t_end;
+        clock_gettime(CLOCK_MONOTONIC, &t_start);
+        struct mpi_planner *p = mpi_planner_init();
+        clock_gettime(CLOCK_MONOTONIC, &t_end);
+
+        // Calculate the optimal path length
+        double path_optimal = 0;
+        for (size_t i = 0; i < STATESPACE_DIMS; i++) {
+            path_optimal += ((*p->start)[i] - (*p->target)[i]) *
+                            ((*p->start)[i] - (*p->target)[i]);
+        }
+        path_optimal = sqrt(path_optimal);
+
+        double t_init = diffms(t_start, t_end);
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        clock_gettime(CLOCK_MONOTONIC, &t_start);
+        float path_cost = mpi_astar_solve(p);
+        // Wait for all processes to exit before recording time
+        MPI_Barrier(MPI_COMM_WORLD);
+        clock_gettime(CLOCK_MONOTONIC, &t_end);
+
+        double t_solve = diffms(t_start, t_end);
+
+        // Calculate final metrics
+        double path_quality = path_cost / path_optimal;
+
+        // Sum the collision checks across all MPI processes
+        long long n_collision_checks = 0;
+        MPI_Allreduce(&p->gog.access_counter, &n_collision_checks, 1,
+                      MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+
+        // Let process 0 record metrics to the log file
+        if (proc_id == 0) {
+            printf("%ld) D=%d l=%3.2f c=%1.4f ti=%4.4f ms ts=%4.4f ms\n",
+                   test_i, STATESPACE_DIMS, path_cost, path_quality, t_init,
+                   t_solve);
+            fprintf(fp, "%f,%f,%f,%f,%f,%lld,", t_init, t_solve, path_optimal,
+                    path_cost, path_quality, n_collision_checks);
+            fprintf(fp, "%f,",
+                    (float) p->sum_local * 100.0f / (float) p->sum_global);
+            for (int i = 1; i < n_procs; i++) {
+                size_t sum_local = 0;
+                (void) MPI_Recv(&sum_local, 1, MPI_LONG, i, 0, MPI_COMM_WORLD,
+                                MPI_STATUS_IGNORE);
+                fprintf(fp, "%f,",
+                        (float) sum_local * 100.0f / (float) p->sum_global);
+            }
+            fprintf(fp, "\n");
+        } else {
+            MPI_Send(&p->sum_local, 1, MPI_LONG, 0, 0, MPI_COMM_WORLD);
+        }
+
+        mpi_planner_free(&p);
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+    if (proc_id == 0) {
+        fclose(fp);
+    }
+
     aml_finalize();
     return;
 }

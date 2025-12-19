@@ -14,6 +14,7 @@
 #include "mpi/aml.h"
 
 #define AML_VISIT 1
+// #define GREEDY
 
 // Local variables for fixing aml pe/pes function call overhead
 static int lgsize = 0xBEEF;
@@ -40,9 +41,9 @@ static void visit_hndl(int from, void *dat, int size) {
     // }
     vstate_t *new = dat;
 
-    if (new->weight >= target_state.weight) {
-        return;
-    }
+    // if (new->weight >= target_state.weight) {
+    //     return;
+    // }
 
     uint64_t index = state_index(new->state);
 
@@ -56,7 +57,7 @@ static void visit_hndl(int from, void *dat, int size) {
             t.cost += (new->state[i] - target_state.state[i]) *
                       (new->state[i] - target_state.state[i]);
         }
-        t.cost = sqrt(t.cost) * 1.4 + t.weight;
+        t.cost = sqrt(t.cost) * M_SQRT2 + t.weight;
         state_cpy(&t.state, (const state_t *) &new->state);
         mheap_push(s1, &t);
     }
@@ -83,13 +84,19 @@ float mpi_astar_solve(struct mpi_planner *planner) {
 
     if (OWNER(start_idx) == pid) {
         mheap_push(s1, &start_state);
-        printf("Process %d owns the start node (%d, %d)\n", pid,
-               start_state.state[0], start_state.state[1]);
+        printf("Process %d owns the start node (%d\n", pid,
+               start_state.state[0]);
+        for (size_t i = 1; i < STATESPACE_DIMS; i++)
+            printf(", %d", start_state.state[i]);
+        printf(")\n");
     }
 
     if (OWNER(target_idx) == pid) {
-        printf("Process %d owns the target node (%d, %d)\n", pid,
-               target_state.state[0], target_state.state[1]);
+        printf("Process %d owns the target node (%d", pid,
+               target_state.state[0]);
+        for (size_t i = 1; i < STATESPACE_DIMS; i++)
+            printf(", %d", target_state.state[i]);
+        printf(")\n");
     }
 
     if (pid == 0)
@@ -128,9 +135,11 @@ float mpi_astar_solve(struct mpi_planner *planner) {
         // Pull the next state to be explored
         for (size_t batch = 0; s1->n_elements > 0 && batch < 20000; batch++) {
             mheap_pop(s1, &node_v);
+#ifdef GREEDY
             if (node_v.cost > local_min_f) {
                 continue;
             }
+#endif
             // Clone copy for push adjustments
             vstate_t next;
             state_cpy(&next.state, (const state_t *) &node_v.state);
@@ -217,7 +226,7 @@ float mpi_astar_solve(struct mpi_planner *planner) {
                       MPI_MIN, MPI_COMM_WORLD);
         // if (proc_id == 0)
         //     printf("Target Distance: %3.2f\n", target_cost);
-        if (target_state.weight < 400 && pid == 0) {
+        if (target_state.weight < FLT_MAX && pid == 0) {
             printf("Target Distance: %3.2f\n", target_state.weight);
         }
     }
@@ -226,8 +235,11 @@ float mpi_astar_solve(struct mpi_planner *planner) {
         printf("Solved Graph in %ld iterations\n", iteration);
     }
 
-    printf("Proc %d completed %2.5f %% of work\n", pid,
-           (double) sum_local * 100.0 / (double) sum_global);
+    planner->sum_global = sum_global;
+    planner->sum_local = sum_local;
+
+    // printf("Proc %d completed %2.5f %% of work\n", pid,
+    //        (double) sum_local * 100.0 / (double) sum_global);
 
     return target_state.weight;
 }
