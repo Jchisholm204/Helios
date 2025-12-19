@@ -12,8 +12,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
 find_package(OpenMP REQUIRED)
-find_package(SDL2 REQUIRED)
-find_package(ompl REQUIRED)
+# find_package(SDL2 REQUIRED)
+# find_package(ompl REQUIRED)
 
 # Add additional include directories for standard libraries
 include_directories(SYSTEM ${CMAKE_C_COMPILER_INCLUDE_DIRS})
@@ -37,7 +37,9 @@ set(GENERIC_COMPILE_OPTIONS
 
 file(GLOB_RECURSE PROJECT_SOURCES FOLLOW_SYMLINKS
     ${PROJECT_DIR}/src/*.c
-    ${PROJECT_DIR}/src/*.cpp)
+    # ${PROJECT_DIR}/src/*.cpp
+    ${PROJECT_DIR}/src/main.cpp
+)
 
 
 # Append to this list
@@ -46,9 +48,9 @@ include_directories(
     ~/.local/include
     # Include Directories for MPI on RHEL Systems
     /usr/include/openmpi-x86_64
-    ${SDL2_INCLUDE_DIRS}
-    ${SDL_TTF_INCLUDE_DIRS}
-    ${OMPL_INCLUDE_DIRS}
+    # ${SDL2_INCLUDE_DIRS}
+    # ${SDL_TTF_INCLUDE_DIRS}
+    # ${OMPL_INCLUDE_DIRS}
 )
 
 # Append to this list
@@ -93,8 +95,8 @@ target_link_libraries(${EXECUTABLE}
     mpi
     gfortran
     OpenMP::OpenMP_CXX
-    ${SDL2_LIBRARIES}
-    ${SDL_TTF_LIBRARIES}
-    SDL2_ttf
-    ${OMPL_LIBRARIES}
+    # ${SDL2_LIBRARIES}
+    # ${SDL_TTF_LIBRARIES}
+    # SDL2_ttf
+    # ${OMPL_LIBRARIES}
 )
