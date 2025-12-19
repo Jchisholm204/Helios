@@ -26,12 +26,14 @@ static int pid = 0xBEEF;
 
 static hashtable_t *visiteds = NULL;
 static min_heap_t *s1 = (void *) 0xDEADBEEF;
+static min_heap_t *s2 = (void *) 0xDEADBEEF;
 
 static uint64_t start_idx = 0x00;
 static uint64_t target_idx = 0x00;
 
 static wstate_t start_state = {{0}, 0.0, 0.0};
 static wstate_t target_state = {{0}, FLT_MAX, 0.0};
+static float global_min_f = FLT_MAX;
 
 static void visit_hndl(int from, void *dat, int size) {
     (void) from;
@@ -57,9 +59,13 @@ static void visit_hndl(int from, void *dat, int size) {
             t.cost += (new->state[i] - target_state.state[i]) *
                       (new->state[i] - target_state.state[i]);
         }
-        t.cost = sqrt(t.cost) * M_SQRT2 / 2 + t.weight;
+        t.cost = sqrt(t.cost) * A_WEIGHT + t.weight;
         state_cpy(&t.state, (const state_t *) &new->state);
-        mheap_push(s1, &t);
+        if (t.cost < global_min_f * 1.005f || s1->n_elements < 500) {
+            mheap_push(s1, &t);
+        } else {
+            mheap_push(s2, &t);
+        }
     } else if (r == -2) {
         fprintf(stderr, "Hash Table - EnoMEM\n");
     }
@@ -71,6 +77,7 @@ float mpi_astar_solve(struct mpi_planner *planner) {
     gog_t *gog = &planner->gog;
     visiteds = planner->table;
     s1 = planner->heap;
+    s2 = planner->heap2;
 
     lgsize = lgprocs;
     nproc = n_procs;
@@ -116,7 +123,7 @@ float mpi_astar_solve(struct mpi_planner *planner) {
     size_t sum_global = 0;
     size_t sum_local = 0;
 
-    while (global_work > 0 || local_work > 0) {
+    while (global_work > 0 || local_work + s2->n_elements > 0) {
         iteration++;
         sum_global += global_work;
         sum_local += local_work;
@@ -126,7 +133,6 @@ float mpi_astar_solve(struct mpi_planner *planner) {
         }
         wstate_t node_v = {{0}, FLT_MAX, FLT_MAX};
         float local_min_f = (s1->n_elements > 0) ? s1->data[0].cost : FLT_MAX;
-        float global_min_f;
         MPI_Allreduce(&local_min_f, &global_min_f, 1, MPI_FLOAT, MPI_MIN,
                       MPI_COMM_WORLD);
         if (target_state.weight <= global_min_f + 0.001f &&
@@ -134,21 +140,23 @@ float mpi_astar_solve(struct mpi_planner *planner) {
             break;
         }
         // Pull the next state to be explored
-        for (size_t batch = 0; s1->n_elements > 0 && batch < 20000; batch++) {
-            mheap_pop(s1, &node_v);
-            uint64_t node_idx = state_index(node_v.state);
-            // float node_weight =
-            //     hashtable_find(visiteds, &node_v.state, node_idx)->weight;
-            // if (node_v.weight >= node_weight) {
-            //     continue;
-            // }
-#ifdef GREEDY
-            if (node_v.cost > local_min_f * 1.0001f) {
+        for (size_t batch = 0;
+             s1->n_elements + s2->n_elements > 0 && batch < 20000; batch++) {
+            float cost1 = s1->data[0].cost;
+            float cost2 = s2->data[0].cost;
+            if (s1->n_elements != 0 && cost1 < cost2) {
+                mheap_pop(s1, &node_v);
+            } else {
+                mheap_pop(s2, &node_v);
+            }
+
+            if (node_v.cost > target_state.weight) {
                 continue;
             }
-#endif
+
             // Clone copy for push adjustments
             vstate_t next;
+            uint64_t node_idx = state_index(node_v.state);
             state_cpy(&next.state, (const state_t *) &node_v.state);
             state_cpy(&next.parent, (const state_t *) &node_v.state);
             next.weight = node_v.weight;
@@ -231,7 +239,7 @@ float mpi_astar_solve(struct mpi_planner *planner) {
                       MPI_MIN, MPI_COMM_WORLD);
         // if (proc_id == 0)
         //     printf("Target Distance: %3.2f\n", target_cost);
-        if (target_state.weight < FLT_MAX && pid == 0) {
+        if (target_state.cost < FLT_MAX && pid == 0) {
             printf("Target Distance: %3.2f\n", target_state.weight);
         }
     }

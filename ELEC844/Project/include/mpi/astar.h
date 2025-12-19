@@ -15,6 +15,18 @@
 
 #include "mpi_plannerbase.h"
 
+#if STATESPACE_DIMS == 2
+#define A_WEIGHT 1.0f
+#elif STATESPACE_DIMS == 4
+#define A_WEIGHT 1.4f
+#elif STATESPACE_DIMS == 6
+#define A_WEIGHT 1.74f
+#elif STATESPACE_DIMS == 8
+// #define A_WEIGHT 2.020f
+#elif STATESPACE_DIMS == 10
+#define A_WEIGHT 2.28f
+#endif
+
 extern float mpi_astar_solve(struct mpi_planner *planner);
 
 #endif

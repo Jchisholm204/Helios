@@ -52,8 +52,8 @@ struct mpi_planner *mpi_planner_init(void) {
     size_t default_arr_size = 0x1ULL
                               << (int) ((STATESPACE_DIMS/2 + 24 - lgprocs));
     planner->table = hashtable_init(default_arr_size);
-    planner->heap = mheap_init(default_arr_size);
-    // planner->heap2 = mheap_init(default_arr_size);
+    planner->heap = mheap_init(default_arr_size >> 2);
+    planner->heap2 = mheap_init(default_arr_size >> 2);
 
     // Ensure all processes allocate the planner before continuing
     MPI_Barrier(MPI_COMM_WORLD);
@@ -91,7 +91,7 @@ inline double diffms(struct timespec start, struct timespec end) {
     return timems;
 }
 
-#define N_TESTS 20
+#define N_TESTS 1
 #define STRLN 200
 
 void mpi_planner_evaluate(int argc, char **argv) {
