@@ -22,7 +22,9 @@
 #elif STATESPACE_DIMS == 6
 #define A_WEIGHT 1.74f
 #elif STATESPACE_DIMS == 8
-// #define A_WEIGHT 2.020f
+// #define A_WEIGHT 2.020f // Low bounds
+#define A_WEIGHT 2.021f
+// #define A_WEIGHT 2.024f // High bounds
 #elif STATESPACE_DIMS == 10
 #define A_WEIGHT 2.28f
 #endif
