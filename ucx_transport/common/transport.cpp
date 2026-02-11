@@ -42,6 +42,7 @@ Transport::~Transport() {
     ucp_cleanup(_ucp_context);
     std::cout << "[UCX] Exited" << std::endl;
 }
+
 void Transport::_handle_connection(ucp_conn_request_h conn_request) {
     ucp_ep_params_t ep_params;
     ep_params.field_mask = UCP_EP_PARAM_FIELD_CONN_REQUEST;
@@ -55,17 +56,27 @@ void Transport::_handle_connection(ucp_conn_request_h conn_request) {
 void Transport::_setup() {
     ucs_status_t status;
 
+    ucp_params_t ucp_params;
     status = ucp_config_read(NULL, NULL, &_ucp_config);
     if (status != UCS_OK) {
         std::cerr << "[UCX] Failed Configuration Read" << std::endl;
         exit(1);
     }
-    _ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES;
-    _ucp_params.features = UCP_FEATURE_TAG;
+    ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES;
+    ucp_params.features = UCP_FEATURE_TAG;
 
-    status = ucp_init(&_ucp_params, _ucp_config, &_ucp_context);
+    status = ucp_init(&ucp_params, _ucp_config, &_ucp_context);
     if (status != UCS_OK) {
         std::cerr << "[UCX] Failed Initialization" << std::endl;
+        exit(1);
+    }
+
+    ucp_worker_params_t worker_params;
+    worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
+    worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
+    status = ucp_worker_create(_ucp_context, &worker_params, &_ucp_worker);
+    if (status != UCS_OK) {
+        std::cerr << "[UCX] Failed to create worker" << std::endl;
         exit(1);
     }
 }
@@ -81,7 +92,12 @@ void Transport::_setup_server() {
     listener_params.conn_handler.cb = _c_connection_handler;
     listener_params.conn_handler.arg = this;
 
-    ucp_listener_create(_ucp_worker, &listener_params, &_listener);
+    ucs_status_t status;
+    status = ucp_listener_create(_ucp_worker, &listener_params, &_listener);
+    if(status != UCS_OK){
+        std::cerr << "[UCX] [Server] Failed to create listener" << std::endl;
+        exit(1);
+    }
 }
 void Transport::_setup_client(const char *server_ip) {
     struct sockaddr_in listener_addr;
