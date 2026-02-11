@@ -26,12 +26,11 @@ class Transport {
     ~Transport();
 
   private:
-    ucp_params_t _ucp_params;
     ucp_config_t *_ucp_config;
     ucp_context_h _ucp_context;
     ucp_worker_h _ucp_worker;
     ucp_listener_h _listener;
-    std::vector<ucp_ep_h> _client_eps;
+    std::vector<ucp_ep_h> _endpoints;
     static void _c_connection_handler(ucp_conn_request_h conn_request,
                                       void *arg) {
         auto *self = static_cast<Transport *>(arg);

@@ -50,7 +50,7 @@ void Transport::_handle_connection(ucp_conn_request_h conn_request) {
 
     ucp_ep_h client_ep;
     ucp_ep_create(_ucp_worker, &ep_params, &client_ep);
-    _client_eps.push_back(client_ep);
+    _endpoints.push_back(client_ep);
 }
 
 void Transport::_setup() {
@@ -87,21 +87,39 @@ void Transport::_setup_server() {
     struct sockaddr_in listener_addr;
     listener_addr.sin_family = AF_INET;
     listener_addr.sin_port = htons(TRANSPORT_CONN_PORT);
+    inet_pton(AF_INET, "127.0.0.1", &listener_addr.sin_addr);
     listener_params.sockaddr.addr = (struct sockaddr *) &listener_addr;
     listener_params.sockaddr.addrlen = sizeof(listener_addr);
     listener_params.conn_handler.cb = _c_connection_handler;
     listener_params.conn_handler.arg = this;
 
-    ucs_status_t status;
+    ucs_status_t status = UCS_OK;
     status = ucp_listener_create(_ucp_worker, &listener_params, &_listener);
-    if(status != UCS_OK){
+    if (status != UCS_OK) {
         std::cerr << "[UCX] [Server] Failed to create listener" << std::endl;
         exit(1);
     }
+    std::cout << "[UCX] [Server] Online" << std::endl;
 }
 void Transport::_setup_client(const char *server_ip) {
     struct sockaddr_in listener_addr;
     listener_addr.sin_family = AF_INET;
     listener_addr.sin_port = htons(TRANSPORT_CONN_PORT);
     inet_pton(AF_INET, server_ip, &listener_addr.sin_addr);
+
+    ucp_ep_params_t ep_params;
+    ep_params.field_mask =
+        UCP_EP_PARAM_FIELD_FLAGS | UCP_EP_PARAM_FIELD_SOCK_ADDR;
+    ep_params.flags = UCP_EP_PARAMS_FLAGS_CLIENT_SERVER;
+    ep_params.sockaddr.addr = (struct sockaddr *) &listener_addr;
+    ep_params.sockaddr.addrlen = sizeof(listener_addr);
+
+    ucs_status_t status = UCS_OK;
+    ucp_ep_h server_ep;
+    if ((status = ucp_ep_create(_ucp_worker, &ep_params, &server_ep))) {
+        std::cerr << "[UCX] [Client] Failed to create endpoint" << std::endl;
+        exit(1);
+    }
+    _endpoints.push_back(server_ep);
+    std::cout << "[UCX] [Client] Online" << std::endl;
 }

@@ -10,12 +10,17 @@
  */
 
 #include "main.h"
+
+#include "transport.hpp"
+
 #include <stdio.h>
 #include <unistd.h>
 
 int main(int argc, char **argv) {
 
-  printf("Client Online\n");
+    Transport tl = Transport("127.0.0.1");
 
-  return 0;
+    printf("Client Online\n");
+
+    return 0;
 }
