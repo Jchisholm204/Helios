@@ -5,7 +5,7 @@ file(GLOB_RECURSE CLIENT_SOURCES FOLLOW_SYMLINKS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
 )
 
-add_executable(${TARG} ${CLIENT_SOURCES})
+add_executable(${TARG} ${CLIENT_SOURCES} ${COMMON_SOURCES})
 
 target_include_directories(${TARG} PRIVATE ${INCLUDE_DIRECTORIES})
 

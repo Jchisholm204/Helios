@@ -32,7 +32,7 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 run: build
-	./${BUILD_DIR}/${PROJ_NAME}
+	./${BUILD_DIR}/server/ucx_server & ${BUILD_DIR}/client/ucx_client
 
 mpirun: build
 	mpirun ./${BUILD_DIR}/${PROJ_NAME}
