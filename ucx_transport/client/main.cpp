@@ -16,6 +16,7 @@
 #include <chrono>
 #include <iostream>
 #include <stdio.h>
+#include <string.h>
 #include <thread>
 #include <unistd.h>
 
@@ -35,14 +36,14 @@ int main(int argc, char **argv) {
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    tl.send_blocking(0x123, buf, sizeof(buf));
+    if (argc > 1) {
+        tl.send_blocking(3ULL << 32, argv[1], strlen(argv[1]) + 1);
+    }
+    else {
+        tl.send_blocking(3ULL << 32, buf, sizeof(buf));
+    }
 
     std::cout << "Sent Message";
-
-    // for (;;) {
-    //     tl.progress_loop();
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    // }
 
     return 0;
 }

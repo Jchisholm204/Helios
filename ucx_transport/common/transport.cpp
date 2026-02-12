@@ -52,8 +52,6 @@ void Transport::send_blocking(uint64_t tag, void *buf, size_t len) {
     }
     ucp_ep_h ep = _endpoints[0];
     ucp_request_param_t rparam;
-    // rparam.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK |
-    // UCP_OP_ATTR_FIELD_USER_DATA;
     rparam.op_attr_mask = 0;
 
     ucs_status_ptr_t pStatus = ucp_tag_send_nbx(ep, buf, len, tag, &rparam);
@@ -74,8 +72,7 @@ void Transport::recv_blocking(uint64_t tag, void *buf, size_t len) {
     ucp_request_param_t rparam;
     rparam.op_attr_mask = 0;
     ucs_status_ptr_t pStatus =
-        ucp_tag_recv_nbx(_ucp_worker, buf, len, tag,
-                        tag_mask, &rparam);
+        ucp_tag_recv_nbx(_ucp_worker, buf, len, tag, tag_mask, &rparam);
 
     if (UCS_PTR_IS_ERR(pStatus)) {
         std::cerr << "[UCX] [send_blocking] fatal error" << std::endl;
@@ -87,8 +84,75 @@ void Transport::recv_blocking(uint64_t tag, void *buf, size_t len) {
         ucp_request_free(pStatus);
     }
 }
+size_t Transport::send(uint32_t tag, uint32_t source, void *buf, size_t len) {
+    if (_endpoints.size() == 0) {
+        std::cerr << "[UCX] [send] No endpoints to send to" << std::endl;
+    }
+    ucp_ep_h ep = _endpoints[0];
+    ucp_request_param_t rparam;
+    rparam.op_attr_mask =
+        UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+    rparam.cb.send = _ucp_send_callback;
+    rparam.user_data = this;
 
-void Transport::_handle_connection(ucp_conn_request_h conn_request) {
+    uint64_t full_tag = ((uint64_t) tag) << 32 | source;
+
+    ucs_status_ptr_t pStatus =
+        ucp_tag_send_nbx(ep, buf, len, full_tag, &rparam);
+
+    if (UCS_PTR_IS_ERR(pStatus)) {
+        std::cerr << "[UCX] [send] fatal error" << std::endl;
+    }
+    else if (UCS_PTR_IS_PTR(pStatus)) {
+        _msgs_status.push_back(pStatus);
+        return _msgs_status.size();
+    }
+    return 0;
+}
+
+size_t Transport::recv(uint32_t tag, uint32_t source, void *buf, size_t len) {
+    uint64_t tag_mask = -1;
+    ucp_request_param_t rparam;
+    rparam.op_attr_mask =
+        UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+    rparam.cb.recv = _ucp_recv_callback;
+    rparam.user_data = this;
+    uint64_t full_tag = ((uint64_t) tag) << 32 | source;
+    ucs_status_ptr_t pStatus =
+        ucp_tag_recv_nbx(_ucp_worker, buf, len, full_tag, tag_mask, &rparam);
+
+    if (UCS_PTR_IS_ERR(pStatus)) {
+        std::cerr << "[UCX] [recv] fatal error" << std::endl;
+    }
+    else if (UCS_PTR_IS_PTR(pStatus)) {
+        _msgs_status.push_back(pStatus);
+        return _msgs_status.size();
+    }
+    return 0;
+}
+bool Transport::check_completion(size_t msg) {
+    if (msg == 0) {
+        return true;
+    }
+    if (msg > _msgs_status.size()) {
+        return false;
+    }
+
+    ucs_status_ptr_t pStatus = _msgs_status[msg - 1];
+    if (UCS_PTR_IS_PTR(pStatus) && pStatus) {
+        if (ucp_request_check_status(pStatus) == UCS_INPROGRESS) {
+            return false;
+        }
+        else {
+            ucp_request_free(pStatus);
+            _msgs_status[msg - 1] = NULL;
+            return true;
+        }
+    }
+    return false;
+}
+
+void Transport::_connection_callback(ucp_conn_request_h conn_request) {
     ucp_ep_params_t ep_params;
     ep_params.field_mask = UCP_EP_PARAM_FIELD_CONN_REQUEST;
     ep_params.conn_request = conn_request;
@@ -96,6 +160,18 @@ void Transport::_handle_connection(ucp_conn_request_h conn_request) {
     ucp_ep_h client_ep;
     ucp_ep_create(_ucp_worker, &ep_params, &client_ep);
     _endpoints.push_back(client_ep);
+    std::cout << "[UCX] [Server] New connection received" << std::endl;
+}
+
+void Transport::_send_callback(void *request, ucs_status_t status) {
+    std::cout << "[UCX] Send completed" << std::endl;
+}
+
+void Transport::_recv_callback(void *request, ucs_status_t status,
+                               const ucp_tag_recv_info_t *tag_info) {
+
+    std::cout << "[UCX] Recv completed from: "
+              << (tag_info->sender_tag & 0xFFFF) << std::endl;
 }
 
 void Transport::_setup() {
@@ -135,7 +211,7 @@ void Transport::_setup_server() {
     inet_pton(AF_INET, "127.0.0.1", &listener_addr.sin_addr);
     listener_params.sockaddr.addr = (struct sockaddr *) &listener_addr;
     listener_params.sockaddr.addrlen = sizeof(listener_addr);
-    listener_params.conn_handler.cb = _c_connection_handler;
+    listener_params.conn_handler.cb = _ucp_connection_callback;
     listener_params.conn_handler.arg = this;
 
     ucs_status_t status = UCS_OK;
