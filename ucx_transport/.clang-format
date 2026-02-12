@@ -4,7 +4,10 @@ TabWidth: 4
 UseTab: Never
 
 # Keep braces consistent and readable
-BreakBeforeBraces: Attach
+BreakBeforeBraces: Custom
+BraceWrapping:
+  BeforeElse: true
+  AfterControlStatement: Never
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: InlineOnly

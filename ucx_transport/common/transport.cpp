@@ -42,6 +42,51 @@ Transport::~Transport() {
     ucp_cleanup(_ucp_context);
     std::cout << "[UCX] Exited" << std::endl;
 }
+void Transport::progress_loop() {
+    ucp_worker_progress(_ucp_worker);
+}
+
+void Transport::send_blocking(uint64_t tag, void *buf, size_t len) {
+    if (_endpoints.size() == 0) {
+        std::cerr << "[UCX] [send_blocking] No endpoints created" << std::endl;
+    }
+    ucp_ep_h ep = _endpoints[0];
+    ucp_request_param_t rparam;
+    // rparam.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK |
+    // UCP_OP_ATTR_FIELD_USER_DATA;
+    rparam.op_attr_mask = 0;
+
+    ucs_status_ptr_t pStatus = ucp_tag_send_nbx(ep, buf, len, tag, &rparam);
+
+    if (UCS_PTR_IS_ERR(pStatus)) {
+        std::cerr << "[UCX] [send_blocking] fatal error" << std::endl;
+    }
+    else if (UCS_PTR_IS_PTR(pStatus)) {
+        while (ucp_request_check_status(pStatus) == UCS_INPROGRESS) {
+            this->progress_loop();
+        }
+        ucp_request_free(pStatus);
+    }
+}
+
+void Transport::recv_blocking(uint64_t tag, void *buf, size_t len) {
+    uint64_t tag_mask = -1;
+    ucp_request_param_t rparam;
+    rparam.op_attr_mask = 0;
+    ucs_status_ptr_t pStatus =
+        ucp_tag_recv_nbx(_ucp_worker, buf, len, tag,
+                        tag_mask, &rparam);
+
+    if (UCS_PTR_IS_ERR(pStatus)) {
+        std::cerr << "[UCX] [send_blocking] fatal error" << std::endl;
+    }
+    else if (UCS_PTR_IS_PTR(pStatus)) {
+        while (ucp_request_check_status(pStatus) == UCS_INPROGRESS) {
+            this->progress_loop();
+        }
+        ucp_request_free(pStatus);
+    }
+}
 
 void Transport::_handle_connection(ucp_conn_request_h conn_request) {
     ucp_ep_params_t ep_params;

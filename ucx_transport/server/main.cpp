@@ -10,15 +10,18 @@
  */
 
 #include "main.h"
+
 #include "transport.hpp"
 
+#include <chrono>
 #include <iostream>
+#include <thread>
 #include <ucp/api/ucp.h>
 #include <unistd.h>
 
 void check_ucx_features() {
     ucp_params_t ucp_params;
-    ucp_config_t* config;
+    ucp_config_t *config;
     ucp_context_h ucp_context;
 
     // Initialize UCX config
@@ -36,18 +39,36 @@ void check_ucx_features() {
 
     if (status != UCS_OK) {
         std::cerr << "UCX Init failed!" << std::endl;
-    } else {
+    }
+    else {
         std::cout << "UCX Initialized Successfully on Narval!" << std::endl;
         ucp_cleanup(ucp_context);
     }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
+
+    (void) argc;
+    (void) argv;
 
     Transport tl = Transport();
 
-    check_ucx_features();
+    char buf[1024];
 
-    printf("Server Online\n");
+    for (;;) {
+        if (tl.n_connections() > 0) {
+            std::cout << "[Server] Connection Established" << std::endl;
+            break;
+        }
+        tl.progress_loop();
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+
+    tl.recv_blocking(0x123, buf, sizeof(buf));
+
+    std::cout << "recvd: " << buf;
+
+    return 0;
+
     return 0;
 }

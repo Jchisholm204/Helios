@@ -13,14 +13,36 @@
 
 #include "transport.hpp"
 
+#include <chrono>
+#include <iostream>
 #include <stdio.h>
+#include <thread>
 #include <unistd.h>
 
 int main(int argc, char **argv) {
 
     Transport tl = Transport("127.0.0.1");
 
-    printf("Client Online\n");
+    char buf[] = "Hello World\n\0";
+
+    for (;;) {
+        if (tl.n_connections() > 0) {
+            std::cout << "[Client] Connection Established" << std::endl;
+            break;
+        }
+        tl.progress_loop();
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    tl.send_blocking(0x123, buf, sizeof(buf));
+
+    std::cout << "Sent Message";
+
+    // for (;;) {
+    //     tl.progress_loop();
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    // }
 
     return 0;
 }

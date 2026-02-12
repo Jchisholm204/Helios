@@ -15,7 +15,7 @@
 #include <ucp/api/ucp.h>
 #include <vector>
 
-#define TRANSPORT_CONN_PORT 9196
+#define TRANSPORT_CONN_PORT 9092
 
 class Transport {
   public:
@@ -24,6 +24,15 @@ class Transport {
     // Client Init
     Transport(const char *server_ip);
     ~Transport();
+
+    void progress_loop();
+
+    size_t n_connections(void){
+        return _endpoints.size();
+    }
+
+    void send_blocking(uint64_t tag, void *buf, size_t len);
+    void recv_blocking(uint64_t tag, void *buf, size_t len);
 
   private:
     ucp_config_t *_ucp_config;
