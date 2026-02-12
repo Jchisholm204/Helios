@@ -30,13 +30,18 @@ class Transport {
     size_t n_connections(void) { return _endpoints.size(); }
     size_t n_requests(void) { return _msgs_status.size(); }
 
-    void send_blocking(uint64_t tag, void *buf, size_t len);
-    void recv_blocking(uint64_t tag, void *buf, size_t len);
+    void send_blocking(uint32_t tag, uint32_t source, void *buf, size_t len);
+    void recv_blocking(uint32_t tag, uint32_t source, void *buf, size_t len);
 
     size_t send(uint32_t tag, uint32_t source, void *buf, size_t len);
     size_t recv(uint32_t tag, uint32_t source, void *buf, size_t len);
 
     bool check_completion(size_t msg);
+
+    void register_rma_source(void *const ptr, size_t size);
+    void register_rma_remote(void **ptr, ucp_rkey_h *rkey);
+    void read_remote(void *local_ptr, size_t size, uintptr_t remote_addr,
+                     ucp_rkey_h rkey);
 
   private:
     ucp_config_t *_ucp_config;
@@ -45,6 +50,7 @@ class Transport {
     ucp_listener_h _listener;
     std::vector<ucp_ep_h> _endpoints;
     std::vector<ucs_status_ptr_t> _msgs_status;
+    std::vector<ucp_mem_h> _mem_hndls;
 
     void _connection_callback(ucp_conn_request_h conn_request);
     void _send_callback(void *request, ucs_status_t status);

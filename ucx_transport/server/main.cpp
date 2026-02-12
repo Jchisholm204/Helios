@@ -55,27 +55,47 @@ int main(int argc, char **argv) {
 
     std::vector<char *> rbufs;
 
-    size_t n_connections = tl.n_connections();
-
     for (;;) {
-        if ((tl.n_connections() - n_connections) > 0) {
-            std::cout << "[Server] New Connection Established" << std::endl;
-            n_connections = tl.n_connections();
-            char *rbuf = (char *) malloc(BUF_SIZE);
-            tl.recv(3, 0, rbuf, 1024);
-            rbufs.push_back(rbuf);
-            std::cout << "[Server] Recv buffer posted" << std::endl;
+        if (tl.n_connections() > 0) {
+            std::cout << "[Server] Connection Established" << std::endl;
+            break;
         }
         tl.progress_loop();
-        for (size_t i = 1; i <= n_connections; i++) {
-            if (tl.check_completion(i)) {
-                std::cout << "[Server] Recv " << i
-                          << " Completed: " << rbufs[i - 1] << std::endl;
-                // free(rbufs[i - 1]);
-            }
-        }
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
+
+    void *rbuf = NULL;
+    ucp_rkey_h rkey;
+    tl.register_rma_remote(&rbuf, &rkey);
+
+    for (size_t i = 0;; i++) {
+        size_t ri = 0;
+        tl.read_remote(&ri, sizeof(ri), (uintptr_t) rbuf, rkey);
+        std::cout << "Got: " << ri << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    // size_t n_connections = tl.n_connections();
+
+    // for (;;) {
+    //     if ((tl.n_connections() - n_connections) > 0) {
+    //         std::cout << "[Server] New Connection Established" << std::endl;
+    //         n_connections = tl.n_connections();
+    //         char *rbuf = (char *) malloc(BUF_SIZE);
+    //         tl.recv(3, 0, rbuf, 1024);
+    //         rbufs.push_back(rbuf);
+    //         std::cout << "[Server] Recv buffer posted" << std::endl;
+    //     }
+    //     tl.progress_loop();
+    //     for (size_t i = 1; i <= n_connections; i++) {
+    //         if (tl.check_completion(i)) {
+    //             std::cout << "[Server] Recv " << i
+    //                       << " Completed: " << rbufs[i - 1] << std::endl;
+    //             // free(rbufs[i - 1]);
+    //         }
+    //     }
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    // }
 
     return 0;
 }

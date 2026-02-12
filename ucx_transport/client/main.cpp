@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
     Transport tl = Transport("127.0.0.1");
 
-    char buf[] = "Hello World\n\0";
+    char *buf = (char *) malloc(1024);
 
     for (;;) {
         if (tl.n_connections() > 0) {
@@ -36,11 +36,14 @@ int main(int argc, char **argv) {
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    if (argc > 1) {
-        tl.send_blocking(3ULL << 32, argv[1], strlen(argv[1]) + 1);
-    }
-    else {
-        tl.send_blocking(3ULL << 32, buf, sizeof(buf));
+
+    tl.register_rma_source(buf, 1024);
+
+    for (size_t i = 0;; i++) {
+        *((size_t *) buf) = i;
+        std::cout << "Updated to: " << i << std::endl;
+        tl.progress_loop();
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
     std::cout << "Sent Message";
